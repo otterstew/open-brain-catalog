@@ -328,7 +328,7 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 48px 40px;
+    padding: 40px 28px;
     overflow-y: auto;
     min-height: 0;
   }
@@ -351,9 +351,14 @@
     line-height: 1.6;
   }
 
+  .edit-actions {
+    border-top: 1px solid var(--hairline);
+    border-bottom: 1px solid var(--hairline);
+  }
+
   .index-card {
     width: 100%;
-    max-width: 620px;
+    max-width: 1040px;
     background: var(--panel-raised);
     border: 1px solid var(--hairline);
     border-radius: 3px;
@@ -1679,14 +1684,14 @@ function startEdit(t) {
         <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="editTags" type="text" placeholder="comma, separated, tags" value="${escapeAttr(t.topics.join(', '))}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="editUrl" type="text" value="${escapeAttr(t.source_url || '')}" /></div>
       </div>
-      <div class="index-card-body">
-        <label class="edit-body-label" for="editContent">Body</label>
-        <textarea class="edit-body-textarea" id="editContent" spellcheck="true">${escapeHtml(t.content)}</textarea>
-      </div>
-      <div class="index-card-foot compose-actions">
+      <div class="index-card-foot compose-actions edit-actions">
         <span class="compose-status" id="editStatus"></span>
         <button class="compose-cancel" id="editCancel" type="button">Cancel</button>
         <button class="compose-save" id="editSave" type="button">Save changes</button>
+      </div>
+      <div class="index-card-body">
+        <label class="edit-body-label" for="editContent">Body</label>
+        <textarea class="edit-body-textarea" id="editContent" spellcheck="true">${escapeHtml(t.content)}</textarea>
       </div>
     </div>
   `;
