@@ -211,6 +211,31 @@
   .topic-chip-row::-webkit-scrollbar { width: 6px; }
   .topic-chip-row::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 3px; }
 
+  .chip-count {
+    opacity: 0.65;
+    margin-left: 1px;
+  }
+  .chip-caret {
+    margin-left: 3px;
+    font-size: 8px;
+    opacity: 0.8;
+  }
+
+  .chip-subrow {
+    flex-basis: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin: 1px 0 3px 10px;
+    padding-left: 9px;
+    border-left: 2px solid var(--hairline);
+  }
+  .chip-sub {
+    font-size: 9.5px;
+    padding: 3px 8px;
+    opacity: 0.9;
+  }
+
   .list-scroll {
     flex: 1;
     overflow-y: auto;
@@ -650,6 +675,7 @@ let activeTypes = new Set();
 let activeTopics = new Set(); // normalized (lowercased) topic strings
 let activeAuthors = new Set(); // normalized (lowercased) author strings
 let activeSources = new Set(); // normalized (lowercased) source strings
+let expandedTopicGroups = new Set(); // lowercased first-word group keys currently expanded
 let selectedIndex = null;
 let searchMode = false;
 let lastSearchQuery = '';
@@ -904,6 +930,23 @@ function renderChips() {
 // search is currently active. Topics are grouped case-insensitively (the
 // AI extractor isn't always consistent about casing) but displayed using
 // the first-seen casing.
+function makeTopicChip(norm, label, isSub) {
+  const chip = document.createElement('button');
+  chip.className = 'chip' + (isSub ? ' chip-sub' : '') + (activeTopics.has(norm) ? ' active' : '');
+  if (activeTopics.has(norm)) chip.style.background = 'var(--brass)';
+  chip.innerHTML = '<span class="dot" style="background:var(--brass)"></span># ' + escapeHtml(label);
+  chip.addEventListener('click', () => {
+    if (activeTopics.has(norm)) activeTopics.delete(norm); else activeTopics.add(norm);
+    applyFilters();
+  });
+  return chip;
+}
+
+// Topics that share a first word (e.g. "AI", "AI Agents", "AI Careers") get
+// collapsed under one parent chip so a busy tag vocabulary doesn't overwhelm
+// the drawer — click the parent to expand/collapse its members, click a
+// member to filter by it same as any other topic chip. Topics with no
+// sibling sharing that first word render as ordinary flat chips.
 function renderTopicChips() {
   const topicMap = new Map(); // normalized -> display label
   allThoughts.forEach(t => {
@@ -920,17 +963,48 @@ function renderTopicChips() {
   }
   topicRowLabel.style.display = 'block';
 
-  const sorted = Array.from(topicMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  sorted.forEach(([norm, label]) => {
-    const chip = document.createElement('button');
-    chip.className = 'chip' + (activeTopics.has(norm) ? ' active' : '');
-    if (activeTopics.has(norm)) chip.style.background = 'var(--brass)';
-    chip.innerHTML = '<span class="dot" style="background:var(--brass)"></span># ' + escapeHtml(label);
-    chip.addEventListener('click', () => {
-      if (activeTopics.has(norm)) activeTopics.delete(norm); else activeTopics.add(norm);
-      applyFilters();
+  const groups = new Map(); // lowercased first word -> [{norm, label}]
+  topicMap.forEach((label, norm) => {
+    const firstWord = label.split(/\s+/)[0].toLowerCase();
+    if (!groups.has(firstWord)) groups.set(firstWord, []);
+    groups.get(firstWord).push({ norm, label });
+  });
+
+  const entries = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+
+  entries.forEach(([groupKey, members]) => {
+    if (members.length === 1) {
+      const { norm, label } = members[0];
+      topicRow.appendChild(makeTopicChip(norm, label));
+      return;
+    }
+
+    members.sort((a, b) => a.label.localeCompare(b.label));
+    const isExpanded = expandedTopicGroups.has(groupKey);
+    const anyActive = members.some(m => activeTopics.has(m.norm));
+    const displayLabel = members[0].label.split(/\s+/)[0];
+
+    const parent = document.createElement('button');
+    parent.className = 'chip chip-group' + (anyActive ? ' active' : '');
+    if (anyActive) parent.style.background = 'var(--brass)';
+    parent.innerHTML = '<span class="dot" style="background:var(--brass)"></span># '
+      + escapeHtml(displayLabel)
+      + '<span class="chip-count">(' + members.length + ')</span>'
+      + '<span class="chip-caret">' + (isExpanded ? '▾' : '▸') + '</span>';
+    parent.title = isExpanded ? 'Collapse' : 'Show ' + members.length + ' ' + displayLabel + ' subtopics';
+    parent.addEventListener('click', () => {
+      if (expandedTopicGroups.has(groupKey)) expandedTopicGroups.delete(groupKey);
+      else expandedTopicGroups.add(groupKey);
+      renderTopicChips();
     });
-    topicRow.appendChild(chip);
+    topicRow.appendChild(parent);
+
+    if (isExpanded) {
+      const subRow = document.createElement('div');
+      subRow.className = 'chip-subrow';
+      members.forEach(({ norm, label }) => subRow.appendChild(makeTopicChip(norm, label, true)));
+      topicRow.appendChild(subRow);
+    }
   });
 }
 
@@ -1155,6 +1229,9 @@ function selectThought(t) {
       searchInput.value = '';
       searchClear.style.display = 'none';
       activeTopics = new Set([tag.trim().toLowerCase()]);
+      // Auto-expand this tag's group (if any) so it's visible, not hidden
+      // inside a collapsed parent chip, the moment the drawer re-renders.
+      expandedTopicGroups.add(tag.trim().split(/\s+/)[0].toLowerCase());
       showEmptyState();
       applyFilters();
     });
