@@ -1517,10 +1517,10 @@ function selectThought(t) {
         <div class="field-row"><span class="field-label">Tags</span><span class="field-value">${tagsHtml}</span></div>
         <div class="field-row"><span class="field-label">URL</span><span class="field-value">${urlHtml}</span></div>
       </div>
-      <div class="index-card-body"><p>${escapeHtml(t.content)}</p></div>
       ${peopleHtml}
       ${linksHtml}
       ${linkedNotesHtml}
+      <div class="index-card-body"><p>${escapeHtml(t.content)}</p></div>
       <div class="index-card-confirm" id="cardConfirm"></div>
     </div>
   `;
