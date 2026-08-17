@@ -1,0 +1,826 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Open Brain — Catalog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Serif+4:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper: #16140F;
+    --panel: #1E1A12;
+    --panel-raised: #262019;
+    --ruled: rgba(232,223,200,0.07);
+    --hairline: rgba(232,223,200,0.13);
+    --ink: #E9DFC7;
+    --ink-dim: #A79A7D;
+    --ink-faint: #766B54;
+    --brass: #C9A227;
+    --moss: #7C9A6E;
+    --rust: #B15B45;
+    --blue: #6C93A8;
+    --plum: #9A79A0;
+    --unfiled: #766B54;
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+    --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    height: 100%;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+  }
+
+  body {
+    background-image:
+      radial-gradient(ellipse at 20% -10%, rgba(201,162,39,0.05), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(124,154,110,0.04), transparent 40%);
+  }
+
+  /* subtle paper grain */
+  .grain {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.5;
+    z-index: 50;
+    mix-blend-mode: overlay;
+  }
+
+  button { font-family: inherit; }
+
+  .app {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    height: 100vh;
+  }
+
+  /* ---------- DRAWER (left column) ---------- */
+  .drawer {
+    background: var(--panel);
+    border-right: 1px solid var(--hairline);
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .drawer-header {
+    padding: 22px 20px 16px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .drawer-title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .drawer-title {
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 21px;
+    letter-spacing: 0.01em;
+    margin: 0;
+  }
+
+  .drawer-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+
+  .drawer-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    margin-top: 3px;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  .refresh-btn {
+    background: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-dim);
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 120ms, color 120ms, transform 400ms;
+    flex-shrink: 0;
+  }
+  .refresh-btn:hover { border-color: var(--brass); color: var(--brass); }
+  .refresh-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .refresh-btn.spinning svg { animation: spin 700ms linear; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .search-row {
+    margin-top: 14px;
+    position: relative;
+  }
+
+  .search-input {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 13.5px;
+    padding: 9px 32px 9px 12px;
+    border-radius: 4px;
+    outline: none;
+    transition: border-color 120ms;
+  }
+  .search-input::placeholder { color: var(--ink-faint); font-style: italic; }
+  .search-input:focus { border-color: var(--brass); }
+
+  .search-clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    cursor: pointer;
+    font-size: 15px;
+    line-height: 1;
+    padding: 2px;
+  }
+  .search-clear:hover { color: var(--brass); }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 12px;
+  }
+
+  .chip {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 999px;
+    border: 1px solid var(--hairline);
+    background: transparent;
+    color: var(--ink-dim);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: border-color 120ms, color 120ms, background 120ms;
+  }
+  .chip:hover { border-color: var(--ink-dim); }
+  .chip.active { color: var(--paper); border-color: transparent; }
+  .chip:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+  .list-scroll {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 0 20px;
+  }
+
+  .list-scroll::-webkit-scrollbar { width: 8px; }
+  .list-scroll::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 4px; }
+
+  .card-row {
+    display: flex;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    border-bottom: 1px solid var(--ruled);
+    cursor: pointer;
+    padding: 0;
+    color: inherit;
+  }
+
+  .card-row-tab {
+    width: 5px;
+    flex-shrink: 0;
+    background: var(--unfiled);
+  }
+
+  .card-row-body {
+    flex: 1;
+    padding: 13px 18px 13px 15px;
+    min-width: 0;
+    transition: background 120ms, transform 120ms;
+  }
+
+  .card-row:hover .card-row-body { background: rgba(232,223,200,0.03); transform: translateX(2px); }
+  .card-row:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+  .card-row.selected .card-row-body { background: rgba(201,162,39,0.08); }
+
+  .card-row-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 5px;
+  }
+
+  .card-row-type {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .card-row-date {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+
+  .card-row-preview {
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--ink-dim);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .card-row.selected .card-row-preview { color: var(--ink); }
+
+  .list-status {
+    padding: 30px 22px;
+    color: var(--ink-faint);
+    font-size: 13px;
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .list-status .retry {
+    display: inline-block;
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-style: normal;
+    text-decoration: underline;
+    color: var(--brass);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  /* ---------- MAIN (right column) ---------- */
+  .main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 48px 40px;
+    overflow-y: auto;
+    min-height: 0;
+  }
+
+  .empty-state {
+    max-width: 380px;
+    margin-top: 12vh;
+    text-align: center;
+    color: var(--ink-faint);
+  }
+  .empty-state .glyph {
+    font-family: var(--font-display);
+    font-size: 34px;
+    color: var(--ink-faint);
+    margin-bottom: 14px;
+  }
+  .empty-state p {
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.6;
+  }
+
+  .index-card {
+    width: 100%;
+    max-width: 620px;
+    background: var(--panel-raised);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    box-shadow: 0 22px 50px -20px rgba(0,0,0,0.6);
+    transform: rotate(-0.35deg);
+    animation: settle 220ms ease-out;
+    overflow: hidden;
+  }
+
+  @keyframes settle {
+    from { opacity: 0; transform: rotate(-0.35deg) translateY(8px); }
+    to   { opacity: 1; transform: rotate(-0.35deg) translateY(0); }
+  }
+
+  .index-card-ribbon {
+    height: 7px;
+  }
+
+  .index-card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px 0;
+  }
+
+  .index-card-type {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 3px 0;
+  }
+
+  .index-card-date {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+
+  .index-card-body {
+    padding: 18px 28px 26px;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 27px,
+      var(--ruled) 28px
+    );
+  }
+
+  .index-card-body p {
+    font-size: 17px;
+    line-height: 28px;
+    margin: 0;
+    color: var(--ink);
+  }
+
+  .index-card-foot {
+    border-top: 1px solid var(--hairline);
+    padding: 14px 28px 18px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .tag {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    color: var(--ink-dim);
+    border: 1px solid var(--hairline);
+    padding: 3px 9px;
+    border-radius: 999px;
+  }
+  .tag.person::before { content: "@ "; color: var(--ink-faint); }
+  .tag.topic::before { content: "# "; color: var(--ink-faint); }
+
+  .back-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    cursor: pointer;
+    margin-bottom: 18px;
+    padding: 4px 0;
+  }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 760px) {
+    .app { grid-template-columns: 1fr; }
+    .drawer { display: flex; }
+    .main { display: none; padding: 24px 18px; }
+    .app.detail-open .drawer { display: none; }
+    .app.detail-open .main { display: flex; }
+    .back-btn { display: inline-block; }
+    .index-card { max-width: 100%; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    .card-row:hover .card-row-body { transform: none; }
+  }
+</style>
+</head>
+<body>
+
+<svg class="grain" width="0" height="0">
+  <filter id="noise">
+    <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="2" stitchTiles="stitch"/>
+    <feColorMatrix type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.035 0"/>
+  </filter>
+  <rect width="100%" height="100%" filter="url(#noise)"/>
+</svg>
+
+<div class="app" id="app">
+
+  <div class="drawer">
+    <div class="drawer-header">
+      <div class="drawer-title-row">
+        <div>
+          <h1 class="drawer-title">Open Brain</h1>
+          <div class="drawer-sub">Catalog of thoughts</div>
+        </div>
+        <button class="refresh-btn" id="refreshBtn" title="Refresh from archive" aria-label="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+        </button>
+      </div>
+
+      <div class="search-row">
+        <input class="search-input" id="searchInput" type="text" placeholder="Search by meaning…" />
+        <button class="search-clear" id="searchClear" style="display:none" aria-label="Clear search">×</button>
+      </div>
+
+      <div class="chip-row" id="chipRow"></div>
+    </div>
+
+    <div class="list-scroll" id="listScroll">
+      <div class="list-status">Opening the drawer…</div>
+    </div>
+  </div>
+
+  <div class="main" id="main">
+    <div class="empty-state">
+      <div class="glyph">§</div>
+      <p>Select a card from the drawer to read it.</p>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// Talks directly to your Open Brain MCP server (Supabase edge function) — no
+// AI middleman needed just to list or search notes. Auth is the MCP Access
+// Key from your credential tracker, sent as the x-brain-key header, the same
+// way the Claude Code CLI / mcp-remote connections use it.
+const MCP_URL = "https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mcp";
+const MCP_ACCESS_KEY = "0e5f61a4dba2ea08005bb8f859cbacdae7569e8ea805f7071ac078ee9f7e6193";
+
+const TYPE_STYLES = {
+  observation:  { color: 'var(--moss)', label: 'Observation' },
+  idea:         { color: 'var(--brass)', label: 'Idea' },
+  task:         { color: 'var(--rust)',  label: 'Task' },
+  reference:    { color: 'var(--blue)',  label: 'Reference' },
+  person_note:  { color: 'var(--plum)',  label: 'Person note' },
+};
+const UNFILED = { color: 'var(--unfiled)', label: 'Unfiled' };
+
+function typeStyle(t) {
+  if (t && TYPE_STYLES[t]) return TYPE_STYLES[t];
+  return UNFILED;
+}
+
+let allThoughts = [];   // full list, from last successful list fetch
+let displayed = [];     // currently shown (after search/filter)
+let activeTypes = new Set();
+let selectedIndex = null;
+let searchMode = false;
+let lastSearchQuery = '';
+
+const listScroll = document.getElementById('listScroll');
+const chipRow = document.getElementById('chipRow');
+const main = document.getElementById('main');
+const app = document.getElementById('app');
+const searchInput = document.getElementById('searchInput');
+const searchClear = document.getElementById('searchClear');
+const refreshBtn = document.getElementById('refreshBtn');
+
+function formatDate(iso) {
+  if (!iso) return 'Undated';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return 'Undated';
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+/* ---------- MCP JSON-RPC client ---------- */
+
+let mcpSessionId = null; // the server strips this from responses, but kept in case that changes
+let rpcCounter = 0;
+
+async function mcpRequest(method, params) {
+  const body = { jsonrpc: '2.0', id: ++rpcCounter, method };
+  if (params !== undefined) body.params = params;
+
+  const headers = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json, text/event-stream',
+    'x-brain-key': MCP_ACCESS_KEY,
+  };
+  if (mcpSessionId) headers['Mcp-Session-Id'] = mcpSessionId;
+
+  let response;
+  try {
+    response = await fetch(MCP_URL, { method: 'POST', headers, body: JSON.stringify(body) });
+  } catch (err) {
+    throw new Error('Could not reach the archive server. This is usually a network problem, or the server may not be allowing direct browser requests (CORS). (' + err.message + ')');
+  }
+
+  const sid = response.headers.get('Mcp-Session-Id');
+  if (sid) mcpSessionId = sid;
+
+  if (!response.ok) {
+    let detail = '';
+    try { detail = (await response.text()).slice(0, 200); } catch (_) {}
+    let hint = '';
+    if (response.status === 401 || response.status === 403) hint = ' — check that the access key embedded in this page is still valid';
+    throw new Error('Archive returned HTTP ' + response.status + hint + (detail ? (': ' + detail) : ''));
+  }
+
+  const contentType = response.headers.get('Content-Type') || '';
+  let payload;
+  if (contentType.includes('text/event-stream')) {
+    const raw = await response.text();
+    const dataLines = raw.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim());
+    const lastJson = [...dataLines].reverse().find(l => l.startsWith('{'));
+    if (!lastJson) throw new Error('The archive sent a streamed response with no data.');
+    payload = JSON.parse(lastJson);
+  } else {
+    const raw = await response.text();
+    payload = raw.trim() ? JSON.parse(raw) : {};
+  }
+
+  if (payload.error) throw new Error(payload.error.message || 'The archive reported an error.');
+  return payload.result;
+}
+
+// Your server rebuilds a fresh MCP server + transport on every single HTTP
+// call (sessionIdGenerator: undefined — true stateless mode, per the source
+// you shared), so there's no persisted session to negotiate and no need to
+// send "initialize" before a tool call — each request is self-contained.
+async function callTool(name, args) {
+  const result = await mcpRequest('tools/call', { name, arguments: args || {} });
+  const block = ((result && result.content) || []).find(b => b.type === 'text');
+  if (!block) throw new Error('The archive returned no readable content for "' + name + '".');
+  return block.text;
+}
+
+/* ---------- Parsing the tool's plain-text output into cards ----------
+   The MCP tools return human-readable text rather than structured JSON,
+   so we parse the known formats. If a format ever changes and parsing
+   comes up empty, we fall back to showing the raw text as a single card
+   rather than failing silently. */
+
+function normalizeType(raw) {
+  if (!raw) return null;
+  const t = raw.trim().toLowerCase();
+  if (!t || t === '??' || t === 'unknown' || t === 'none' || t === 'null') return null;
+  return Object.prototype.hasOwnProperty.call(TYPE_STYLES, t) ? t : null;
+}
+
+function stableId(prefix, idx, content) {
+  let hash = 0;
+  const str = content || '';
+  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0;
+  return prefix + '-' + idx + '-' + Math.abs(hash);
+}
+
+// Matches list_thoughts output:
+// "1. [8/16/2026] (idea)\n   Some content that may span\n   multiple lines.\n\n2. ..."
+function parseListText(text) {
+  const items = [];
+  const re = /(\d+)\.\s*\[([^\]]*)\]\s*\(([^)]*)\)\s*\n([\s\S]*?)(?=\n\s*\d+\.\s*\[|$)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const content = m[4].trim();
+    if (!content) continue;
+    items.push({
+      id: stableId('list', m[1], content),
+      content,
+      type: normalizeType(m[3]),
+      topic: null,
+      person: null,
+      created_at: m[2].trim() || null,
+    });
+  }
+  return items;
+}
+
+// Matches search_thoughts output:
+// "--- Result 1 (59.7% match) ---\nCaptured: 8/16/2026\nType: unknown\n\nSome content.\n\n--- Result 2 ..."
+function parseSearchText(text) {
+  const items = [];
+  const re = /---\s*Result\s*(\d+)[^\n]*---\s*\nCaptured:\s*([^\n]*)\nType:\s*([^\n]*)\n\n([\s\S]*?)(?=\n\n---\s*Result|$)/g;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    const content = m[4].trim();
+    if (!content) continue;
+    items.push({
+      id: stableId('search', m[1], content),
+      content,
+      type: normalizeType(m[3]),
+      topic: null,
+      person: null,
+      created_at: m[2].trim() || null,
+    });
+  }
+  return items;
+}
+
+function renderChips() {
+  const typesPresent = new Set(allThoughts.map(t => t.type || '__unfiled__'));
+  chipRow.innerHTML = '';
+  if (typesPresent.size <= 1) return;
+  typesPresent.forEach(t => {
+    const key = t === '__unfiled__' ? null : t;
+    const style = typeStyle(key);
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (activeTypes.has(t) ? ' active' : '');
+    if (activeTypes.has(t)) chip.style.background = style.color;
+    chip.innerHTML = '<span class="dot" style="background:' + style.color + '"></span>' + style.label;
+    chip.addEventListener('click', () => {
+      if (activeTypes.has(t)) activeTypes.delete(t); else activeTypes.add(t);
+      applyFilters();
+    });
+    chipRow.appendChild(chip);
+  });
+}
+
+function applyFilters() {
+  const base = searchMode ? displayed.baseResults : allThoughts;
+  let filtered = base;
+  if (activeTypes.size > 0) {
+    filtered = base.filter(t => activeTypes.has(t.type || '__unfiled__'));
+  }
+  renderChips();
+  renderList(filtered, searchMode);
+}
+
+function renderList(items, isSearch) {
+  displayed = items;
+  displayed.baseResults = isSearch ? displayed.baseResults : items;
+  listScroll.innerHTML = '';
+
+  if (items.length === 0) {
+    const status = document.createElement('div');
+    status.className = 'list-status';
+    status.textContent = isSearch
+      ? 'No cards match that search.'
+      : 'The drawer is empty. Capture a thought to file one here.';
+    listScroll.appendChild(status);
+    return;
+  }
+
+  items.forEach((t, idx) => {
+    const style = typeStyle(t.type);
+    const row = document.createElement('button');
+    row.className = 'card-row' + (selectedIndex === t.id ? ' selected' : '');
+    row.innerHTML = `
+      <div class="card-row-tab" style="background:${style.color}"></div>
+      <div class="card-row-body">
+        <div class="card-row-meta">
+          <span class="card-row-type" style="color:${style.color}">${style.label}</span>
+          <span class="card-row-date">${formatDate(t.created_at)}</span>
+        </div>
+        <div class="card-row-preview">${escapeHtml(t.content)}</div>
+      </div>
+    `;
+    row.addEventListener('click', () => selectThought(t));
+    listScroll.appendChild(row);
+  });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function selectThought(t) {
+  selectedIndex = t.id;
+  renderList(displayed, searchMode);
+  const style = typeStyle(t.type);
+  main.innerHTML = `
+    <div class="index-card">
+      <div class="index-card-ribbon" style="background:${style.color}"></div>
+      <div class="index-card-head">
+        <span class="index-card-type" style="color:${style.color}">${style.label}</span>
+        <span class="index-card-date">${formatDate(t.created_at)}</span>
+      </div>
+      <div class="index-card-body"><p>${escapeHtml(t.content)}</p></div>
+      <div class="index-card-foot" id="cardFoot"></div>
+    </div>
+  `;
+  const foot = document.getElementById('cardFoot');
+  if (t.topic) {
+    (t.topic.split(',')).map(s => s.trim()).filter(Boolean).forEach(tag => {
+      const el = document.createElement('span');
+      el.className = 'tag topic';
+      el.textContent = tag;
+      foot.appendChild(el);
+    });
+  }
+  if (t.person) {
+    const el = document.createElement('span');
+    el.className = 'tag person';
+    el.textContent = t.person;
+    foot.appendChild(el);
+  }
+  if (!t.topic && !t.person) {
+    foot.innerHTML = '<span class="tag" style="opacity:0.6">Unfiled — no topic or person noted</span>';
+  }
+  const back = document.createElement('button');
+  back.className = 'back-btn';
+  back.textContent = '← Back to drawer';
+  back.addEventListener('click', () => app.classList.remove('detail-open'));
+  main.prepend(back);
+
+  app.classList.add('detail-open');
+}
+
+function showStatus(msg, isError, retryFn) {
+  listScroll.innerHTML = '';
+  const el = document.createElement('div');
+  el.className = 'list-status';
+  el.style.color = isError ? 'var(--rust)' : 'var(--ink-faint)';
+  el.textContent = msg;
+  if (retryFn) {
+    const btn = document.createElement('button');
+    btn.className = 'retry';
+    btn.textContent = 'Try again';
+    btn.addEventListener('click', retryFn);
+    el.appendChild(document.createElement('br'));
+    el.appendChild(btn);
+  }
+  listScroll.appendChild(el);
+}
+
+async function loadAll() {
+  searchMode = false;
+  lastSearchQuery = '';
+  searchInput.value = '';
+  searchClear.style.display = 'none';
+  showStatus('Opening the drawer…', false);
+  try {
+    const text = await callTool('list_thoughts', { limit: 100 });
+    let results = parseListText(text);
+    if (results.length === 0 && !/^\s*0\s+recent/i.test(text) && text.trim()) {
+      // Unexpected shape — show the raw text rather than an empty drawer.
+      results = [{ id: 'raw-list', content: text.trim(), type: null, topic: null, person: null, created_at: null }];
+    }
+    allThoughts = results;
+    activeTypes = new Set();
+    applyFilters();
+  } catch (err) {
+    showStatus('Could not reach the archive — ' + err.message, true, loadAll);
+  }
+}
+
+async function runSearch(query) {
+  if (!query.trim()) { loadAll(); return; }
+  searchMode = true;
+  lastSearchQuery = query;
+  searchClear.style.display = 'block';
+  showStatus('Searching the archive for "' + query + '"…', false);
+  try {
+    const text = await callTool('search_thoughts', { query, limit: 50 });
+    let results = parseSearchText(text);
+    if (results.length === 0 && !/found\s+0/i.test(text) && text.trim()) {
+      results = [{ id: 'raw-search', content: text.trim(), type: null, topic: null, person: null, created_at: null }];
+    }
+    displayed.baseResults = results;
+    activeTypes = new Set();
+    applyFilters();
+  } catch (err) {
+    showStatus('Search failed — ' + err.message, true, () => runSearch(query));
+  }
+}
+
+refreshBtn.addEventListener('click', () => {
+  refreshBtn.classList.add('spinning');
+  setTimeout(() => refreshBtn.classList.remove('spinning'), 700);
+  searchMode ? runSearch(lastSearchQuery) : loadAll();
+});
+
+searchClear.addEventListener('click', () => { loadAll(); });
+
+let searchTimer = null;
+searchInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') { clearTimeout(searchTimer); runSearch(searchInput.value); }
+});
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  if (searchInput.value.trim() === '') { searchClear.style.display = 'none'; return; }
+  searchTimer = setTimeout(() => runSearch(searchInput.value), 650);
+});
+
+loadAll();
+</script>
+
+</body>
+</html>
