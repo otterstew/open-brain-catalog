@@ -82,6 +82,12 @@
     gap: 8px;
   }
 
+  .header-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
   .drawer-title {
     font-family: var(--font-display);
     font-weight: 600;
@@ -401,6 +407,60 @@
     padding: 4px 0;
   }
 
+  /* ---------- compose (new thought) ---------- */
+  .compose-textarea {
+    width: 100%;
+    min-height: 180px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: vertical;
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 28px;
+    color: var(--ink);
+    padding: 0;
+  }
+  .compose-textarea::placeholder { color: var(--ink-faint); font-style: italic; }
+
+  .compose-actions {
+    justify-content: flex-end;
+  }
+
+  .compose-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.02em;
+    color: var(--ink-faint);
+    margin-right: auto;
+  }
+
+  .compose-cancel, .compose-save {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: border-color 120ms, color 120ms, background 120ms, opacity 120ms;
+  }
+  .compose-cancel {
+    background: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-dim);
+  }
+  .compose-cancel:hover { border-color: var(--ink-dim); color: var(--ink); }
+
+  .compose-save {
+    background: var(--brass);
+    border: 1px solid var(--brass);
+    color: var(--paper);
+    font-weight: 500;
+  }
+  .compose-save:hover { opacity: 0.88; }
+  .compose-save:disabled, .compose-cancel:disabled { opacity: 0.5; cursor: default; }
+
   /* ---------- responsive ---------- */
   @media (max-width: 760px) {
     .app { grid-template-columns: 1fr; }
@@ -437,9 +497,14 @@
           <h1 class="drawer-title">Open Brain</h1>
           <div class="drawer-sub">Catalog of thoughts</div>
         </div>
-        <button class="refresh-btn" id="refreshBtn" title="Refresh from archive" aria-label="Refresh">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
-        </button>
+        <div class="header-actions">
+          <button class="refresh-btn" id="newBtn" title="New thought" aria-label="New thought">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <button class="refresh-btn" id="refreshBtn" title="Refresh from archive" aria-label="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+          </button>
+        </div>
       </div>
 
       <div class="search-row">
@@ -500,6 +565,7 @@ const app = document.getElementById('app');
 const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
 const refreshBtn = document.getElementById('refreshBtn');
+const newBtn = document.getElementById('newBtn');
 
 function formatDate(iso) {
   if (!iso) return 'Undated';
@@ -742,6 +808,90 @@ function selectThought(t) {
 
   app.classList.add('detail-open');
 }
+
+function showEmptyState() {
+  selectedIndex = null;
+  renderList(displayed, searchMode);
+  main.innerHTML = `
+    <div class="empty-state">
+      <div class="glyph">§</div>
+      <p>Select a card from the drawer to read it.</p>
+    </div>
+  `;
+  app.classList.remove('detail-open');
+}
+
+function showComposer() {
+  selectedIndex = null;
+  renderList(displayed, searchMode);
+  main.innerHTML = `
+    <div class="index-card">
+      <div class="index-card-ribbon" style="background:var(--brass)"></div>
+      <div class="index-card-head">
+        <span class="index-card-type" style="color:var(--brass)">New thought</span>
+      </div>
+      <div class="index-card-body">
+        <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought — it'll be auto-tagged when saved…"></textarea>
+      </div>
+      <div class="index-card-foot compose-actions">
+        <span class="compose-status" id="composeStatus"></span>
+        <button class="compose-cancel" id="composeCancel" type="button">Cancel</button>
+        <button class="compose-save" id="composeSave" type="button">Save to archive</button>
+      </div>
+    </div>
+  `;
+  const back = document.createElement('button');
+  back.className = 'back-btn';
+  back.textContent = '← Back to drawer';
+  back.addEventListener('click', () => app.classList.remove('detail-open'));
+  main.prepend(back);
+  app.classList.add('detail-open');
+
+  const textEl = document.getElementById('composeText');
+  const statusEl = document.getElementById('composeStatus');
+  const saveBtn = document.getElementById('composeSave');
+  const cancelBtn = document.getElementById('composeCancel');
+
+  textEl.focus();
+
+  cancelBtn.addEventListener('click', showEmptyState);
+
+  async function submit() {
+    const content = textEl.value.trim();
+    if (!content) {
+      statusEl.textContent = 'Write something first.';
+      statusEl.style.color = 'var(--rust)';
+      return;
+    }
+    saveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    statusEl.style.color = 'var(--ink-faint)';
+    statusEl.textContent = 'Sending to the archive…';
+    try {
+      await callTool('capture_thought', { content });
+      statusEl.style.color = 'var(--moss)';
+      statusEl.textContent = 'Saved.';
+      setTimeout(() => {
+        showEmptyState();
+        searchMode ? runSearch(lastSearchQuery) : loadAll();
+      }, 500);
+    } catch (err) {
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+      saveBtn.textContent = 'Save to archive';
+      statusEl.style.color = 'var(--rust)';
+      statusEl.textContent = 'Could not save — ' + err.message;
+    }
+  }
+
+  saveBtn.addEventListener('click', submit);
+  textEl.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); submit(); }
+  });
+}
+
+newBtn.addEventListener('click', showComposer);
 
 function showStatus(msg, isError, retryFn) {
   listScroll.innerHTML = '';
