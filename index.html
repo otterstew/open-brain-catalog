@@ -411,6 +411,13 @@
     white-space: pre-wrap;
   }
 
+  .body-link {
+    color: var(--blue);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(108,147,168,0.4);
+  }
+  .body-link:hover { border-bottom-color: var(--blue); }
+
   .index-card-foot {
     border-top: 1px solid var(--hairline);
     padding: 14px 28px 18px;
@@ -1014,6 +1021,31 @@ function escapeAttr(str) {
     .replace(/>/g, '&gt;');
 }
 
+// Renders note content for display: HTML-escaped first (so nothing in a note
+// can inject markup), then markdown links [text](url) and bare http(s) URLs
+// are turned into real anchors. The raw markdown is left untouched in the
+// stored content and in the edit textarea — this is display-only.
+const MD_LINK_RE = /\[([^\]\n]{1,200})\]\((https?:\/\/[^\s<>"')]+)\)/g;
+const BARE_URL_RE = /(^|[\s(])(https?:\/\/[^\s<>"')]+)/g;
+
+function linkAnchor(url, label) {
+  // url/label are already HTML-escaped by escapeHtml, so they must not be
+  // escaped again (that would turn &amp; into &amp;amp;). The URL character
+  // class excludes " < > so it is safe inside a double-quoted attribute.
+  const trail = url.match(/[.,;:!?]+$/);
+  let href = url, tail = '';
+  if (trail && label === url) { href = url.slice(0, -trail[0].length); tail = trail[0]; }
+  return '<a href="' + href + '" target="_blank" rel="noopener noreferrer" class="body-link">'
+    + (label === url ? href : label) + '</a>' + tail;
+}
+
+function renderBodyHtml(content) {
+  let html = escapeHtml(content);
+  html = html.replace(MD_LINK_RE, (_m, text, url) => linkAnchor(url, text));
+  html = html.replace(BARE_URL_RE, (_m, pre, url) => pre + linkAnchor(url, url));
+  return html;
+}
+
 /* ---------- MCP JSON-RPC client ---------- */
 
 let mcpSessionId = null; // the server strips this from responses, but kept in case that changes
@@ -1451,7 +1483,7 @@ function openReference(t) {
         <div class="field-row"><span class="field-label">Published</span><span class="field-value">${t.published_date ? escapeHtml(formatDate(t.published_date)) : '<span class="field-value empty">—</span>'}</span></div>
         <div class="field-row"><span class="field-label">Source</span><span class="field-value">${t.source ? escapeHtml(t.source) : '<span class="field-value empty">—</span>'}</span></div>
       </div>
-      <div class="ref-panel-content">${escapeHtml(t.content)}</div>
+      <div class="ref-panel-content">${renderBodyHtml(t.content)}</div>
       <button class="ref-panel-open-full" id="refOpenFull" type="button">Open this note (discards current edit)</button>
     </div>
   `;
@@ -1520,7 +1552,7 @@ function selectThought(t) {
       ${peopleHtml}
       ${linksHtml}
       ${linkedNotesHtml}
-      <div class="index-card-body"><p>${escapeHtml(t.content)}</p></div>
+      <div class="index-card-body"><p>${renderBodyHtml(t.content)}</p></div>
       <div class="index-card-confirm" id="cardConfirm"></div>
     </div>
   `;
