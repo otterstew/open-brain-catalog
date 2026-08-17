@@ -647,19 +647,32 @@
     outline: none;
   }
   .edit-field-input:focus { border-color: var(--brass); }
+  .edit-body-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    display: block;
+    margin-bottom: 7px;
+  }
   .edit-body-textarea {
     width: 100%;
-    min-height: 140px;
-    background: transparent;
-    border: none;
+    box-sizing: border-box;
+    min-height: 320px;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
     outline: none;
     resize: vertical;
+    overflow: hidden;
     font-family: var(--font-body);
     font-size: 16px;
     line-height: 26px;
     color: var(--ink);
-    padding: 0;
+    padding: 12px 14px;
   }
+  .edit-body-textarea:focus { border-color: var(--brass); }
 
   /* ---------- links / linked notes ---------- */
   .section-label {
@@ -1635,7 +1648,8 @@ function startEdit(t) {
         <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="editUrl" type="text" value="${escapeAttr(t.source_url || '')}" /></div>
       </div>
       <div class="index-card-body">
-        <textarea class="edit-body-textarea" id="editContent">${escapeHtml(t.content)}</textarea>
+        <label class="edit-body-label" for="editContent">Body</label>
+        <textarea class="edit-body-textarea" id="editContent" spellcheck="true">${escapeHtml(t.content)}</textarea>
       </div>
       <div class="index-card-foot compose-actions">
         <span class="compose-status" id="editStatus"></span>
@@ -1655,6 +1669,14 @@ function startEdit(t) {
   const cancelBtn = document.getElementById('editCancel');
   const saveBtn = document.getElementById('editSave');
   const statusEl = document.getElementById('editStatus');
+  const bodyEl = document.getElementById('editContent');
+
+  function autoGrow() {
+    bodyEl.style.height = 'auto';
+    bodyEl.style.height = (bodyEl.scrollHeight + 2) + 'px';
+  }
+  bodyEl.addEventListener('input', autoGrow);
+  autoGrow();
 
   cancelBtn.addEventListener('click', () => { editingId = null; selectThought(t); });
 
