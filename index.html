@@ -411,6 +411,8 @@
   }
   .tag.person::before { content: "@ "; color: var(--ink-faint); }
   .tag.topic::before { content: "# "; color: var(--ink-faint); }
+  .tag.author::before { content: "by "; color: var(--ink-faint); }
+  .tag.source::before { content: "via "; color: var(--ink-faint); }
 
   .back-btn {
     display: none;
@@ -600,6 +602,10 @@
       <div class="chip-row" id="chipRow"></div>
       <div class="chip-group-label" id="topicRowLabel" style="display:none">Topics</div>
       <div class="chip-row topic-chip-row" id="topicRow"></div>
+      <div class="chip-group-label" id="authorRowLabel" style="display:none">Authors</div>
+      <div class="chip-row topic-chip-row" id="authorRow"></div>
+      <div class="chip-group-label" id="sourceRowLabel" style="display:none">Sources</div>
+      <div class="chip-row topic-chip-row" id="sourceRow"></div>
     </div>
 
     <div class="list-scroll" id="listScroll">
@@ -642,6 +648,8 @@ let allThoughts = [];   // full list, from last successful list fetch
 let displayed = [];     // currently shown (after search/filter)
 let activeTypes = new Set();
 let activeTopics = new Set(); // normalized (lowercased) topic strings
+let activeAuthors = new Set(); // normalized (lowercased) author strings
+let activeSources = new Set(); // normalized (lowercased) source strings
 let selectedIndex = null;
 let searchMode = false;
 let lastSearchQuery = '';
@@ -650,6 +658,10 @@ const listScroll = document.getElementById('listScroll');
 const chipRow = document.getElementById('chipRow');
 const topicRow = document.getElementById('topicRow');
 const topicRowLabel = document.getElementById('topicRowLabel');
+const authorRow = document.getElementById('authorRow');
+const authorRowLabel = document.getElementById('authorRowLabel');
+const sourceRow = document.getElementById('sourceRow');
+const sourceRowLabel = document.getElementById('sourceRowLabel');
 const main = document.getElementById('main');
 const app = document.getElementById('app');
 const searchInput = document.getElementById('searchInput');
@@ -784,7 +796,21 @@ function parseListText(text) {
   const re = /(\d+)\.\s*\[([^\]]*)\]\s*\(([^)]*)\)\s*\n([\s\S]*?)(?=\n\s*\d+\.\s*\[|$)/g;
   let m;
   while ((m = re.exec(text)) !== null) {
-    const { content, realId } = extractIdTrailer(m[4].trim());
+    // Optional "Author: X" / "Source: Y" lines the server inserts right after
+    // the parenthetical, before the content — peel off zero, one, or both
+    // (in either order) before treating what's left as the thought's body.
+    let rest = m[4];
+    let author = null;
+    let source = null;
+    const peelRe = /^\s*(Author|Source):\s*([^\n]*)\n/;
+    let peel;
+    while ((peel = rest.match(peelRe))) {
+      const value = peel[2].trim() || null;
+      if (peel[1] === 'Author') author = value; else source = value;
+      rest = rest.slice(peel[0].length);
+    }
+
+    const { content, realId } = extractIdTrailer(rest.trim());
     if (!content) continue;
     const paren = m[3].trim();
     const dashIdx = paren.indexOf(' - ');
@@ -797,6 +823,8 @@ function parseListText(text) {
       type: normalizeType(rawType),
       topics,
       people: [],
+      author,
+      source,
       created_at: m[2].trim() || null,
     });
   }
@@ -831,6 +859,8 @@ function parseSearchText(text) {
     const typeM = metaBlock.match(/Type:\s*([^\n]*)/);
     const topicsM = metaBlock.match(/Topics:\s*([^\n]*)/);
     const peopleM = metaBlock.match(/People:\s*([^\n]*)/);
+    const authorM = metaBlock.match(/Author:\s*([^\n]*)/);
+    const sourceM = metaBlock.match(/Source:\s*([^\n]*)/);
 
     const { content, realId } = extractIdTrailer(bodyRaw);
     if (!content) continue;
@@ -841,6 +871,8 @@ function parseSearchText(text) {
       type: normalizeType(typeM ? typeM[1] : null),
       topics: topicsM ? splitCsv(topicsM[1]) : [],
       people: peopleM ? splitCsv(peopleM[1]) : [],
+      author: authorM ? (authorM[1].trim() || null) : null,
+      source: sourceM ? (sourceM[1].trim() || null) : null,
       created_at: capturedM ? capturedM[1].trim() : null,
     });
   }
@@ -902,6 +934,49 @@ function renderTopicChips() {
   });
 }
 
+// Author/Source chips work like Topics (built from allThoughts, hidden when
+// there's nothing but a single value) but each thought has at most one of
+// each rather than an array, so the map-building and filter predicate are a
+// little simpler than the topic version.
+function renderSingleValueChips(row, rowLabel, field, accentColor, activeSet) {
+  const map = new Map(); // normalized -> display label
+  allThoughts.forEach(t => {
+    const raw = t[field];
+    if (raw) {
+      const norm = raw.trim().toLowerCase();
+      if (norm && !map.has(norm)) map.set(norm, raw.trim());
+    }
+  });
+
+  row.innerHTML = '';
+  if (map.size === 0) {
+    rowLabel.style.display = 'none';
+    return;
+  }
+  rowLabel.style.display = 'block';
+
+  const sorted = Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  sorted.forEach(([norm, label]) => {
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (activeSet.has(norm) ? ' active' : '');
+    if (activeSet.has(norm)) chip.style.background = accentColor;
+    chip.innerHTML = '<span class="dot" style="background:' + accentColor + '"></span>' + escapeHtml(label);
+    chip.addEventListener('click', () => {
+      if (activeSet.has(norm)) activeSet.delete(norm); else activeSet.add(norm);
+      applyFilters();
+    });
+    row.appendChild(chip);
+  });
+}
+
+function renderAuthorChips() {
+  renderSingleValueChips(authorRow, authorRowLabel, 'author', 'var(--plum)', activeAuthors);
+}
+
+function renderSourceChips() {
+  renderSingleValueChips(sourceRow, sourceRowLabel, 'source', 'var(--blue)', activeSources);
+}
+
 function applyFilters() {
   const base = searchMode ? displayed.baseResults : allThoughts;
   let filtered = base;
@@ -913,8 +988,16 @@ function applyFilters() {
       (t.topics || []).some(top => activeTopics.has(top.trim().toLowerCase()))
     );
   }
+  if (activeAuthors.size > 0) {
+    filtered = filtered.filter(t => t.author && activeAuthors.has(t.author.trim().toLowerCase()));
+  }
+  if (activeSources.size > 0) {
+    filtered = filtered.filter(t => t.source && activeSources.has(t.source.trim().toLowerCase()));
+  }
   renderChips();
   renderTopicChips();
+  renderAuthorChips();
+  renderSourceChips();
   renderList(filtered, searchMode);
 }
 
@@ -1025,6 +1108,39 @@ function selectThought(t) {
   const foot = document.getElementById('cardFoot');
   const topics = t.topics || [];
   const people = t.people || [];
+
+  // Author/Source filter helper shared by both tag click handlers below —
+  // same "exit search, narrow to just this value" behavior as the topic tag.
+  function filterToSingleValue(setRef, value) {
+    searchMode = false;
+    lastSearchQuery = '';
+    searchInput.value = '';
+    searchClear.style.display = 'none';
+    setRef.clear();
+    setRef.add(value.trim().toLowerCase());
+    showEmptyState();
+    applyFilters();
+  }
+
+  if (t.author) {
+    const el = document.createElement('span');
+    el.className = 'tag author';
+    el.textContent = t.author;
+    el.style.cursor = 'pointer';
+    el.title = 'Filter the drawer by this author';
+    el.addEventListener('click', () => filterToSingleValue(activeAuthors, t.author));
+    foot.appendChild(el);
+  }
+  if (t.source) {
+    const el = document.createElement('span');
+    el.className = 'tag source';
+    el.textContent = t.source;
+    el.style.cursor = 'pointer';
+    el.title = 'Filter the drawer by this source';
+    el.addEventListener('click', () => filterToSingleValue(activeSources, t.source));
+    foot.appendChild(el);
+  }
+
   topics.forEach(tag => {
     const el = document.createElement('span');
     el.className = 'tag topic';
@@ -1050,8 +1166,9 @@ function selectThought(t) {
     el.textContent = person;
     foot.appendChild(el);
   });
-  if (!topics.length && !people.length) {
-    foot.innerHTML = '<span class="tag" style="opacity:0.6">Unfiled — no topic or person noted</span>';
+  if (!topics.length && !people.length && !t.author && !t.source) {
+    // Safe to overwrite here — nothing else has been appended to foot yet.
+    foot.innerHTML = '<span class="tag" style="opacity:0.6">Unfiled — no topic, person, author, or source noted</span>';
   }
   const back = document.createElement('button');
   back.className = 'back-btn';
@@ -1174,11 +1291,13 @@ async function loadAll() {
     let results = parseListText(text);
     if (results.length === 0 && !isNoResultsMessage(text) && text.trim()) {
       // Unexpected shape — show the raw text rather than an empty drawer.
-      results = [{ id: 'raw-list', content: text.trim(), type: null, topics: [], people: [], created_at: null }];
+      results = [{ id: 'raw-list', content: text.trim(), type: null, topics: [], people: [], author: null, source: null, created_at: null }];
     }
     allThoughts = results;
     activeTypes = new Set();
     activeTopics = new Set();
+    activeAuthors = new Set();
+    activeSources = new Set();
     applyFilters();
   } catch (err) {
     showStatus('Could not reach the archive — ' + err.message, true, loadAll);
@@ -1195,11 +1314,13 @@ async function runSearch(query) {
     const text = await callTool('search_thoughts', { query, limit: 50 });
     let results = parseSearchText(text);
     if (results.length === 0 && !isNoResultsMessage(text) && text.trim()) {
-      results = [{ id: 'raw-search', content: text.trim(), type: null, topics: [], people: [], created_at: null }];
+      results = [{ id: 'raw-search', content: text.trim(), type: null, topics: [], people: [], author: null, source: null, created_at: null }];
     }
     displayed.baseResults = results;
     activeTypes = new Set();
     activeTopics = new Set();
+    activeAuthors = new Set();
+    activeSources = new Set();
     applyFilters();
   } catch (err) {
     showStatus('Search failed — ' + err.message, true, () => runSearch(query));
