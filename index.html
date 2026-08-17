@@ -61,6 +61,8 @@
     height: 100vh;
   }
 
+  .app.ref-open { grid-template-columns: 380px 1fr 320px; }
+
   /* ---------- DRAWER (left column) ---------- */
   .drawer {
     background: var(--panel);
@@ -101,15 +103,6 @@
     font-size: 11px;
     color: var(--ink-faint);
     white-space: nowrap;
-  }
-
-  .drawer-sub {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    color: var(--ink-faint);
-    margin-top: 3px;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
   .refresh-btn {
@@ -273,6 +266,7 @@
   .card-row:hover .card-row-body { background: rgba(232,223,200,0.03); transform: translateX(2px); }
   .card-row:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
   .card-row.selected .card-row-body { background: rgba(201,162,39,0.08); }
+  .card-row.referencing .card-row-body { background: rgba(108,147,168,0.1); }
 
   .card-row-meta {
     display: flex;
@@ -414,6 +408,7 @@
     line-height: 28px;
     margin: 0;
     color: var(--ink);
+    white-space: pre-wrap;
   }
 
   .index-card-foot {
@@ -451,7 +446,7 @@
     padding: 4px 0;
   }
 
-  /* ---------- card actions (delete) ---------- */
+  /* ---------- card actions (edit/delete) ---------- */
   .index-card-head-right {
     display: flex;
     align-items: center;
@@ -473,6 +468,7 @@
     flex-shrink: 0;
   }
   .icon-btn:hover { border-color: var(--rust); color: var(--rust); }
+  .icon-btn#editBtn:hover { border-color: var(--brass); color: var(--brass); }
   .icon-btn:focus-visible { outline: 2px solid var(--rust); outline-offset: 2px; }
   .icon-btn:disabled { opacity: 0.35; cursor: default; }
   .icon-btn:disabled:hover { border-color: var(--hairline); color: var(--ink-faint); }
@@ -573,9 +569,291 @@
   .compose-save:hover { opacity: 0.88; }
   .compose-save:disabled, .compose-cancel:disabled { opacity: 0.5; cursor: default; }
 
+  /* ---------- field list (Title/Author/Published/Source/Tags/URL) ---------- */
+  .field-list {
+    padding: 16px 28px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .field-row {
+    display: flex;
+    gap: 10px;
+    align-items: baseline;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .field-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    width: 74px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .field-value {
+    color: var(--ink-dim);
+    word-break: break-word;
+  }
+  .field-value.empty { opacity: 0.5; font-style: italic; }
+  .field-value a { color: var(--blue); text-decoration: none; }
+  .field-value a:hover { text-decoration: underline; }
+  .field-tag-btn {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    font: inherit;
+    font-size: 13px;
+    padding: 0;
+    cursor: pointer;
+    text-decoration: none;
+  }
+  .field-tag-btn:hover { color: var(--brass); text-decoration: underline; }
+  .field-tags { display: flex; flex-wrap: wrap; gap: 4px 10px; }
+
+  /* ---------- edit mode ---------- */
+  .edit-field-list {
+    padding: 16px 28px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+  }
+  .edit-field-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+  .edit-field-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    width: 74px;
+    flex-shrink: 0;
+  }
+  .edit-field-input {
+    flex: 1;
+    min-width: 0;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 13px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    outline: none;
+  }
+  .edit-field-input:focus { border-color: var(--brass); }
+  .edit-body-textarea {
+    width: 100%;
+    min-height: 140px;
+    background: transparent;
+    border: none;
+    outline: none;
+    resize: vertical;
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 26px;
+    color: var(--ink);
+    padding: 0;
+  }
+
+  /* ---------- links / linked notes ---------- */
+  .section-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 14px 28px 6px;
+    border-top: 1px solid var(--hairline);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .tag-row {
+    padding: 2px 28px 12px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .link-list, .linked-note-list {
+    padding: 0 28px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .link-item, .linked-note-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 12.5px;
+  }
+  .link-open {
+    color: var(--blue);
+    text-decoration: none;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .link-open:hover { text-decoration: underline; }
+  .linked-note-open {
+    background: none;
+    border: none;
+    color: var(--ink-dim);
+    text-align: left;
+    cursor: pointer;
+    font: inherit;
+    font-size: 12.5px;
+    padding: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+  }
+  .linked-note-open:hover { color: var(--brass); }
+  .link-create-btn, .link-add-toggle {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    background: none;
+    border: 1px solid var(--hairline);
+    border-radius: 999px;
+    padding: 3px 9px;
+    cursor: pointer;
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .link-create-btn:hover, .link-add-toggle:hover { border-color: var(--brass); color: var(--brass); }
+  .linked-note-unlink {
+    background: none;
+    border: none;
+    color: var(--ink-faint);
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+    flex-shrink: 0;
+  }
+  .linked-note-unlink:hover { color: var(--rust); }
+
+  .link-picker {
+    padding: 8px 28px 16px;
+  }
+  .link-picker-input {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    padding: 7px 10px;
+    border-radius: 4px;
+    outline: none;
+    margin-bottom: 6px;
+  }
+  .link-picker-input:focus { border-color: var(--brass); }
+  .link-picker-results { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+  .link-picker-item {
+    background: none;
+    border: none;
+    text-align: left;
+    color: var(--ink-dim);
+    font-size: 12px;
+    padding: 6px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    width: 100%;
+  }
+  .link-picker-item:hover { background: rgba(232,223,200,0.05); color: var(--ink); }
+
+  /* ---------- reference panel ---------- */
+  .ref-panel {
+    background: var(--panel);
+    border-left: 1px solid var(--hairline);
+    display: none;
+    flex-direction: column;
+    min-height: 0;
+    overflow-y: auto;
+  }
+  .app.ref-open .ref-panel { display: flex; }
+  .ref-panel-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 18px;
+    border-bottom: 1px solid var(--hairline);
+    position: sticky;
+    top: 0;
+    background: var(--panel);
+  }
+  .ref-panel-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+  .ref-panel-close {
+    background: none;
+    border: 1px solid var(--hairline);
+    color: var(--ink-faint);
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .ref-panel-close:hover { border-color: var(--rust); color: var(--rust); }
+  .ref-panel-body { padding: 16px 20px 30px; }
+  .ref-panel-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 10px;
+    color: var(--ink);
+  }
+  .ref-panel-fields { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .ref-panel-content {
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--ink-dim);
+    white-space: pre-wrap;
+    margin-bottom: 16px;
+  }
+  .ref-panel-open-full {
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--brass);
+    background: none;
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 6px 12px;
+    cursor: pointer;
+  }
+  .ref-panel-open-full:hover { border-color: var(--brass); }
+
   /* ---------- responsive ---------- */
   @media (max-width: 760px) {
     .app { grid-template-columns: 1fr; }
+    .app.ref-open { grid-template-columns: 1fr; }
+    .ref-panel { display: none !important; }
     .drawer { display: flex; }
     .main { display: none; padding: 24px 18px; }
     .app.detail-open .drawer { display: none; }
@@ -605,10 +883,7 @@
   <div class="drawer">
     <div class="drawer-header">
       <div class="drawer-title-row">
-        <div>
-          <h1 class="drawer-title">Open Brain</h1>
-          <div class="drawer-sub">Catalog of thoughts</div>
-        </div>
+        <h1 class="drawer-title">Open Brain</h1>
         <div class="header-actions">
           <button class="refresh-btn" id="newBtn" title="New thought" aria-label="New thought">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -645,6 +920,8 @@
     </div>
   </div>
 
+  <div class="ref-panel" id="refPanel"></div>
+
 </div>
 
 <script>
@@ -677,6 +954,8 @@ let activeAuthors = new Set(); // normalized (lowercased) author strings
 let activeSources = new Set(); // normalized (lowercased) source strings
 let expandedTopicGroups = new Set(); // lowercased first-word group keys currently expanded
 let selectedIndex = null;
+let editingId = null;    // id of the thought currently open in the edit form, or null
+let referenceId = null;  // id of the thought shown read-only in the reference panel, or null
 let searchMode = false;
 let lastSearchQuery = '';
 
@@ -690,6 +969,7 @@ const sourceRow = document.getElementById('sourceRow');
 const sourceRowLabel = document.getElementById('sourceRowLabel');
 const main = document.getElementById('main');
 const app = document.getElementById('app');
+const refPanel = document.getElementById('refPanel');
 const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
 const refreshBtn = document.getElementById('refreshBtn');
@@ -700,6 +980,25 @@ function formatDate(iso) {
   const d = new Date(iso);
   if (isNaN(d.getTime())) return 'Undated';
   return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : str;
+  return div.innerHTML;
+}
+
+// For interpolating into a double-quoted HTML attribute (value="...",
+// data-x="..."). escapeHtml alone isn't safe here — text-node serialization
+// doesn't escape quote characters, so an unescaped " in e.g. a title would
+// break out of the attribute. getAttribute()/reading .value later decodes
+// these entities back to the original string automatically.
+function escapeAttr(str) {
+  return String(str == null ? '' : str)
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
 }
 
 /* ---------- MCP JSON-RPC client ---------- */
@@ -764,145 +1063,48 @@ async function callTool(name, args) {
   return block.text;
 }
 
-/* ---------- Parsing the tool's plain-text output into cards ----------
-   The MCP tools return human-readable text rather than structured JSON,
-   so we parse the known formats. If a format ever changes and parsing
-   comes up empty, we fall back to showing the raw text as a single card
-   rather than failing silently. */
+/* ---------- Normalizing the tool's JSON output into cards ----------
+   list_thoughts / search_thoughts are called with format:"json" so the
+   server returns a real array of {id, content, created_at, metadata}
+   objects instead of the plain-text format meant for other AI clients —
+   no more regex-parsing prose, and ids are always the real database id. */
 
 function normalizeType(raw) {
   if (!raw) return null;
-  const t = raw.trim().toLowerCase();
+  const t = String(raw).trim().toLowerCase();
   if (!t || t === '??' || t === 'unknown' || t === 'none' || t === 'null') return null;
   return Object.prototype.hasOwnProperty.call(TYPE_STYLES, t) ? t : null;
 }
 
-function stableId(prefix, idx, content) {
-  let hash = 0;
-  const str = content || '';
-  for (let i = 0; i < str.length; i++) hash = (hash * 31 + str.charCodeAt(i)) | 0;
-  return prefix + '-' + idx + '-' + Math.abs(hash);
+function normalizeThought(raw) {
+  const m = raw.metadata || {};
+  return {
+    id: raw.id,
+    realId: raw.id,
+    content: raw.content || '',
+    created_at: raw.created_at || null,
+    type: normalizeType(m.type),
+    topics: Array.isArray(m.topics) ? m.topics : [],
+    people: Array.isArray(m.people) ? m.people : [],
+    author: m.author || null,
+    source: m.source_name || null,
+    source_url: m.source_url || null,
+    title: m.title || null,
+    published_date: m.published_date || null,
+    extracted_links: Array.isArray(m.extracted_links) ? m.extracted_links : [],
+    linked_thought_ids: Array.isArray(m.linked_thought_ids) ? m.linked_thought_ids : [],
+  };
 }
 
-// Trailing "[id: <uuid>]" line the server appends to list_thoughts/search_thoughts
-// entries so clients can reference a thought for deletion. Stripped from the
-// displayed content and captured as the real thought id when present.
-const ID_TRAILER_RE = /\n\s*\[id:\s*([0-9a-fA-F-]+)\]\s*$/;
-
-function extractIdTrailer(content) {
-  const match = content.match(ID_TRAILER_RE);
-  if (!match) return { content, realId: null };
-  return { content: content.slice(0, match.index).trim(), realId: match[1] };
+function parseJsonThoughts(text) {
+  let raw;
+  try { raw = JSON.parse(text); } catch (_) { raw = []; }
+  if (!Array.isArray(raw)) raw = [];
+  return raw.map(normalizeThought);
 }
 
-// The server's zero-result messages both start with "No thoughts found"
-// ("No thoughts found." from list_thoughts, "No thoughts found matching
-// "..."." from search_thoughts). Used to tell a genuine empty result apart
-// from an unexpected/malformed response, so we don't render the server's
-// plain-language "nothing here" message as a fake card.
-function isNoResultsMessage(text) {
-  return /^no thoughts found/i.test((text || '').trim());
-}
-
-function splitCsv(str) {
-  return (str || '')
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-// Matches list_thoughts output:
-// "1. [8/16/2026] (observation - AI agents, briefing)\n   Some content...\n\n2. ..."
-// The parenthetical is "type" alone, or "type - topic1, topic2" when topics
-// exist — split on the first " - " rather than treating the whole thing as
-// the type (otherwise normalizeType never matches and everything shows as
-// Unfiled).
-function parseListText(text) {
-  const items = [];
-  const re = /(\d+)\.\s*\[([^\]]*)\]\s*\(([^)]*)\)\s*\n([\s\S]*?)(?=\n\s*\d+\.\s*\[|$)/g;
-  let m;
-  while ((m = re.exec(text)) !== null) {
-    // Optional "Author: X" / "Source: Y" lines the server inserts right after
-    // the parenthetical, before the content — peel off zero, one, or both
-    // (in either order) before treating what's left as the thought's body.
-    let rest = m[4];
-    let author = null;
-    let source = null;
-    const peelRe = /^\s*(Author|Source):\s*([^\n]*)\n/;
-    let peel;
-    while ((peel = rest.match(peelRe))) {
-      const value = peel[2].trim() || null;
-      if (peel[1] === 'Author') author = value; else source = value;
-      rest = rest.slice(peel[0].length);
-    }
-
-    const { content, realId } = extractIdTrailer(rest.trim());
-    if (!content) continue;
-    const paren = m[3].trim();
-    const dashIdx = paren.indexOf(' - ');
-    const rawType = dashIdx >= 0 ? paren.slice(0, dashIdx) : paren;
-    const topics = dashIdx >= 0 ? splitCsv(paren.slice(dashIdx + 3)) : [];
-    items.push({
-      id: realId || stableId('list', m[1], content),
-      realId,
-      content,
-      type: normalizeType(rawType),
-      topics,
-      people: [],
-      author,
-      source,
-      created_at: m[2].trim() || null,
-    });
-  }
-  return items;
-}
-
-// Matches search_thoughts output, e.g.:
-// "--- Result 1 (59.7% match) ---\nCaptured: 8/16/2026\nType: observation\nTopics: AI agents\nPeople: Nate\n\nSome content...\n\n--- Result 2 ..."
-// Topics/People/Actions lines are optional and variable in count, so this
-// locates each result block by its header, then splits header metadata from
-// body content on the first blank line rather than assuming a fixed number
-// of metadata lines (a fixed-line regex silently fails to match — and drops
-// the whole result — whenever Topics/People/Actions are present).
-function parseSearchText(text) {
-  const items = [];
-  const headerRe = /---\s*Result\s*(\d+)[^\n]*---/g;
-  const headers = [];
-  let hm;
-  while ((hm = headerRe.exec(text)) !== null) {
-    headers.push({ num: hm[1], end: headerRe.lastIndex });
-  }
-  for (let i = 0; i < headers.length; i++) {
-    const start = headers[i].end;
-    const nextHeaderStart = i + 1 < headers.length ? text.indexOf('--- Result', start) : -1;
-    const block = text.slice(start, nextHeaderStart >= 0 ? nextHeaderStart : text.length);
-    const blankIdx = block.indexOf('\n\n');
-    const metaBlock = blankIdx >= 0 ? block.slice(0, blankIdx) : block;
-    const bodyRaw = (blankIdx >= 0 ? block.slice(blankIdx + 2) : '').trim();
-    if (!bodyRaw) continue;
-
-    const capturedM = metaBlock.match(/Captured:\s*([^\n]*)/);
-    const typeM = metaBlock.match(/Type:\s*([^\n]*)/);
-    const topicsM = metaBlock.match(/Topics:\s*([^\n]*)/);
-    const peopleM = metaBlock.match(/People:\s*([^\n]*)/);
-    const authorM = metaBlock.match(/Author:\s*([^\n]*)/);
-    const sourceM = metaBlock.match(/Source:\s*([^\n]*)/);
-
-    const { content, realId } = extractIdTrailer(bodyRaw);
-    if (!content) continue;
-    items.push({
-      id: realId || stableId('search', headers[i].num, content),
-      realId,
-      content,
-      type: normalizeType(typeM ? typeM[1] : null),
-      topics: topicsM ? splitCsv(topicsM[1]) : [],
-      people: peopleM ? splitCsv(peopleM[1]) : [],
-      author: authorM ? (authorM[1].trim() || null) : null,
-      source: sourceM ? (sourceM[1].trim() || null) : null,
-      created_at: capturedM ? capturedM[1].trim() : null,
-    });
-  }
-  return items;
+function findThought(id) {
+  return allThoughts.find(t => t.id === id) || null;
 }
 
 function renderChips() {
@@ -1090,10 +1292,12 @@ function renderList(items, isSearch) {
     return;
   }
 
-  items.forEach((t, idx) => {
+  items.forEach((t) => {
     const style = typeStyle(t.type);
     const row = document.createElement('button');
-    row.className = 'card-row' + (selectedIndex === t.id ? ' selected' : '');
+    row.className = 'card-row'
+      + (selectedIndex === t.id ? ' selected' : '')
+      + (referenceId === t.id ? ' referencing' : '');
     row.innerHTML = `
       <div class="card-row-tab" style="background:${style.color}"></div>
       <div class="card-row-body">
@@ -1101,133 +1305,260 @@ function renderList(items, isSearch) {
           <span class="card-row-type" style="color:${style.color}">${style.label}</span>
           <span class="card-row-date">${formatDate(t.created_at)}</span>
         </div>
-        <div class="card-row-preview">${escapeHtml(t.content)}</div>
+        <div class="card-row-preview">${escapeHtml(t.title || t.content)}</div>
       </div>
     `;
-    row.addEventListener('click', () => selectThought(t));
+    row.addEventListener('click', () => {
+      if (editingId && t.id !== editingId) {
+        openReference(t);
+      } else if (!editingId) {
+        selectThought(t);
+      }
+    });
     listScroll.appendChild(row);
   });
 }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+// Shared by both the author and source field-value clicks in the detail
+// view — exits any active search and narrows the drawer to just that value.
+function filterToSingleValue(setRef, value) {
+  searchMode = false;
+  lastSearchQuery = '';
+  searchInput.value = '';
+  searchClear.style.display = 'none';
+  setRef.clear();
+  setRef.add(value.trim().toLowerCase());
+  showEmptyState();
+  applyFilters();
+}
+
+function renderLinksSection(t) {
+  const items = t.extracted_links.map(l => {
+    const label = l.text && l.text !== l.url ? l.text : l.url;
+    return `
+      <div class="link-item">
+        <a class="link-open" href="${escapeAttr(l.url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>
+        <button class="link-create-btn" data-url="${escapeAttr(l.url)}" data-text="${escapeAttr(l.text || '')}" type="button">+ Create linked note</button>
+      </div>
+    `;
+  }).join('');
+  return `<div class="section-label"><span>Links found in this note</span></div><div class="link-list">${items}</div>`;
+}
+
+function renderLinkedNotesSection(t) {
+  const items = t.linked_thought_ids.map(id => {
+    const found = findThought(id);
+    const label = found
+      ? (found.title || found.content.replace(/\s+/g, ' ').trim().slice(0, 60))
+      : ('Note ' + id.slice(0, 8) + '…');
+    return `
+      <div class="linked-note-item">
+        <button class="linked-note-open" data-id="${escapeAttr(id)}" type="button">${escapeHtml(label)}</button>
+        <button class="linked-note-unlink" data-id="${escapeAttr(id)}" title="Remove link" type="button">×</button>
+      </div>
+    `;
+  }).join('');
+  return `
+    <div class="section-label">
+      <span>Linked notes</span>
+      <button class="link-add-toggle" id="linkAddToggle" type="button">+ Link to another note</button>
+    </div>
+    <div class="linked-note-list">${items || '<span class="field-value empty">No linked notes yet.</span>'}</div>
+    <div class="link-picker" id="linkPicker" style="display:none">
+      <input class="link-picker-input" id="linkPickerInput" type="text" placeholder="Search notes to link…" />
+      <div class="link-picker-results" id="linkPickerResults"></div>
+    </div>
+  `;
+}
+
+function setupLinkPicker(t) {
+  const toggle = document.getElementById('linkAddToggle');
+  const picker = document.getElementById('linkPicker');
+  const input = document.getElementById('linkPickerInput');
+  const results = document.getElementById('linkPickerResults');
+  if (!toggle) return;
+
+  function renderResults(query) {
+    const q = query.trim().toLowerCase();
+    const linked = new Set(t.linked_thought_ids);
+    const candidates = allThoughts.filter(o => o.id !== t.id && !linked.has(o.id));
+    const matches = (q
+      ? candidates.filter(o => (o.title || '').toLowerCase().includes(q) || o.content.toLowerCase().includes(q))
+      : candidates
+    ).slice(0, 8);
+    results.innerHTML = matches.length
+      ? matches.map(o => `<button class="link-picker-item" data-id="${escapeAttr(o.id)}" type="button">${escapeHtml(o.title || o.content.replace(/\s+/g, ' ').trim().slice(0, 70))}</button>`).join('')
+      : '<span class="field-value empty" style="padding:6px 8px;display:block;">No matches.</span>';
+    results.querySelectorAll('.link-picker-item').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await callTool('link_thoughts', { id_a: t.id, id_b: btn.getAttribute('data-id') });
+          await refreshAndReselect(t.id);
+        } catch (err) {
+          btn.disabled = false;
+          results.insertAdjacentHTML('afterbegin', `<span class="field-value" style="color:var(--rust);display:block;padding:4px 8px;">Could not link — ${escapeHtml(err.message)}</span>`);
+        }
+      });
+    });
+  }
+
+  toggle.addEventListener('click', () => {
+    const showing = picker.style.display !== 'none';
+    picker.style.display = showing ? 'none' : 'block';
+    if (!showing) { input.value = ''; renderResults(''); input.focus(); }
+  });
+  input.addEventListener('input', () => renderResults(input.value));
+}
+
+async function refreshAndReselect(id) {
+  await loadAll();
+  const found = findThought(id);
+  if (found) selectThought(found); else showEmptyState();
+}
+
+function closeReference() {
+  referenceId = null;
+  refPanel.innerHTML = '';
+  app.classList.remove('ref-open');
+}
+
+function openReference(t) {
+  referenceId = t.id;
+  renderList(displayed, searchMode);
+  refPanel.innerHTML = `
+    <div class="ref-panel-header">
+      <span class="ref-panel-label">Reference</span>
+      <button class="ref-panel-close" id="refClose" aria-label="Close reference panel" type="button">×</button>
+    </div>
+    <div class="ref-panel-body">
+      <h3 class="ref-panel-title">${escapeHtml(t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 60))}</h3>
+      <div class="ref-panel-fields">
+        <div class="field-row"><span class="field-label">Author</span><span class="field-value">${t.author ? escapeHtml(t.author) : '<span class="field-value empty">—</span>'}</span></div>
+        <div class="field-row"><span class="field-label">Published</span><span class="field-value">${t.published_date ? escapeHtml(formatDate(t.published_date)) : '<span class="field-value empty">—</span>'}</span></div>
+        <div class="field-row"><span class="field-label">Source</span><span class="field-value">${t.source ? escapeHtml(t.source) : '<span class="field-value empty">—</span>'}</span></div>
+      </div>
+      <div class="ref-panel-content">${escapeHtml(t.content)}</div>
+      <button class="ref-panel-open-full" id="refOpenFull" type="button">Open this note (discards current edit)</button>
+    </div>
+  `;
+  app.classList.add('ref-open');
+  document.getElementById('refClose').addEventListener('click', closeReference);
+  document.getElementById('refOpenFull').addEventListener('click', () => {
+    editingId = null;
+    closeReference();
+    selectThought(t);
+  });
 }
 
 function selectThought(t) {
   selectedIndex = t.id;
+  editingId = null;
+  closeReference();
   renderList(displayed, searchMode);
   const style = typeStyle(t.type);
+
+  const titleHtml = t.title ? escapeHtml(t.title) : '<span class="field-value empty">—</span>';
+  const authorHtml = t.author
+    ? `<button class="field-tag-btn" data-author="${escapeAttr(t.author)}" type="button">${escapeHtml(t.author)}</button>`
+    : '<span class="field-value empty">—</span>';
+  const publishedHtml = t.published_date
+    ? escapeHtml(formatDate(t.published_date))
+    : '<span class="field-value empty">—</span>';
+  const sourceHtml = t.source
+    ? `<button class="field-tag-btn" data-source="${escapeAttr(t.source)}" type="button">${escapeHtml(t.source)}</button>`
+    : '<span class="field-value empty">—</span>';
+  const tagsHtml = t.topics.length
+    ? '<div class="field-tags">' + t.topics.map(tag => `<button class="field-tag-btn" data-topic="${escapeAttr(tag)}" type="button">#${escapeHtml(tag)}</button>`).join('') + '</div>'
+    : '<span class="field-value empty">—</span>';
+  const urlHtml = t.source_url
+    ? `<a href="${escapeAttr(t.source_url)}" target="_blank" rel="noopener">${escapeHtml(t.source_url)}</a>`
+    : '<span class="field-value empty">—</span>';
+
+  const peopleHtml = t.people.length
+    ? `<div class="section-label"><span>People mentioned</span></div><div class="tag-row">${t.people.map(p => `<span class="tag person">${escapeHtml(p)}</span>`).join('')}</div>`
+    : '';
+  const linksHtml = t.extracted_links.length ? renderLinksSection(t) : '';
+  const linkedNotesHtml = renderLinkedNotesSection(t);
+
   main.innerHTML = `
     <div class="index-card">
       <div class="index-card-ribbon" style="background:${style.color}"></div>
       <div class="index-card-head">
         <span class="index-card-type" style="color:${style.color}">${style.label}</span>
         <div class="index-card-head-right">
-          <span class="index-card-date">${formatDate(t.created_at)}</span>
+          <span class="index-card-date" title="Date captured">${formatDate(t.created_at)}</span>
+          <button class="icon-btn" id="editBtn" title="Edit thought" aria-label="Edit thought">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+          </button>
           <button class="icon-btn" id="deleteBtn" title="Delete thought" aria-label="Delete thought">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path><path d="M10 11v6"></path><path d="M14 11v6"></path><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"></path></svg>
           </button>
         </div>
       </div>
+      <div class="field-list">
+        <div class="field-row"><span class="field-label">Title</span><span class="field-value">${titleHtml}</span></div>
+        <div class="field-row"><span class="field-label">Author</span><span class="field-value">${authorHtml}</span></div>
+        <div class="field-row"><span class="field-label">Published</span><span class="field-value">${publishedHtml}</span></div>
+        <div class="field-row"><span class="field-label">Source</span><span class="field-value">${sourceHtml}</span></div>
+        <div class="field-row"><span class="field-label">Tags</span><span class="field-value">${tagsHtml}</span></div>
+        <div class="field-row"><span class="field-label">URL</span><span class="field-value">${urlHtml}</span></div>
+      </div>
       <div class="index-card-body"><p>${escapeHtml(t.content)}</p></div>
+      ${peopleHtml}
+      ${linksHtml}
+      ${linkedNotesHtml}
       <div class="index-card-confirm" id="cardConfirm"></div>
-      <div class="index-card-foot" id="cardFoot"></div>
     </div>
   `;
 
   const deleteBtn = document.getElementById('deleteBtn');
+  const editBtn = document.getElementById('editBtn');
   const cardConfirm = document.getElementById('cardConfirm');
-  const deletableId = t.realId || null;
+  const deletableId = t.realId;
 
-  if (!deletableId) {
-    deleteBtn.disabled = true;
-    deleteBtn.title = 'Cannot delete — no id available for this card (try refreshing)';
-  } else {
-    deleteBtn.addEventListener('click', () => {
-      cardConfirm.style.display = 'flex';
-      cardConfirm.innerHTML = `
-        <span class="confirm-text">Delete this thought? This can't be undone.</span>
-        <button class="confirm-cancel" type="button">Cancel</button>
-        <button class="confirm-delete" type="button">Delete</button>
-      `;
-      const textEl = cardConfirm.querySelector('.confirm-text');
-      const cancelBtn = cardConfirm.querySelector('.confirm-cancel');
-      const confirmBtn = cardConfirm.querySelector('.confirm-delete');
+  editBtn.addEventListener('click', () => startEdit(t));
 
-      cancelBtn.addEventListener('click', () => {
-        cardConfirm.style.display = 'none';
-        cardConfirm.innerHTML = '';
-      });
+  deleteBtn.addEventListener('click', () => {
+    cardConfirm.style.display = 'flex';
+    cardConfirm.innerHTML = `
+      <span class="confirm-text">Delete this thought? This can't be undone.</span>
+      <button class="confirm-cancel" type="button">Cancel</button>
+      <button class="confirm-delete" type="button">Delete</button>
+    `;
+    const textEl = cardConfirm.querySelector('.confirm-text');
+    const cancelBtn = cardConfirm.querySelector('.confirm-cancel');
+    const confirmBtn = cardConfirm.querySelector('.confirm-delete');
 
-      confirmBtn.addEventListener('click', async () => {
-        confirmBtn.disabled = true;
-        cancelBtn.disabled = true;
-        confirmBtn.textContent = 'Deleting…';
-        try {
-          await callTool('delete_thought', { id: deletableId });
-          showEmptyState();
-          searchMode ? runSearch(lastSearchQuery) : loadAll();
-        } catch (err) {
-          confirmBtn.disabled = false;
-          cancelBtn.disabled = false;
-          confirmBtn.textContent = 'Delete';
-          textEl.textContent = 'Could not delete — ' + err.message;
-        }
-      });
+    cancelBtn.addEventListener('click', () => {
+      cardConfirm.style.display = 'none';
+      cardConfirm.innerHTML = '';
     });
-  }
 
-  const foot = document.getElementById('cardFoot');
-  const topics = t.topics || [];
-  const people = t.people || [];
+    confirmBtn.addEventListener('click', async () => {
+      confirmBtn.disabled = true;
+      cancelBtn.disabled = true;
+      confirmBtn.textContent = 'Deleting…';
+      try {
+        await callTool('delete_thought', { id: deletableId });
+        showEmptyState();
+        await loadAll();
+      } catch (err) {
+        confirmBtn.disabled = false;
+        cancelBtn.disabled = false;
+        confirmBtn.textContent = 'Delete';
+        textEl.textContent = 'Could not delete — ' + err.message;
+      }
+    });
+  });
 
-  // Author/Source filter helper shared by both tag click handlers below —
-  // same "exit search, narrow to just this value" behavior as the topic tag.
-  function filterToSingleValue(setRef, value) {
-    searchMode = false;
-    lastSearchQuery = '';
-    searchInput.value = '';
-    searchClear.style.display = 'none';
-    setRef.clear();
-    setRef.add(value.trim().toLowerCase());
-    showEmptyState();
-    applyFilters();
-  }
-
-  if (t.author) {
-    const el = document.createElement('span');
-    el.className = 'tag author';
-    el.textContent = t.author;
-    el.style.cursor = 'pointer';
-    el.title = 'Filter the drawer by this author';
-    el.addEventListener('click', () => filterToSingleValue(activeAuthors, t.author));
-    foot.appendChild(el);
-  }
-  if (t.source) {
-    const el = document.createElement('span');
-    el.className = 'tag source';
-    el.textContent = t.source;
-    el.style.cursor = 'pointer';
-    el.title = 'Filter the drawer by this source';
-    el.addEventListener('click', () => filterToSingleValue(activeSources, t.source));
-    foot.appendChild(el);
-  }
-
-  topics.forEach(tag => {
-    const el = document.createElement('span');
-    el.className = 'tag topic';
-    el.textContent = tag;
-    el.style.cursor = 'pointer';
-    el.title = 'Filter the drawer by this topic';
-    el.addEventListener('click', () => {
-      // Browse this topic against the full list, not scoped to whatever
-      // search (if any) got us here.
+  main.querySelectorAll('[data-topic]').forEach(btn => {
+    btn.addEventListener('click', () => {
       searchMode = false;
       lastSearchQuery = '';
       searchInput.value = '';
       searchClear.style.display = 'none';
+      const tag = btn.getAttribute('data-topic');
       activeTopics = new Set([tag.trim().toLowerCase()]);
       // Auto-expand this tag's group (if any) so it's visible, not hidden
       // inside a collapsed parent chip, the moment the drawer re-renders.
@@ -1235,18 +1566,42 @@ function selectThought(t) {
       showEmptyState();
       applyFilters();
     });
-    foot.appendChild(el);
   });
-  people.forEach(person => {
-    const el = document.createElement('span');
-    el.className = 'tag person';
-    el.textContent = person;
-    foot.appendChild(el);
+  const authorBtn = main.querySelector('[data-author]');
+  if (authorBtn) authorBtn.addEventListener('click', () => filterToSingleValue(activeAuthors, authorBtn.getAttribute('data-author')));
+  const sourceBtn = main.querySelector('[data-source]');
+  if (sourceBtn) sourceBtn.addEventListener('click', () => filterToSingleValue(activeSources, sourceBtn.getAttribute('data-source')));
+
+  main.querySelectorAll('.link-create-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const url = btn.getAttribute('data-url');
+      const text = btn.getAttribute('data-text');
+      const prefill = text && text !== url ? `${text}\n${url}` : url;
+      showComposer(prefill, t.id);
+    });
   });
-  if (!topics.length && !people.length && !t.author && !t.source) {
-    // Safe to overwrite here — nothing else has been appended to foot yet.
-    foot.innerHTML = '<span class="tag" style="opacity:0.6">Unfiled — no topic, person, author, or source noted</span>';
-  }
+
+  main.querySelectorAll('.linked-note-open').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const found = findThought(btn.getAttribute('data-id'));
+      if (found) selectThought(found);
+    });
+  });
+  main.querySelectorAll('.linked-note-unlink').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      try {
+        await callTool('unlink_thoughts', { id_a: t.id, id_b: btn.getAttribute('data-id') });
+        await refreshAndReselect(t.id);
+      } catch (err) {
+        btn.disabled = false;
+        btn.title = 'Could not unlink — ' + err.message;
+      }
+    });
+  });
+
+  setupLinkPicker(t);
+
   const back = document.createElement('button');
   back.className = 'back-btn';
   back.textContent = '← Back to drawer';
@@ -1256,8 +1611,102 @@ function selectThought(t) {
   app.classList.add('detail-open');
 }
 
+function startEdit(t) {
+  editingId = t.id;
+  closeReference();
+  renderList(displayed, searchMode);
+  const style = typeStyle(t.type);
+
+  main.innerHTML = `
+    <div class="index-card">
+      <div class="index-card-ribbon" style="background:${style.color}"></div>
+      <div class="index-card-head">
+        <span class="index-card-type" style="color:${style.color}">${style.label} · editing</span>
+        <div class="index-card-head-right">
+          <span class="index-card-date">${formatDate(t.created_at)}</span>
+        </div>
+      </div>
+      <div class="edit-field-list">
+        <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="editTitle" type="text" value="${escapeAttr(t.title || '')}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="editAuthor" type="text" value="${escapeAttr(t.author || '')}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="editPublished" type="text" placeholder="YYYY-MM-DD" value="${escapeAttr(t.published_date || '')}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="editSource" type="text" value="${escapeAttr(t.source || '')}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="editTags" type="text" placeholder="comma, separated, tags" value="${escapeAttr(t.topics.join(', '))}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="editUrl" type="text" value="${escapeAttr(t.source_url || '')}" /></div>
+      </div>
+      <div class="index-card-body">
+        <textarea class="edit-body-textarea" id="editContent">${escapeHtml(t.content)}</textarea>
+      </div>
+      <div class="index-card-foot compose-actions">
+        <span class="compose-status" id="editStatus"></span>
+        <button class="compose-cancel" id="editCancel" type="button">Cancel</button>
+        <button class="compose-save" id="editSave" type="button">Save changes</button>
+      </div>
+    </div>
+  `;
+
+  const back = document.createElement('button');
+  back.className = 'back-btn';
+  back.textContent = '← Back to drawer';
+  back.addEventListener('click', () => { editingId = null; app.classList.remove('detail-open'); });
+  main.prepend(back);
+  app.classList.add('detail-open');
+
+  const cancelBtn = document.getElementById('editCancel');
+  const saveBtn = document.getElementById('editSave');
+  const statusEl = document.getElementById('editStatus');
+
+  cancelBtn.addEventListener('click', () => { editingId = null; selectThought(t); });
+
+  saveBtn.addEventListener('click', async () => {
+    const newContent = document.getElementById('editContent').value.trim();
+    if (!newContent) {
+      statusEl.textContent = 'Content cannot be empty.';
+      statusEl.style.color = 'var(--rust)';
+      return;
+    }
+    const newTitle = document.getElementById('editTitle').value.trim();
+    const newAuthor = document.getElementById('editAuthor').value.trim();
+    const newPublished = document.getElementById('editPublished').value.trim();
+    const newSource = document.getElementById('editSource').value.trim();
+    const newTags = document.getElementById('editTags').value.split(',').map(s => s.trim()).filter(Boolean);
+    const newUrl = document.getElementById('editUrl').value.trim();
+
+    saveBtn.disabled = true;
+    cancelBtn.disabled = true;
+    saveBtn.textContent = 'Saving…';
+    statusEl.style.color = 'var(--ink-faint)';
+    statusEl.textContent = 'Saving changes…';
+
+    const args = {
+      id: t.id,
+      title: newTitle || null,
+      author: newAuthor || null,
+      published_date: newPublished || null,
+      source_name: newSource || null,
+      source_url: newUrl || null,
+      topics: newTags,
+    };
+    if (newContent !== t.content) args.content = newContent;
+
+    try {
+      await callTool('update_thought', args);
+      editingId = null;
+      await refreshAndReselect(t.id);
+    } catch (err) {
+      saveBtn.disabled = false;
+      cancelBtn.disabled = false;
+      saveBtn.textContent = 'Save changes';
+      statusEl.style.color = 'var(--rust)';
+      statusEl.textContent = 'Could not save — ' + err.message;
+    }
+  });
+}
+
 function showEmptyState() {
   selectedIndex = null;
+  editingId = null;
+  closeReference();
   renderList(displayed, searchMode);
   main.innerHTML = `
     <div class="empty-state">
@@ -1268,17 +1717,19 @@ function showEmptyState() {
   app.classList.remove('detail-open');
 }
 
-function showComposer() {
+function showComposer(prefill, parentId) {
   selectedIndex = null;
+  editingId = null;
+  closeReference();
   renderList(displayed, searchMode);
   main.innerHTML = `
     <div class="index-card">
       <div class="index-card-ribbon" style="background:var(--brass)"></div>
       <div class="index-card-head">
-        <span class="index-card-type" style="color:var(--brass)">New thought</span>
+        <span class="index-card-type" style="color:var(--brass)">New thought${parentId ? ' · linked' : ''}</span>
       </div>
       <div class="index-card-body">
-        <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought — it'll be auto-tagged when saved…"></textarea>
+        <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought — it'll be auto-tagged when saved…">${escapeHtml(prefill || '')}</textarea>
       </div>
       <div class="index-card-foot compose-actions">
         <span class="compose-status" id="composeStatus"></span>
@@ -1300,6 +1751,7 @@ function showComposer() {
   const cancelBtn = document.getElementById('composeCancel');
 
   textEl.focus();
+  if (prefill) textEl.setSelectionRange(0, 0);
 
   cancelBtn.addEventListener('click', showEmptyState);
 
@@ -1314,14 +1766,17 @@ function showComposer() {
     cancelBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
     statusEl.style.color = 'var(--ink-faint)';
-    statusEl.textContent = 'Sending to the archive…';
+    statusEl.textContent = parentId ? 'Sending to the archive and linking back…' : 'Sending to the archive…';
     try {
-      await callTool('capture_thought', { content });
+      const args = { content };
+      if (parentId) args.parent_thought_id = parentId;
+      await callTool('capture_thought', args);
       statusEl.style.color = 'var(--moss)';
       statusEl.textContent = 'Saved.';
-      setTimeout(() => {
+      setTimeout(async () => {
         showEmptyState();
-        searchMode ? runSearch(lastSearchQuery) : loadAll();
+        if (parentId) { await loadAll(); const found = findThought(parentId); if (found) selectThought(found); }
+        else { await loadAll(); }
       }, 500);
     } catch (err) {
       saveBtn.disabled = false;
@@ -1338,7 +1793,7 @@ function showComposer() {
   });
 }
 
-newBtn.addEventListener('click', showComposer);
+newBtn.addEventListener('click', () => showComposer());
 
 function showStatus(msg, isError, retryFn) {
   listScroll.innerHTML = '';
@@ -1364,13 +1819,8 @@ async function loadAll() {
   searchClear.style.display = 'none';
   showStatus('Opening the drawer…', false);
   try {
-    const text = await callTool('list_thoughts', { limit: 100 });
-    let results = parseListText(text);
-    if (results.length === 0 && !isNoResultsMessage(text) && text.trim()) {
-      // Unexpected shape — show the raw text rather than an empty drawer.
-      results = [{ id: 'raw-list', content: text.trim(), type: null, topics: [], people: [], author: null, source: null, created_at: null }];
-    }
-    allThoughts = results;
+    const text = await callTool('list_thoughts', { limit: 100, format: 'json' });
+    allThoughts = parseJsonThoughts(text);
     activeTypes = new Set();
     activeTopics = new Set();
     activeAuthors = new Set();
@@ -1388,11 +1838,8 @@ async function runSearch(query) {
   searchClear.style.display = 'block';
   showStatus('Searching the archive for "' + query + '"…', false);
   try {
-    const text = await callTool('search_thoughts', { query, limit: 50 });
-    let results = parseSearchText(text);
-    if (results.length === 0 && !isNoResultsMessage(text) && text.trim()) {
-      results = [{ id: 'raw-search', content: text.trim(), type: null, topics: [], people: [], author: null, source: null, created_at: null }];
-    }
+    const text = await callTool('search_thoughts', { query, limit: 50, format: 'json' });
+    const results = parseJsonThoughts(text);
     displayed.baseResults = results;
     activeTypes = new Set();
     activeTopics = new Set();
