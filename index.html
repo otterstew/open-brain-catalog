@@ -1447,6 +1447,28 @@
   </p>
 </div>
 
+<div class="import" id="tagPanel" hidden>
+  <div class="import-panel">
+    <div class="import-tags" id="importTags">
+      <div class="import-tags-head" id="importTagsHead">Tags for this note</div>
+      <div class="import-tag-row" id="importTagRow"></div>
+      <div class="import-tag-add">
+        <input class="import-tag-input" id="importTagInput" type="text" list="importTagOptions"
+               placeholder="Type a tag, or pick one below — Enter to add"
+               autocomplete="off" aria-label="Add a tag" />
+        <button class="import-btn ghost" id="importTagAdd" type="button">Add</button>
+      </div>
+      <datalist id="importTagOptions"></datalist>
+      <div class="import-tag-common" id="importTagCommon"></div>
+      <div class="import-status" id="tagStatus"></div>
+      <div class="import-actions">
+        <button class="import-btn" id="importTagSave" type="button">Save tags</button>
+        <button class="import-btn ghost" id="importTagSkip" type="button">Leave as they are</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="import" id="importPanel" hidden>
   <div class="import-panel">
     <div class="import-head">
@@ -1466,22 +1488,6 @@
         <input class="link-picker-input" id="importPickerInput" type="text"
                placeholder="Search notes to replace…" />
         <div class="link-picker-results" id="importPickerResults"></div>
-      </div>
-    </div>
-    <div class="import-tags" id="importTags" hidden>
-      <div class="import-tags-head" id="importTagsHead">Tags for this note</div>
-      <div class="import-tag-row" id="importTagRow"></div>
-      <div class="import-tag-add">
-        <input class="import-tag-input" id="importTagInput" type="text" list="importTagOptions"
-               placeholder="Type a tag, or pick one below — Enter to add"
-               autocomplete="off" aria-label="Add a tag" />
-        <button class="import-btn ghost" id="importTagAdd" type="button">Add</button>
-      </div>
-      <datalist id="importTagOptions"></datalist>
-      <div class="import-tag-common" id="importTagCommon"></div>
-      <div class="import-actions">
-        <button class="import-btn" id="importTagSave" type="button">Save tags</button>
-        <button class="import-btn ghost" id="importTagSkip" type="button">Leave as they are</button>
       </div>
     </div>
     <div class="import-summary" id="importSummary" hidden>
@@ -3080,13 +3086,20 @@ function showComposer(prefill, parentId) {
       // files go the other way: their own byline and date are detected.
       const args = { content, author: SELF_AUTHOR, published_date: todayISO() };
       if (parentId) args.parent_thought_id = parentId;
-      await callTool('capture_thought', args);
+      const res = await callTool('capture_thought', args);
+      // The id is needed to offer the tag step. The extractor reads the text
+      // with no idea what this archive collects, so on an unfamiliar subject it
+      // reaches for the nearest tag it knows — a note about light waves came
+      // back tagged "AI". Confirming while the note is still in mind is the
+      // cheapest place to correct it.
+      const saved = /id: ([0-9a-f-]{36})/.exec(res);
       statusEl.style.color = 'var(--moss)';
       statusEl.textContent = 'Saved.';
       setTimeout(async () => {
         showEmptyState();
         if (parentId) { await loadAll(); const found = findThought(parentId); if (found) selectThought(found); }
         else { await loadAll(); }
+        if (saved) await confirmTags(saved[1]);
       }, 500);
     } catch (err) {
       saveBtn.disabled = false;
@@ -3782,6 +3795,8 @@ document.getElementById('importDone').addEventListener('click', closeImport);
 // archive collects, so on an unusual subject it reaches for the nearest tag it
 // knows. Correcting it here costs one step; finding it months later costs
 // remembering the note exists at all.
+const tagPanel = document.getElementById('tagPanel');
+const tagStatus = document.getElementById('tagStatus');
 const importTags = document.getElementById('importTags');
 const importTagRow = document.getElementById('importTagRow');
 const importTagInput = document.getElementById('importTagInput');
@@ -3856,45 +3871,57 @@ function fillTagSuggestions() {
 // the save having failed.
 function confirmTags(id) {
   const note = allThoughts.find(t => t.id === id);
+  // No note means the list has not caught up. Skipping silently is right: the
+  // note is already saved, and a modal about a note we cannot show is worse
+  // than no modal.
   if (!note) return Promise.resolve();
+  tagNoteId = id;
   tagOriginal = (note.topics || []).slice();
   tagDraft = tagOriginal.slice();
   importTagsHead.textContent = tagOriginal.length
     ? 'Suggested tags — change them if they are wrong'
     : 'No tags were suggested — add one';
+  setTagStatus('');
   fillTagSuggestions();
   renderTagDraft();
-  importEditor.hidden = true;
-  importTags.hidden = false;
+  tagPanel.hidden = false;
   importTagInput.value = '';
   importTagInput.focus();
   return new Promise(resolve => { tagResolve = resolve; });
 }
 
 function finishTags() {
-  importTags.hidden = true;
-  importEditor.hidden = false;
+  tagPanel.hidden = true;
   const done = tagResolve; tagResolve = null;
   if (done) done();
 }
 
+function setTagStatus(msg, isError) {
+  tagStatus.textContent = msg || '';
+  tagStatus.classList.toggle('error', Boolean(isError));
+}
+
 document.getElementById('importTagSkip').addEventListener('click', finishTags);
+document.addEventListener('keydown', ev => {
+  if (ev.key === 'Escape' && !tagPanel.hidden) { ev.preventDefault(); finishTags(); }
+});
 document.getElementById('importTagSave').addEventListener('click', async ev => {
   const btn = ev.currentTarget;
   const same = tagDraft.length === tagOriginal.length &&
                tagDraft.every((t, i) => t === tagOriginal[i]);
   if (same) { finishTags(); return; }
   btn.disabled = true;
-  setImportStatus('Saving tags…');
+  setTagStatus('Saving tags…');
   try {
     await callTool('update_thought', { id: tagNoteId, topics: tagDraft });
     await loadAll();
-    setImportStatus('');
-  } catch (err) {
-    setImportStatus('Tags not saved — ' + err.message, true);
-  } finally {
+    setTagStatus('');
     btn.disabled = false;
     finishTags();
+  } catch (err) {
+    // Leave the panel open on failure, so the tags typed are not lost.
+    setTagStatus('Tags not saved — ' + err.message, true);
+    btn.disabled = false;
   }
 });
 
