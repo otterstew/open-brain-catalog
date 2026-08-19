@@ -1215,6 +1215,7 @@
     font-family: var(--font-mono); font-size: 12px; padding: 7px 8px;
   }
   .import-tag-input:focus { outline: 2px solid var(--brass); outline-offset: 1px; }
+  .edit-tag-suggest-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
   .import-tag-common { display: flex; flex-wrap: wrap; gap: 5px; }
   .import-tag-common button {
     background: none; border: 1px dashed var(--ink-dim); border-radius: 3px;
@@ -2861,6 +2862,16 @@ function startEdit(t, anchorOffset) {
         <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="editPublished" type="text" placeholder="dd/mm/yyyy" value="${escapeAttr(formatDateInput(t.published_date))}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="editSource" type="text" value="${escapeAttr(t.source || '')}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="editTags" type="text" placeholder="comma, separated, tags" value="${escapeAttr(t.topics.join(', '))}" /></div>
+        <div class="edit-field-row edit-tag-suggest">
+          <span class="edit-field-label"></span>
+          <div class="edit-tag-suggest-body">
+            <input class="edit-field-input" id="editTagAdd" type="text" list="editTagOptions"
+                   placeholder="Add a tag — type to search, Enter to add" autocomplete="off"
+                   aria-label="Add a tag from the ones already in use" />
+            <datalist id="editTagOptions"></datalist>
+            <div class="import-tag-common" id="editTagCommon"></div>
+          </div>
+        </div>
         <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="editUrl" type="text" value="${escapeAttr(t.source_url || '')}" /></div>
       </div>
       <div class="index-card-foot compose-actions edit-actions">
@@ -2927,6 +2938,62 @@ function startEdit(t, anchorOffset) {
     if (main.scrollTop !== keep) main.scrollTop = keep;
   }
   bodyEl.addEventListener('input', autoGrow);
+
+  // Tag suggestions on the edit panel. The field itself stays a plain
+  // comma-separated list — the save path reads it unchanged — but retyping a
+  // tag from memory is how "Workflow" and "workflow" became two tags, so offer
+  // the ones already in use rather than trusting recall.
+  (function wireEditTagSuggestions() {
+    const field = document.getElementById('editTags');
+    const adder = document.getElementById('editTagAdd');
+    const options = document.getElementById('editTagOptions');
+    const common = document.getElementById('editTagCommon');
+    if (!field || !adder || !options || !common) return;
+
+    const current = () => field.value.split(',').map(x => x.trim()).filter(Boolean);
+
+    function append(tag) {
+      const clean = (tag || '').trim().replace(/,+$/, '').trim();
+      if (!clean) return;
+      const have = current();
+      if (have.some(x => x.toLowerCase() === clean.toLowerCase())) return;  // same tag, different case
+      field.value = have.concat(clean).join(', ');
+      paint();
+    }
+
+    // Most-used first: the vocabulary's preferred tags rise to the top on their
+    // own, without this file needing its own copy of topics.txt to drift from.
+    const counts = Array.from(topicCounts().values())
+      .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
+
+    options.innerHTML = counts.map(c =>
+      '<option value="' + escapeAttr(c.label) + '">' + c.n + ' note' + (c.n === 1 ? '' : 's') + '</option>').join('');
+
+    function paint() {
+      const have = current().map(x => x.toLowerCase());
+      common.innerHTML = counts.slice(0, 14).map(c =>
+        '<button type="button" data-tag="' + escapeAttr(c.label) + '"' +
+        (have.indexOf(c.label.toLowerCase()) === -1 ? '' : ' disabled') + '>' +
+        escapeHtml(c.label) + '</button>').join('');
+    }
+    paint();
+
+    common.addEventListener('click', ev => {
+      const btn = ev.target.closest('button[data-tag]');
+      if (btn && !btn.disabled) append(btn.dataset.tag);
+    });
+    adder.addEventListener('keydown', ev => {
+      if (ev.key !== 'Enter' && ev.key !== ',') return;
+      ev.preventDefault();
+      append(adder.value);
+      adder.value = '';
+    });
+    // Picking from the browser's datalist fires input, not keydown.
+    adder.addEventListener('input', () => {
+      if (counts.some(c => c.label === adder.value)) { append(adder.value); adder.value = ''; }
+    });
+    field.addEventListener('input', paint);
+  })();
   autoGrow();
   setupBodyLinkPicker(t, bodyEl, autoGrow);
   wireTopButtons();
@@ -3869,14 +3936,29 @@ function fillTagSuggestions() {
 // Resolves once the user has accepted or corrected the tags. Never rejects —
 // the note is already saved by this point, so a problem here must not read as
 // the save having failed.
-function confirmTags(id) {
+async function confirmTags(id) {
+  // Do NOT depend on the note being in allThoughts. loadAll() refetches the
+  // whole archive and swallows its own errors, so on a slow connection the
+  // list can silently stay stale — and this step then did nothing at all, with
+  // no way to tell that from "the extractor happened to get it right". The id
+  // is enough on its own; ask the archive for just this note's metadata if the
+  // list has not caught up. max_chars keeps that to a few hundred bytes rather
+  // than pulling a whole article back.
+  let topics = [];
   const note = allThoughts.find(t => t.id === id);
-  // No note means the list has not caught up. Skipping silently is right: the
-  // note is already saved, and a modal about a note we cannot show is worse
-  // than no modal.
-  if (!note) return Promise.resolve();
+  if (note) {
+    topics = (note.topics || []).slice();
+  } else {
+    try {
+      const doc = JSON.parse(await callTool('fetch', { id: id, max_chars: 1 }));
+      const t = doc && doc.metadata && doc.metadata.topics;
+      topics = Array.isArray(t) ? t : [];
+    } catch (_) {
+      topics = [];   // still offer the step; better to tag by hand than not at all
+    }
+  }
   tagNoteId = id;
-  tagOriginal = (note.topics || []).slice();
+  tagOriginal = topics.slice();
   tagDraft = tagOriginal.slice();
   importTagsHead.textContent = tagOriginal.length
     ? 'Suggested tags — change them if they are wrong'
