@@ -4,6 +4,13 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Open Brain — Catalog</title>
+<link rel="manifest" href="manifest.webmanifest" />
+<meta name="theme-color" content="#16140F" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="Open Brain" />
+<link rel="apple-touch-icon" href="apple-touch-icon.png" />
+<link rel="icon" href="icon-192.png" type="image/png" />
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Serif+4:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -268,6 +275,19 @@
   .card-row.selected .card-row-body { background: rgba(201,162,39,0.08); }
   .card-row.referencing .card-row-body { background: rgba(108,147,168,0.1); }
 
+  /* A note is often remembered by who is in it, and the AI-written title rarely
+     names them — so the people ride along under the title. */
+  .card-row-people {
+    margin-top: 3px;
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.04em;
+    color: var(--plum);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .card-row-meta {
     display: flex;
     justify-content: space-between;
@@ -298,6 +318,9 @@
     -webkit-line-clamp: 2;
     -webkit-box-orient: vertical;
     overflow: hidden;
+    /* A title with a very long unbroken run — a URL, a slug — would otherwise
+       widen the whole drawer rather than wrap. */
+    overflow-wrap: anywhere;
   }
   .card-row.selected .card-row-preview { color: var(--ink); }
 
@@ -328,7 +351,11 @@
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    padding: 40px 28px;
+    /* Read by the sticky bars, which pull themselves up by this much so they
+       pin to the very top of the reading area rather than leaving a strip of
+       text sliding along above them. */
+    --main-pad-top: 40px;
+    padding: var(--main-pad-top) 28px;
     overflow-y: auto;
     min-height: 0;
   }
@@ -355,6 +382,7 @@
     border-top: 1px solid var(--hairline);
     border-bottom: 1px solid var(--hairline);
   }
+  .edit-actions-bottom { border-bottom: none; }
 
   .index-card {
     width: 100%;
@@ -365,7 +393,9 @@
     box-shadow: 0 22px 50px -20px rgba(0,0,0,0.6);
     transform: rotate(-0.35deg);
     animation: settle 220ms ease-out;
-    overflow: hidden;
+    /* clip, not hidden: hidden would make the card its own scroll container and
+       the sticky bars inside it would stop sticking to the top of the page. */
+    overflow: clip;
   }
 
   @keyframes settle {
@@ -414,6 +444,10 @@
     margin: 0;
     color: var(--ink);
     white-space: pre-wrap;
+    /* pre-wrap keeps the article's own line breaks, but leaves a long unbroken
+       string — a captured URL — no place to break, so it runs past the edge and
+       is simply lost. Let those wrap anywhere; ordinary prose is unaffected. */
+    overflow-wrap: anywhere;
   }
 
   .body-link {
@@ -422,6 +456,20 @@
     border-bottom: 1px solid rgba(108,147,168,0.4);
   }
   .body-link:hover { border-bottom-color: var(--blue); }
+
+  /* In-brain link: [Text](thought:<id>) — opens another note in place. */
+  .thought-link {
+    color: var(--brass);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(176,141,87,0.45);
+    cursor: pointer;
+  }
+  .thought-link:hover { border-bottom-color: var(--brass); }
+  .thought-link.missing {
+    color: var(--ink-dim);
+    border-bottom-style: dotted;
+    cursor: default;
+  }
 
   .index-card-foot {
     border-top: 1px solid var(--hairline);
@@ -685,6 +733,38 @@
     padding: 12px 14px;
   }
   .edit-body-textarea:focus { border-color: var(--brass); }
+  .edit-body-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+  /* The picker that drops a link into the body text. The linked-notes picker
+     supplies its own gutter; this one sits inside the card body, which has
+     padding already. */
+  /* Both bars ride along at the top of the reading area, so the control is
+     wherever the eye is rather than only at the top of a long article. */
+  .edit-body-sticky, .read-body-bar {
+    position: sticky;
+    top: calc(-1 * var(--main-pad-top, 0px));
+    z-index: 4;
+    background: var(--panel-raised);
+    padding: 10px 0 8px;
+    margin-top: -10px;
+  }
+  .read-body-bar { display: flex; justify-content: flex-end; gap: 6px; }
+  .bar-actions { display: flex; align-items: center; gap: 6px; }
+  .inline-link-picker { padding: 0 0 10px; }
+  .inline-link-picker[hidden] { display: none; }
+  .inline-link-picker .link-picker-item { border: 1px solid var(--hairline); }
+  .inline-link-picker .link-picker-item:hover { border-color: var(--brass); color: var(--brass); }
+  .inline-link-picker .link-picker-hint {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    display: block;
+    margin: 6px 0 0;
+  }
 
   /* ---------- links / linked notes ---------- */
   .section-label {
@@ -874,17 +954,475 @@
   }
   .ref-panel-open-full:hover { border-color: var(--brass); }
 
+  /* Facet disclosure. The full rail is 573px on a 375x812 screen — 70% of the
+     viewport before a single note — so on a phone the topic/author/source
+     groups collapse behind this button and the list starts near the top. */
+  .facet-toggle { display: none; }
+  .card-meta-toggle { display: none; }
+
+  /* ---------- archive statistics ---------- */
+  .stats { position: fixed; inset: 0; z-index: 80; overflow-y: auto; background: var(--paper); }
+  .stats[hidden] { display: none; }
+  .stats-inner { max-width: 860px; margin: 0 auto; padding: 26px 20px 60px; }
+  .stats-head { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+  .stats-head h2 { font-family: var(--font-display); font-size: 24px; margin: 0; }
+
+  .stats-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+                 gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); margin-bottom: 16px; }
+  .stats-tiles div { background: var(--panel); padding: 13px 14px; }
+  .stats-tiles .n { display: block; font-family: var(--font-mono); font-variant-numeric: tabular-nums;
+                    font-size: 24px; color: var(--brass); margin-bottom: 5px; }
+  .stats-tiles .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em;
+                    text-transform: uppercase; color: var(--ink-faint); }
+
+  .stats-card { background: var(--panel); border: 1px solid var(--hairline); border-radius: 3px;
+                padding: 16px 18px 18px; margin-bottom: 14px; }
+  .stats-card h3 { font-family: var(--font-display); font-size: 16px; font-weight: 600; margin: 0 0 12px; }
+  .stats-card .hint { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em;
+                      text-transform: uppercase; color: var(--ink-faint); margin-left: 8px; }
+  .note-line { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-faint); }
+
+  .meter { height: 10px; background: var(--paper); border: 1px solid var(--hairline); border-radius: 5px; overflow: hidden; }
+  .meter-fill { height: 100%; background: var(--brass); }
+  .meter-label { margin: 8px 0 0; font-size: 13px; color: var(--ink-dim); }
+  .meter-label strong { color: var(--ink); }
+
+  .stack { position: relative; height: 22px; border-radius: 3px; overflow: hidden; background: var(--paper); }
+  /* 2px gap between segments so adjacent fills never touch */
+  .stack .seg { position: absolute; top: 0; bottom: 0; border-right: 2px solid var(--panel); }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 10px;
+            font-size: 12.5px; color: var(--ink-dim); }
+  .legend .key i { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+                   margin-right: 6px; vertical-align: -1px; }
+  .legend b { color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  .chart { width: 100%; height: auto; display: block; }
+  .chart .axis { stroke: var(--hairline); stroke-width: 1; }
+  .chart .bar { fill: var(--blue); }
+  .chart .bar:hover { fill: var(--brass); }
+  .axis-label { display: flex; justify-content: space-between; margin: 4px 2px 0;
+                font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); }
+
+  .bars { list-style: none; margin: 0; padding: 0; }
+  .bars li { display: grid; grid-template-columns: minmax(90px, 34%) 1fr 38px;
+             align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
+  .bars .t { color: var(--ink-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .bars .track { background: var(--paper); border-radius: 3px; height: 9px; }
+  .bars .fill { display: block; height: 100%; background: var(--brass); border-radius: 3px; }
+  .bars .v { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint);
+             text-align: right; font-variant-numeric: tabular-nums; }
+
+  .hubs { list-style: none; margin: 0; padding: 0; counter-reset: hub; }
+  .hubs li { display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+             padding: 7px 0; border-bottom: 1px solid var(--ruled); }
+  .hubs button { background: none; border: none; color: var(--ink); font-family: var(--font-body);
+                 font-size: 13.5px; text-align: left; cursor: pointer; padding: 0; }
+  .hubs button:hover { color: var(--brass); }
+  .hubs span { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); }
+
+  #graphCanvas { width: 100%; height: 320px; display: block; }
+
+  .stats-tip { position: fixed; z-index: 90; pointer-events: none; display: none;
+               background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 3px;
+               padding: 7px 10px; font-size: 12.5px; color: var(--ink); max-width: 200px; }
+  .stats-tip span { display: block; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); }
+
+  /* ---------- facet dropdowns ---------- */
+  /* Four buttons do not fit one row in the drawer, so they wrap rather than
+     spilling over the edge into the reading pane. */
+  .facet-bar { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 2px; }
+  .facet-btn {
+    /* Two per row: four across does not fit the drawer, and three-plus-one
+       reads like a mistake rather than a layout. */
+    flex: 1 1 calc(50% - 3px);
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 6px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    color: var(--ink-dim);
+    font-family: var(--font-mono);
+    font-size: 10.5px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    cursor: pointer;
+  }
+  .facet-btn:hover { border-color: var(--brass); }
+  .facet-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .facet-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--brass); }
+  .facet-btn.filtering { color: var(--brass); border-color: var(--brass); }
+  .facet-n { color: var(--ink-faint); font-size: 10px; }
+  .facet-btn[aria-expanded="true"] .facet-caret { transform: rotate(180deg); }
+  .facet-caret { transition: transform 140ms ease; }
+
+  .facet-panel { padding-bottom: 4px; }
+  .facet-panel[hidden] { display: none; }
+  .alpha-strip { display: flex; flex-wrap: wrap; gap: 2px; margin: 6px 0 8px; }
+  .alpha-strip[hidden] { display: none; }
+  .alpha-btn {
+    min-width: 22px;
+    padding: 3px 5px;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    color: var(--ink-faint);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    cursor: pointer;
+  }
+  .alpha-btn:hover { color: var(--ink); border-color: var(--hairline); }
+  .alpha-btn.on { color: var(--paper); background: var(--brass); border-color: var(--brass); }
+  .facet-chips { max-height: 210px; overflow-y: auto; }
+
+  /* ---------- import (drag a file in) ---------- */
+  .drop-veil {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(22,20,15,0.86);
+    border: 2px dashed var(--brass);
+  }
+  .drop-veil.on { display: flex; }
+  .drop-veil p {
+    font-family: var(--font-display);
+    font-size: 24px;
+    color: var(--ink);
+    text-align: center;
+    margin: 0;
+    padding: 0 24px;
+  }
+  .drop-veil small {
+    display: block;
+    margin-top: 10px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
+
+  .import {
+    position: fixed;
+    inset: 0;
+    z-index: 75;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(22,20,15,0.9);
+  }
+  .import[hidden] { display: none; }
+  .import-panel {
+    width: 100%;
+    max-width: 760px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 20px;
+  }
+  .import-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .import-file {
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--ink-dim);
+    word-break: break-all;
+  }
+  .import-count {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    white-space: nowrap;
+  }
+  .import-text {
+    flex: 1;
+    min-height: 240px;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 14px;
+    line-height: 1.55;
+    padding: 12px 14px;
+    resize: vertical;
+    outline: none;
+  }
+  .import-text:focus { border-color: var(--brass); }
+  .import-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .import-btn {
+    background: var(--brass);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    padding: 10px 13px;
+    cursor: pointer;
+  }
+  .import-btn.ghost {
+    background: none;
+    color: var(--ink-dim);
+    border: 1px solid var(--hairline);
+  }
+  .import-btn:disabled { opacity: 0.5; cursor: default; }
+  .import-status { font-size: 13px; color: var(--ink-dim); }
+  .import-status.error { color: var(--rust); }
+  .import-picker { display: none; flex-direction: column; gap: 4px; }
+
+  /* Tag confirmation. The extractor guesses topics from the text alone, and on
+     a subject the archive does not usually cover it guesses badly — a note
+     about light waves came back tagged "AI". Showing its guess while the note
+     is still in front of you is the cheapest place to fix that. */
+  .import-tags { display: flex; flex-direction: column; gap: 9px; }
+  .import-tags-head { font-size: 13px; color: var(--ink-dim); }
+  .import-tag-row { display: flex; flex-wrap: wrap; gap: 6px; min-height: 26px; }
+  .import-tag {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: transparent; color: var(--ink);
+    border: 1px solid var(--ink-dim); border-radius: 3px;
+    font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em;
+    padding: 5px 8px;
+  }
+  .import-tag button {
+    background: none; border: none; color: var(--ink-dim);
+    font-size: 14px; line-height: 1; padding: 0; cursor: pointer;
+  }
+  .import-tag button:hover { color: var(--rust); }
+  .import-tag.is-new { border-color: var(--brass); color: var(--brass); }
+  .import-tag-empty { font-size: 12px; color: var(--ink-dim); font-style: italic; }
+  .import-tag-add { display: flex; gap: 6px; }
+  .import-tag-input {
+    flex: 1; background: transparent; color: var(--ink);
+    border: 1px solid var(--ink-dim); border-radius: 3px;
+    font-family: var(--font-mono); font-size: 12px; padding: 7px 8px;
+  }
+  .import-tag-input:focus { outline: 2px solid var(--brass); outline-offset: 1px; }
+  .import-tag-common { display: flex; flex-wrap: wrap; gap: 5px; }
+  .import-tag-common button {
+    background: none; border: 1px dashed var(--ink-dim); border-radius: 3px;
+    color: var(--ink-dim); font-family: var(--font-mono); font-size: 10px;
+    letter-spacing: 0.06em; padding: 4px 7px; cursor: pointer;
+  }
+  .import-tag-common button:hover { color: var(--brass); border-color: var(--brass); }
+  .import-picker.on .link-picker-item { border: 1px solid var(--hairline); }
+  .import-picker.on .link-picker-item:hover { border-color: var(--brass); color: var(--brass); }
+  .import-picker.on { display: flex; }
+
+  .import-editor { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
+  .import-editor[hidden] { display: none; }
+  .import-summary { display: flex; flex-direction: column; gap: 12px; }
+  .import-summary[hidden] { display: none; }
+  .import-summary-text { margin: 0; font-size: 14.5px; color: var(--ink-dim); }
+  .import-made {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 300px;
+    overflow-y: auto;
+    border-top: 1px solid var(--ruled);
+  }
+  .import-made li {
+    padding: 9px 2px;
+    border-bottom: 1px solid var(--ruled);
+    font-size: 14px;
+  }
+  .import-made strong { display: block; color: var(--ink); font-weight: 500; }
+  .import-made span {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+    word-break: break-all;
+  }
+
+  /* ---------- unlock gate ---------- */
+  .unlock {
+    position: fixed;
+    inset: 0;
+    z-index: 60;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--paper);
+  }
+  .unlock[hidden] { display: none; }
+  .unlock-panel {
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 4px;
+    padding: 26px 24px 24px;
+  }
+  .unlock-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 600;
+    margin: 0;
+    color: var(--ink);
+  }
+  .unlock-copy {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--ink-dim);
+  }
+  .unlock-copy.error { color: var(--rust); }
+  .unlock-input {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    color: var(--ink);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+  }
+  .unlock-input:focus { border-color: var(--brass); }
+  .unlock-btn {
+    background: var(--brass);
+    color: var(--paper);
+    border: none;
+    border-radius: 3px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    padding: 11px 14px;
+    cursor: pointer;
+  }
+  .unlock-btn:hover { filter: brightness(1.08); }
+  .unlock-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
   /* ---------- responsive ---------- */
   @media (max-width: 760px) {
+    /* A 1fr grid track will not shrink below its content's minimum width, so a
+       single long title or nowrap line inside the drawer pushes the whole column
+       wider than the screen — taking its right-hand edge out of view. */
+    .app, .app.detail-open, .app.ref-open { grid-template-columns: minmax(0, 1fr); }
+    .drawer, .main { min-width: 0; }
+
+    .facet-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: 100%;
+      margin: 4px 0 2px;
+      padding: 9px 12px;
+      background: var(--panel);
+      border: 1px solid var(--hairline);
+      border-radius: 3px;
+      color: var(--ink-dim);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .facet-toggle:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+    .facet-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--brass); }
+    .facet-toggle-caret { transition: transform 140ms ease; }
+    .facet-toggle[aria-expanded="true"] .facet-toggle-caret { transform: rotate(180deg); }
+    .facet-toggle .facet-count { color: var(--brass); }
+
+    /* The field list, links and linked notes push the article text more than
+       half a screen down on a phone. Reading comes first; the reference data
+       sits one tap away. */
+    .card-meta-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      width: calc(100% - 32px);
+      margin: 14px 16px 2px;
+      padding: 9px 12px;
+      background: var(--panel);
+      border: 1px solid var(--hairline);
+      border-radius: 3px;
+      color: var(--ink-dim);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .card-meta-toggle:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+    .card-meta-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--brass); }
+    .card-meta-toggle[aria-expanded="true"] .facet-toggle-caret { transform: rotate(180deg); }
+    .card-meta { display: none; }
+    .card-meta.open { display: block; }
+
+    .facet-groups { display: none; }
+    .facet-groups.open { display: block; }
+    /* Freed from a fixed sliver, each group can show its chips inline. */
+    .facet-groups .topic-chip-row { max-height: 168px; }
+
     .app { grid-template-columns: 1fr; }
     .app.ref-open { grid-template-columns: 1fr; }
     .ref-panel { display: none !important; }
     .drawer { display: flex; }
-    .main { display: none; padding: 24px 18px; }
+    .main { display: none; padding: 0; --main-pad-top: 0px; }
     .app.detail-open .drawer { display: none; }
-    .app.detail-open .main { display: flex; }
-    .back-btn { display: inline-block; }
-    .index-card { max-width: 100%; }
+
+    /* On a phone the card and the back button must stack. Left as a flex row,
+       the 88px button sits beside the card and squeezes the reading column to
+       about 24 characters. */
+    .app.detail-open .main {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      /* The desktop rule centres the card horizontally. In a column that centres
+         it *vertically*, and a card taller than the screen then overflows equally
+         both ways — putting the start of the article above scroll position zero,
+         where it cannot be reached. */
+      justify-content: flex-start;
+    }
+    .back-btn {
+      display: inline-block;
+      align-self: flex-start;
+      margin: 10px 0 4px 14px;
+    }
+
+    /* Full-bleed: the desktop tilt and side borders cost width the page cannot
+       spare, and a rotated box clips against the viewport edge. */
+    .index-card {
+      max-width: 100%;
+      /* The card is a flex item here. Without this it shrinks to the height of
+         the viewport instead of growing to its content, which clips the article
+         and leaves nothing to scroll. */
+      flex: 0 0 auto;
+      transform: none;
+      border-left: none;
+      border-right: none;
+      border-radius: 0;
+      box-shadow: none;
+    }
+    .index-card-head { padding: 16px 16px 0; }
+    .index-card-body { padding: 16px 16px 22px; }
+    .index-card-foot { padding: 12px 16px 16px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -903,6 +1441,82 @@
   <rect width="100%" height="100%" filter="url(#noise)"/>
 </svg>
 
+<div class="drop-veil" id="dropVeil">
+  <p>Drop it in
+    <small>PDF, text or markdown — becomes a note</small>
+  </p>
+</div>
+
+<div class="import" id="importPanel" hidden>
+  <div class="import-panel">
+    <div class="import-head">
+      <span class="import-file" id="importFile"></span>
+      <span class="import-count" id="importCount"></span>
+    </div>
+    <div class="import-status" id="importStatus"></div>
+    <div class="import-editor" id="importEditor">
+      <textarea class="import-text" id="importText" spellcheck="false"
+                aria-label="Text to save as a note"></textarea>
+      <div class="import-actions">
+        <button class="import-btn" id="importSaveNew" type="button">Save as new note</button>
+        <button class="import-btn ghost" id="importFillToggle" type="button">Fill in an existing note…</button>
+        <button class="import-btn ghost" id="importCancel" type="button">Cancel</button>
+      </div>
+      <div class="import-picker link-picker" id="importPicker">
+        <input class="link-picker-input" id="importPickerInput" type="text"
+               placeholder="Search notes to replace…" />
+        <div class="link-picker-results" id="importPickerResults"></div>
+      </div>
+    </div>
+    <div class="import-tags" id="importTags" hidden>
+      <div class="import-tags-head" id="importTagsHead">Tags for this note</div>
+      <div class="import-tag-row" id="importTagRow"></div>
+      <div class="import-tag-add">
+        <input class="import-tag-input" id="importTagInput" type="text" list="importTagOptions"
+               placeholder="Type a tag, or pick one below — Enter to add"
+               autocomplete="off" aria-label="Add a tag" />
+        <button class="import-btn ghost" id="importTagAdd" type="button">Add</button>
+      </div>
+      <datalist id="importTagOptions"></datalist>
+      <div class="import-tag-common" id="importTagCommon"></div>
+      <div class="import-actions">
+        <button class="import-btn" id="importTagSave" type="button">Save tags</button>
+        <button class="import-btn ghost" id="importTagSkip" type="button">Leave as they are</button>
+      </div>
+    </div>
+    <div class="import-summary" id="importSummary" hidden>
+      <p class="import-summary-text" id="importSummaryText"></p>
+      <ul class="import-made" id="importMadeList"></ul>
+      <div class="import-actions">
+        <button class="import-btn" id="importDone" type="button">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="stats" id="statsPanel" hidden>
+  <div class="stats-inner">
+    <div class="stats-head">
+      <h2>The shape of the archive</h2>
+      <button class="import-btn ghost" id="statsClose" type="button">Close</button>
+    </div>
+    <div class="stats-body" id="statsBody"></div>
+  </div>
+</div>
+
+<div class="unlock" id="unlock" hidden>
+  <form class="unlock-panel" id="unlockForm">
+    <h2 class="unlock-title">Open Brain</h2>
+    <p class="unlock-copy" id="unlockCopy">
+      Enter your archive access key. It is kept in this browser only, never in the page.
+    </p>
+    <input class="unlock-input" id="unlockInput" type="password" inputmode="text"
+           autocomplete="current-password" spellcheck="false"
+           placeholder="Access key" aria-label="Archive access key" />
+    <button class="unlock-btn" type="submit">Unlock the drawer</button>
+  </form>
+</div>
+
 <div class="app" id="app">
 
   <div class="drawer">
@@ -912,6 +1526,17 @@
         <div class="header-actions">
           <button class="refresh-btn" id="newBtn" title="New thought" aria-label="New thought">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          </button>
+          <button class="refresh-btn" id="statsBtn" title="The shape of the archive" aria-label="Archive statistics">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+          </button>
+          <button class="refresh-btn" id="importBtn" title="Import a file as a note" aria-label="Import a file">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          </button>
+          <input type="file" id="importInput" hidden
+                 accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" />
+          <button class="refresh-btn" id="lockBtn" title="Forget the access key on this device" aria-label="Lock archive">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
           </button>
           <button class="refresh-btn" id="refreshBtn" title="Refresh from archive" aria-label="Refresh">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
@@ -925,12 +1550,30 @@
       </div>
 
       <div class="chip-row" id="chipRow"></div>
-      <div class="chip-group-label" id="topicRowLabel" style="display:none">Topics</div>
-      <div class="chip-row topic-chip-row" id="topicRow"></div>
-      <div class="chip-group-label" id="authorRowLabel" style="display:none">Authors</div>
-      <div class="chip-row topic-chip-row" id="authorRow"></div>
-      <div class="chip-group-label" id="sourceRowLabel" style="display:none">Sources</div>
-      <div class="chip-row topic-chip-row" id="sourceRow"></div>
+
+      <div class="facet-bar">
+        <button class="facet-btn" id="facetBtnTopics" type="button" aria-expanded="false">
+          <span>Topics</span><span class="facet-n" id="facetNTopics"></span>
+          <span class="facet-caret" aria-hidden="true">▾</span>
+        </button>
+        <button class="facet-btn" id="facetBtnAuthors" type="button" aria-expanded="false">
+          <span>Authors</span><span class="facet-n" id="facetNAuthors"></span>
+          <span class="facet-caret" aria-hidden="true">▾</span>
+        </button>
+        <button class="facet-btn" id="facetBtnPeople" type="button" aria-expanded="false">
+          <span>People</span><span class="facet-n" id="facetNPeople"></span>
+          <span class="facet-caret" aria-hidden="true">▾</span>
+        </button>
+        <button class="facet-btn" id="facetBtnSources" type="button" aria-expanded="false">
+          <span>Sources</span><span class="facet-n" id="facetNSources"></span>
+          <span class="facet-caret" aria-hidden="true">▾</span>
+        </button>
+      </div>
+
+      <div class="facet-panel" id="facetPanel" hidden>
+        <div class="alpha-strip" id="alphaStrip"></div>
+        <div class="chip-row facet-chips" id="facetChips"></div>
+      </div>
     </div>
 
     <div class="list-scroll" id="listScroll">
@@ -955,7 +1598,22 @@
 // Key from your credential tracker, sent as the x-brain-key header, the same
 // way the Claude Code CLI / mcp-remote connections use it.
 const MCP_URL = "https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mcp";
-const MCP_ACCESS_KEY = "0e5f61a4dba2ea08005bb8f859cbacdae7569e8ea805f7071ac078ee9f7e6193";
+
+// The access key is NOT stored in this file. Anyone holding it can read, write
+// and delete everything in the archive, so baking it into the page would hand
+// it to anyone who ever gets a copy — a host, a backup, a shared link. It is
+// entered once and kept in this browser's localStorage instead.
+const KEY_STORAGE = 'openbrain.accessKey';
+let mcpAccessKey = '';
+try { mcpAccessKey = localStorage.getItem(KEY_STORAGE) || ''; } catch (_) { mcpAccessKey = ''; }
+
+function setAccessKey(key) {
+  mcpAccessKey = (key || '').trim();
+  try {
+    if (mcpAccessKey) localStorage.setItem(KEY_STORAGE, mcpAccessKey);
+    else localStorage.removeItem(KEY_STORAGE);
+  } catch (_) { /* private browsing — the key just won't persist */ }
+}
 
 const TYPE_STYLES = {
   observation:  { color: 'var(--moss)', label: 'Observation' },
@@ -977,7 +1635,7 @@ let activeTypes = new Set();
 let activeTopics = new Set(); // normalized (lowercased) topic strings
 let activeAuthors = new Set(); // normalized (lowercased) author strings
 let activeSources = new Set(); // normalized (lowercased) source strings
-let expandedTopicGroups = new Set(); // lowercased first-word group keys currently expanded
+let activePeople = new Set();  // normalized (lowercased) person names
 let selectedIndex = null;
 let editingId = null;    // id of the thought currently open in the edit form, or null
 let referenceId = null;  // id of the thought shown read-only in the reference panel, or null
@@ -986,12 +1644,6 @@ let lastSearchQuery = '';
 
 const listScroll = document.getElementById('listScroll');
 const chipRow = document.getElementById('chipRow');
-const topicRow = document.getElementById('topicRow');
-const topicRowLabel = document.getElementById('topicRowLabel');
-const authorRow = document.getElementById('authorRow');
-const authorRowLabel = document.getElementById('authorRowLabel');
-const sourceRow = document.getElementById('sourceRow');
-const sourceRowLabel = document.getElementById('sourceRowLabel');
 const main = document.getElementById('main');
 const app = document.getElementById('app');
 const refPanel = document.getElementById('refPanel');
@@ -999,6 +1651,60 @@ const searchInput = document.getElementById('searchInput');
 const searchClear = document.getElementById('searchClear');
 const refreshBtn = document.getElementById('refreshBtn');
 const newBtn = document.getElementById('newBtn');
+
+// Whoever is writing here. Notes typed into the catalog are by definition
+// yours, so the extractor should not be left to guess at the author.
+const SELF_AUTHOR = 'Stewart Morpurgo';
+
+const MONTH_NAMES = ['jan', 'feb', 'mar', 'apr', 'may', 'jun',
+                     'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+
+// Dates are stored as YYYY-MM-DD — the form the archive sorts, filters and
+// charts on — but nobody should have to type that. This reads the ways a date
+// is normally written and returns the stored form, or null if it cannot tell.
+// Day comes first when the order is ambiguous: 01/08/1974 is 1 August.
+function parseDateInput(text) {
+  const raw = (text || '').trim().replace(/,/g, ' ').replace(/\s+/g, ' ');
+  if (!raw) return '';
+
+  const build = (y, m, d) => {
+    if (!(y >= 1000 && y <= 9999) || !(m >= 1 && m <= 12) || !(d >= 1 && d <= 31)) return null;
+    const probe = new Date(Date.UTC(y, m - 1, d));
+    if (probe.getUTCMonth() !== m - 1 || probe.getUTCDate() !== d) return null;  // 31 Feb
+    const pad = n => String(n).padStart(2, '0');
+    return y + '-' + pad(m) + '-' + pad(d);
+  };
+  const fullYear = y => (y >= 100 ? y : y + (y <= (new Date().getFullYear() % 100) ? 2000 : 1900));
+  const monthOf = word => MONTH_NAMES.indexOf(word.slice(0, 3).toLowerCase()) + 1;
+
+  let m;
+  // 1974-08-01, and 1974/08/01
+  if ((m = raw.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})$/)))
+    return build(+m[1], +m[2], +m[3]);
+  // 01/08/1974, 1-8-74, 01.08.1974
+  if ((m = raw.match(/^(\d{1,2})[-/.](\d{1,2})[-/.](\d{2}|\d{4})$/)))
+    return build(fullYear(+m[3]), +m[2], +m[1]);
+  // 1 Aug 1974, 01 August 1974
+  if ((m = raw.match(/^(\d{1,2}) ([A-Za-z]{3,9})\.? (\d{2}|\d{4})$/)))
+    return build(fullYear(+m[3]), monthOf(m[2]), +m[1]);
+  // Aug 1 1974, August 1st 1974
+  if ((m = raw.match(/^([A-Za-z]{3,9})\.? (\d{1,2})(?:st|nd|rd|th)? (\d{2}|\d{4})$/)))
+    return build(fullYear(+m[3]), monthOf(m[1]), +m[2]);
+  return null;
+}
+
+// The stored date as it is typed and read back: dd/mm/yyyy.
+function formatDateInput(iso) {
+  const m = (iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return m ? m[3] + '/' + m[2] + '/' + m[1] : (iso || '');
+}
+
+// Today, in the archive's date format and the reader's own timezone.
+function todayISO() {
+  const d = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
 
 function formatDate(iso) {
   if (!iso) return 'Undated';
@@ -1032,6 +1738,9 @@ function escapeAttr(str) {
 // stored content and in the edit textarea — this is display-only.
 const MD_LINK_RE = /\[([^\]\n]{1,200})\]\((https?:\/\/[^\s<>"')]+)\)/g;
 const BARE_URL_RE = /(^|[\s(])(https?:\/\/[^\s<>"')]+)/g;
+// In-brain link: [Text](thought:<uuid>) points at another note in this archive
+// instead of the open web. Rendered as a click target handled in selectThought.
+const THOUGHT_LINK_RE = /\[([^\]\n]{1,200})\]\(thought:([0-9a-fA-F-]{36})\)/g;
 
 function linkAnchor(url, label) {
   // url/label are already HTML-escaped by escapeHtml, so they must not be
@@ -1046,6 +1755,12 @@ function linkAnchor(url, label) {
 
 function renderBodyHtml(content) {
   let html = escapeHtml(content);
+  html = html.replace(THOUGHT_LINK_RE, (_m, text, id) => {
+    const found = findThought(id);
+    return found
+      ? '<a class="thought-link" data-id="' + escapeAttr(id) + '" title="Open this note">' + text + '</a>'
+      : '<span class="thought-link missing" title="This note is no longer in the archive">' + text + '</span>';
+  });
   html = html.replace(MD_LINK_RE, (_m, text, url) => linkAnchor(url, text));
   html = html.replace(BARE_URL_RE, (_m, pre, url) => pre + linkAnchor(url, url));
   return html;
@@ -1063,7 +1778,7 @@ async function mcpRequest(method, params) {
   const headers = {
     'Content-Type': 'application/json',
     'Accept': 'application/json, text/event-stream',
-    'x-brain-key': MCP_ACCESS_KEY,
+    'x-brain-key': mcpAccessKey,
   };
   if (mcpSessionId) headers['Mcp-Session-Id'] = mcpSessionId;
 
@@ -1081,7 +1796,11 @@ async function mcpRequest(method, params) {
     let detail = '';
     try { detail = (await response.text()).slice(0, 200); } catch (_) {}
     let hint = '';
-    if (response.status === 401 || response.status === 403) hint = ' — check that the access key embedded in this page is still valid';
+    if (response.status === 401 || response.status === 403) {
+      setAccessKey('');
+      showUnlock('That key was rejected. Check it and try again.');
+      hint = ' — the archive rejected that access key';
+    }
     throw new Error('Archive returned HTTP ' + response.status + hint + (detail ? (': ' + detail) : ''));
   }
 
@@ -1098,7 +1817,16 @@ async function mcpRequest(method, params) {
     payload = raw.trim() ? JSON.parse(raw) : {};
   }
 
-  if (payload.error) throw new Error(payload.error.message || 'The archive reported an error.');
+  if (payload.error) {
+    // The server answers an invalid key with HTTP 200 and a JSON-RPC error
+    // (code -32001), so the auth check has to happen here, not on the status.
+    const msg = payload.error.message || 'The archive reported an error.';
+    if (payload.error.code === -32001 || /unauthor/i.test(msg)) {
+      setAccessKey('');
+      showUnlock('That key was rejected. Check it and try again.');
+    }
+    throw new Error(msg);
+  }
   return payload.result;
 }
 
@@ -1141,6 +1869,7 @@ function normalizeThought(raw) {
     source_url: m.source_url || null,
     title: m.title || null,
     published_date: m.published_date || null,
+    updated_date: m.updated_date || null,
     extracted_links: Array.isArray(m.extracted_links) ? m.extracted_links : [],
     linked_thought_ids: Array.isArray(m.linked_thought_ids) ? m.linked_thought_ids : [],
   };
@@ -1182,125 +1911,197 @@ function renderChips() {
 // search is currently active. Topics are grouped case-insensitively (the
 // AI extractor isn't always consistent about casing) but displayed using
 // the first-seen casing.
-function makeTopicChip(norm, label, isSub) {
-  const chip = document.createElement('button');
-  chip.className = 'chip' + (isSub ? ' chip-sub' : '') + (activeTopics.has(norm) ? ' active' : '');
-  if (activeTopics.has(norm)) chip.style.background = 'var(--brass)';
-  chip.innerHTML = '<span class="dot" style="background:var(--brass)"></span># ' + escapeHtml(label);
-  chip.addEventListener('click', () => {
-    if (activeTopics.has(norm)) activeTopics.delete(norm); else activeTopics.add(norm);
-    applyFilters();
-  });
-  return chip;
-}
 
 // Topics that share a first word (e.g. "AI", "AI Agents", "AI Careers") get
 // collapsed under one parent chip so a busy tag vocabulary doesn't overwhelm
 // the drawer — click the parent to expand/collapse its members, click a
 // member to filter by it same as any other topic chip. Topics with no
 // sibling sharing that first word render as ordinary flat chips.
-function renderTopicChips() {
-  const topicMap = new Map(); // normalized -> display label
-  allThoughts.forEach(t => {
-    (t.topics || []).forEach(top => {
-      const norm = top.trim().toLowerCase();
-      if (norm && !topicMap.has(norm)) topicMap.set(norm, top.trim());
-    });
-  });
-
-  topicRow.innerHTML = '';
-  if (topicMap.size === 0) {
-    topicRowLabel.style.display = 'none';
-    return;
-  }
-  topicRowLabel.style.display = 'block';
-
-  const groups = new Map(); // lowercased first word -> [{norm, label}]
-  topicMap.forEach((label, norm) => {
-    const firstWord = label.split(/\s+/)[0].toLowerCase();
-    if (!groups.has(firstWord)) groups.set(firstWord, []);
-    groups.get(firstWord).push({ norm, label });
-  });
-
-  const entries = Array.from(groups.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-
-  entries.forEach(([groupKey, members]) => {
-    if (members.length === 1) {
-      const { norm, label } = members[0];
-      topicRow.appendChild(makeTopicChip(norm, label));
-      return;
-    }
-
-    members.sort((a, b) => a.label.localeCompare(b.label));
-    const isExpanded = expandedTopicGroups.has(groupKey);
-    const anyActive = members.some(m => activeTopics.has(m.norm));
-    const displayLabel = members[0].label.split(/\s+/)[0];
-
-    const parent = document.createElement('button');
-    parent.className = 'chip chip-group' + (anyActive ? ' active' : '');
-    if (anyActive) parent.style.background = 'var(--brass)';
-    parent.innerHTML = '<span class="dot" style="background:var(--brass)"></span># '
-      + escapeHtml(displayLabel)
-      + '<span class="chip-count">(' + members.length + ')</span>'
-      + '<span class="chip-caret">' + (isExpanded ? '▾' : '▸') + '</span>';
-    parent.title = isExpanded ? 'Collapse' : 'Show ' + members.length + ' ' + displayLabel + ' subtopics';
-    parent.addEventListener('click', () => {
-      if (expandedTopicGroups.has(groupKey)) expandedTopicGroups.delete(groupKey);
-      else expandedTopicGroups.add(groupKey);
-      renderTopicChips();
-    });
-    topicRow.appendChild(parent);
-
-    if (isExpanded) {
-      const subRow = document.createElement('div');
-      subRow.className = 'chip-subrow';
-      members.forEach(({ norm, label }) => subRow.appendChild(makeTopicChip(norm, label, true)));
-      topicRow.appendChild(subRow);
-    }
-  });
-}
 
 // Author/Source chips work like Topics (built from allThoughts, hidden when
 // there's nothing but a single value) but each thought has at most one of
 // each rather than an array, so the map-building and filter predicate are a
 // little simpler than the topic version.
-function renderSingleValueChips(row, rowLabel, field, accentColor, activeSet) {
-  const map = new Map(); // normalized -> display label
+
+
+
+// ---------- facet dropdowns ----------
+// One line each for topics, authors and sources. Only one opens at a time, so
+// the drawer stays short however many tags the archive accumulates.
+//
+// Topics get an A–Z index because there are hundreds of them, most used only
+// once; authors and sources are a handful, so an index there would be friction
+// for nothing. The default topic view is the ones actually worth browsing —
+// those used more than once — with the long tail behind its letter.
+
+const facetPanel = document.getElementById('facetPanel');
+const facetChips = document.getElementById('facetChips');
+const alphaStrip = document.getElementById('alphaStrip');
+const facetButtons = {
+  topics: document.getElementById('facetBtnTopics'),
+  authors: document.getElementById('facetBtnAuthors'),
+  people: document.getElementById('facetBtnPeople'),
+  sources: document.getElementById('facetBtnSources'),
+};
+
+let openFacet = null;      // 'topics' | 'authors' | 'sources' | null
+let topicLetter = null;    // null means the "common" view
+
+function topicCounts() {
+  const counts = new Map();   // normalised -> { label, n }
+  allThoughts.forEach(t => {
+    (t.topics || []).forEach(raw => {
+      const norm = raw.trim().toLowerCase();
+      if (!norm) return;
+      const entry = counts.get(norm) || { label: raw.trim(), n: 0 };
+      entry.n += 1;
+      counts.set(norm, entry);
+    });
+  });
+  return counts;
+}
+
+function listCounts(field) {
+  const counts = new Map();
+  allThoughts.forEach(t => (t[field] || []).forEach(raw => {
+    const norm = (raw || '').trim().toLowerCase();
+    if (!norm) return;
+    const entry = counts.get(norm) || { label: raw.trim(), n: 0 };
+    entry.n += 1;
+    counts.set(norm, entry);
+  }));
+  return counts;
+}
+
+function valueCounts(field) {
+  const counts = new Map();
   allThoughts.forEach(t => {
     const raw = t[field];
-    if (raw) {
-      const norm = raw.trim().toLowerCase();
-      if (norm && !map.has(norm)) map.set(norm, raw.trim());
-    }
+    if (!raw) return;
+    const norm = raw.trim().toLowerCase();
+    const entry = counts.get(norm) || { label: raw.trim(), n: 0 };
+    entry.n += 1;
+    counts.set(norm, entry);
   });
+  return counts;
+}
 
-  row.innerHTML = '';
-  if (map.size === 0) {
-    rowLabel.style.display = 'none';
+function facetChip(norm, label, count, activeSet, colour) {
+  const chip = document.createElement('button');
+  const on = activeSet.has(norm);
+  chip.className = 'chip' + (on ? ' active' : '');
+  if (on) chip.style.background = colour;
+  chip.innerHTML = '<span class="dot" style="background:' + colour + '"></span>'
+    + escapeHtml(label)
+    + (count > 1 ? '<span class="chip-count">(' + count + ')</span>' : '');
+  chip.addEventListener('click', () => {
+    if (activeSet.has(norm)) activeSet.delete(norm); else activeSet.add(norm);
+    applyFilters();
+  });
+  return chip;
+}
+
+function renderAlphaStrip(counts) {
+  const letters = [...new Set([...counts.values()]
+    .map(v => (v.label[0] || '').toUpperCase())
+    .filter(c => /[A-Z]/.test(c)))].sort();
+  alphaStrip.innerHTML = '';
+
+  const common = document.createElement('button');
+  common.className = 'alpha-btn' + (topicLetter === null ? ' on' : '');
+  common.type = 'button';
+  common.textContent = 'Common';
+  common.title = 'Topics used more than once';
+  common.addEventListener('click', () => { topicLetter = null; renderFacetPanel(); });
+  alphaStrip.appendChild(common);
+
+  letters.forEach(letter => {
+    const btn = document.createElement('button');
+    btn.className = 'alpha-btn' + (topicLetter === letter ? ' on' : '');
+    btn.type = 'button';
+    btn.textContent = letter;
+    btn.addEventListener('click', () => {
+      topicLetter = topicLetter === letter ? null : letter;
+      renderFacetPanel();
+    });
+    alphaStrip.appendChild(btn);
+  });
+}
+
+function renderFacetPanel() {
+  facetPanel.hidden = !openFacet;
+  alphaStrip.hidden = openFacet !== 'topics';
+  facetChips.innerHTML = '';
+  if (!openFacet) return;
+
+  if (openFacet === 'topics') {
+    const counts = topicCounts();
+    renderAlphaStrip(counts);
+    let entries = [...counts.entries()];
+    if (topicLetter) {
+      entries = entries.filter(([, v]) => (v.label[0] || '').toUpperCase() === topicLetter)
+                       .sort((a, b) => a[1].label.localeCompare(b[1].label));
+    } else {
+      // Anything used once is noise here; it is still reachable by its letter.
+      entries = entries.filter(([norm, v]) => v.n > 1 || activeTopics.has(norm))
+                       .sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label));
+    }
+    if (!entries.length) {
+      facetChips.innerHTML = '<span class="field-value empty">Nothing under that letter.</span>';
+      return;
+    }
+    entries.forEach(([norm, v]) =>
+      facetChips.appendChild(facetChip(norm, '# ' + v.label, v.n, activeTopics, 'var(--brass)')));
     return;
   }
-  rowLabel.style.display = 'block';
 
-  const sorted = Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  sorted.forEach(([norm, label]) => {
-    const chip = document.createElement('button');
-    chip.className = 'chip' + (activeSet.has(norm) ? ' active' : '');
-    if (activeSet.has(norm)) chip.style.background = accentColor;
-    chip.innerHTML = '<span class="dot" style="background:' + accentColor + '"></span>' + escapeHtml(label);
-    chip.addEventListener('click', () => {
-      if (activeSet.has(norm)) activeSet.delete(norm); else activeSet.add(norm);
-      applyFilters();
-    });
-    row.appendChild(chip);
+  const spec = {
+    people:  { counts: () => listCounts('people'), set: activePeople,  colour: 'var(--plum)' },
+    authors: { counts: () => valueCounts('author'), set: activeAuthors, colour: 'var(--moss)' },
+    sources: { counts: () => valueCounts('source'), set: activeSources, colour: 'var(--blue)' },
+  }[openFacet];
+  const counts = spec.counts();
+  const set = spec.set;
+  const colour = spec.colour;
+  [...counts.entries()]
+    .sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label))
+    .forEach(([norm, v]) => facetChips.appendChild(facetChip(norm, v.label, v.n, set, colour)));
+}
+
+function renderFacetBar() {
+  const sizes = {
+    topics: topicCounts().size,
+    authors: valueCounts('author').size,
+    people: listCounts('people').size,
+    sources: valueCounts('source').size,
+  };
+  const actives = { topics: activeTopics, authors: activeAuthors,
+                    people: activePeople, sources: activeSources };
+  document.getElementById('facetNTopics').textContent = sizes.topics || '';
+  document.getElementById('facetNAuthors').textContent = sizes.authors || '';
+  document.getElementById('facetNPeople').textContent = sizes.people || '';
+  document.getElementById('facetNSources').textContent = sizes.sources || '';
+  Object.keys(facetButtons).forEach(name => {
+    const btn = facetButtons[name];
+    btn.setAttribute('aria-expanded', openFacet === name ? 'true' : 'false');
+    // A filter left on inside a closed dropdown would otherwise be invisible.
+    btn.classList.toggle('filtering', actives[name].size > 0);
+    btn.style.display = sizes[name] ? '' : 'none';
   });
 }
 
-function renderAuthorChips() {
-  renderSingleValueChips(authorRow, authorRowLabel, 'author', 'var(--plum)', activeAuthors);
-}
+Object.keys(facetButtons).forEach(name => {
+  facetButtons[name].addEventListener('click', () => {
+    openFacet = openFacet === name ? null : name;
+    if (name === 'topics' && openFacet !== 'topics') topicLetter = null;
+    renderFacetBar();
+    renderFacetPanel();
+  });
+});
 
-function renderSourceChips() {
-  renderSingleValueChips(sourceRow, sourceRowLabel, 'source', 'var(--blue)', activeSources);
+function renderFacets() {
+  renderFacetBar();
+  renderFacetPanel();
 }
 
 function applyFilters() {
@@ -1314,6 +2115,11 @@ function applyFilters() {
       (t.topics || []).some(top => activeTopics.has(top.trim().toLowerCase()))
     );
   }
+  if (activePeople.size > 0) {
+    filtered = filtered.filter(t =>
+      (t.people || []).some(p => activePeople.has(p.trim().toLowerCase()))
+    );
+  }
   if (activeAuthors.size > 0) {
     filtered = filtered.filter(t => t.author && activeAuthors.has(t.author.trim().toLowerCase()));
   }
@@ -1321,9 +2127,7 @@ function applyFilters() {
     filtered = filtered.filter(t => t.source && activeSources.has(t.source.trim().toLowerCase()));
   }
   renderChips();
-  renderTopicChips();
-  renderAuthorChips();
-  renderSourceChips();
+  renderFacets();
   renderList(filtered, searchMode);
 }
 
@@ -1356,6 +2160,9 @@ function renderList(items, isSearch) {
           <span class="card-row-date">${formatDate(t.created_at)}</span>
         </div>
         <div class="card-row-preview">${escapeHtml(t.title || t.content)}</div>
+        ${(t.people || []).length
+          ? `<div class="card-row-people">${escapeHtml((t.people || []).slice(0, 4).join(' · '))}</div>`
+          : ''}
       </div>
     `;
     row.addEventListener('click', () => {
@@ -1388,7 +2195,6 @@ function renderLinksSection(t) {
     return `
       <div class="link-item">
         <a class="link-open" href="${escapeAttr(l.url)}" target="_blank" rel="noopener">${escapeHtml(label)}</a>
-        <button class="link-create-btn" data-url="${escapeAttr(l.url)}" data-text="${escapeAttr(l.text || '')}" type="button">+ Create linked note</button>
       </div>
     `;
   }).join('');
@@ -1461,10 +2267,10 @@ function setupLinkPicker(t) {
   input.addEventListener('input', () => renderResults(input.value));
 }
 
-async function refreshAndReselect(id) {
+async function refreshAndReselect(id, mark) {
   await loadAll();
   const found = findThought(id);
-  if (found) selectThought(found); else showEmptyState();
+  if (found) selectThought(found, mark); else showEmptyState();
 }
 
 function closeReference() {
@@ -1501,7 +2307,9 @@ function openReference(t) {
   });
 }
 
-function selectThought(t) {
+// mark: where the reader was when they left the editor, so that saving does not
+// dump them back at the top of a long article.
+function selectThought(t, mark) {
   selectedIndex = t.id;
   editingId = null;
   closeReference();
@@ -1515,6 +2323,9 @@ function selectThought(t) {
   const publishedHtml = t.published_date
     ? escapeHtml(formatDate(t.published_date))
     : '<span class="field-value empty">—</span>';
+  const updatedHtml = t.updated_date
+    ? escapeHtml(formatDate(t.updated_date))
+    : '<span class="field-value empty">—</span>';
   const sourceHtml = t.source
     ? `<button class="field-tag-btn" data-source="${escapeAttr(t.source)}" type="button">${escapeHtml(t.source)}</button>`
     : '<span class="field-value empty">—</span>';
@@ -1526,7 +2337,7 @@ function selectThought(t) {
     : '<span class="field-value empty">—</span>';
 
   const peopleHtml = t.people.length
-    ? `<div class="section-label"><span>People mentioned</span></div><div class="tag-row">${t.people.map(p => `<span class="tag person">${escapeHtml(p)}</span>`).join('')}</div>`
+    ? `<div class="section-label"><span>People mentioned</span></div><div class="tag-row">${t.people.map(p => `<button class="field-tag-btn" data-person="${escapeAttr(p)}" type="button">${escapeHtml(p)}</button>`).join('')}</div>`
     : '';
   const linksHtml = t.extracted_links.length ? renderLinksSection(t) : '';
   const linkedNotesHtml = renderLinkedNotesSection(t);
@@ -1546,21 +2357,43 @@ function selectThought(t) {
           </button>
         </div>
       </div>
+      <button class="card-meta-toggle" id="cardMetaToggle" type="button" aria-expanded="false" aria-controls="cardMeta">
+        <span>Details, links &amp; tags</span>
+        <span class="facet-toggle-caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="card-meta" id="cardMeta">
       <div class="field-list">
         <div class="field-row"><span class="field-label">Title</span><span class="field-value">${titleHtml}</span></div>
         <div class="field-row"><span class="field-label">Author</span><span class="field-value">${authorHtml}</span></div>
         <div class="field-row"><span class="field-label">Published</span><span class="field-value">${publishedHtml}</span></div>
+        <div class="field-row"><span class="field-label">Updated</span><span class="field-value">${updatedHtml}</span></div>
         <div class="field-row"><span class="field-label">Source</span><span class="field-value">${sourceHtml}</span></div>
         <div class="field-row"><span class="field-label">Tags</span><span class="field-value">${tagsHtml}</span></div>
         <div class="field-row"><span class="field-label">URL</span><span class="field-value">${urlHtml}</span></div>
       </div>
-      <div class="index-card-confirm" id="cardConfirm"></div>
       ${peopleHtml}
       ${linksHtml}
       ${linkedNotesHtml}
-      <div class="index-card-body"><p>${renderBodyHtml(t.content)}</p></div>
+      </div>
+      <div class="index-card-confirm" id="cardConfirm"></div>
+      <div class="index-card-body">
+        <div class="read-body-bar">
+          <button class="link-add-toggle top-btn" type="button">↑ Top</button>
+          <button class="link-add-toggle" id="editHereBtn" type="button">✎ Edit from here</button>
+        </div>
+        <p>${renderBodyHtml(t.content)}</p>
+      </div>
     </div>
   `;
+
+  const cardMetaToggle = document.getElementById('cardMetaToggle');
+  const cardMeta = document.getElementById('cardMeta');
+  if (cardMetaToggle) {
+    cardMetaToggle.addEventListener('click', () => {
+      const open = cardMeta.classList.toggle('open');
+      cardMetaToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+  }
 
   const deleteBtn = document.getElementById('deleteBtn');
   const editBtn = document.getElementById('editBtn');
@@ -1568,6 +2401,13 @@ function selectThought(t) {
   const deletableId = t.realId;
 
   editBtn.addEventListener('click', () => startEdit(t));
+
+  wireTopButtons();
+
+  const editHereBtn = document.getElementById('editHereBtn');
+  if (editHereBtn) {
+    editHereBtn.addEventListener('click', () => startEdit(t, readingOffset(t)));
+  }
 
   deleteBtn.addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
@@ -1602,6 +2442,20 @@ function selectThought(t) {
     });
   });
 
+  main.querySelectorAll('[data-person]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      searchMode = false;
+      lastSearchQuery = '';
+      searchInput.value = '';
+      searchClear.style.display = 'none';
+      activePeople = new Set([btn.getAttribute('data-person').trim().toLowerCase()]);
+      activeTopics = new Set();
+      openFacet = 'people';
+      showEmptyState();
+      applyFilters();
+    });
+  });
+
   main.querySelectorAll('[data-topic]').forEach(btn => {
     btn.addEventListener('click', () => {
       searchMode = false;
@@ -1610,9 +2464,10 @@ function selectThought(t) {
       searchClear.style.display = 'none';
       const tag = btn.getAttribute('data-topic');
       activeTopics = new Set([tag.trim().toLowerCase()]);
-      // Auto-expand this tag's group (if any) so it's visible, not hidden
-      // inside a collapsed parent chip, the moment the drawer re-renders.
-      expandedTopicGroups.add(tag.trim().split(/\s+/)[0].toLowerCase());
+      // Open the topics dropdown at this tag's letter, so the filter you just
+      // switched on is visible rather than hidden inside a closed control.
+      openFacet = 'topics';
+      topicLetter = (tag.trim()[0] || '').toUpperCase();
       showEmptyState();
       applyFilters();
     });
@@ -1622,12 +2477,11 @@ function selectThought(t) {
   const sourceBtn = main.querySelector('[data-source]');
   if (sourceBtn) sourceBtn.addEventListener('click', () => filterToSingleValue(activeSources, sourceBtn.getAttribute('data-source')));
 
-  main.querySelectorAll('.link-create-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const url = btn.getAttribute('data-url');
-      const text = btn.getAttribute('data-text');
-      const prefill = text && text !== url ? `${text}\n${url}` : url;
-      showComposer(prefill, t.id);
+  
+  main.querySelectorAll('.thought-link[data-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      const found = findThought(el.getAttribute('data-id'));
+      if (found) selectThought(found);
     });
   });
 
@@ -1652,6 +2506,8 @@ function selectThought(t) {
 
   setupLinkPicker(t);
 
+  if (mark) requestAnimationFrame(() => scrollToMark(mark));
+
   const back = document.createElement('button');
   back.className = 'back-btn';
   back.textContent = '← Back to drawer';
@@ -1661,7 +2517,324 @@ function selectThought(t) {
   app.classList.add('detail-open');
 }
 
-function startEdit(t) {
+// Back to the top of whichever card is on screen. Both the reading view and the
+// edit view carry the button in their sticky bar.
+function wireTopButtons() {
+  main.querySelectorAll('.top-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const from = main.scrollTop;
+      main.scrollTo({ top: 0, behavior: 'smooth' });
+      // If the smooth scroll was ignored, jump anyway: a button that silently
+      // does nothing is worse than one that skips the animation.
+      setTimeout(() => { if (from > 0 && main.scrollTop === from) main.scrollTop = 0; }, 300);
+    });
+  });
+}
+
+// A phrase can repeat down a long article, so take the occurrence nearest to
+// where the scroll bar says we are rather than simply the first.
+function nearestIndex(hay, needle, estimate) {
+  let best = -1, gap = Infinity;
+  for (let at = hay.indexOf(needle); at !== -1; at = hay.indexOf(needle, at + 1)) {
+    const d = Math.abs(at - estimate);
+    if (d < gap) { best = at; gap = d; }
+    if (at > estimate + 4000) break;
+  }
+  return best;
+}
+
+// The link markup as the reader sees it, so words taken from the stored text
+// can be found again in the rendered article.
+function strippedMarkup(text) {
+  return text.replace(THOUGHT_LINK_RE, '$1').replace(MD_LINK_RE, '$1');
+}
+
+// Where the editor was left, described in a way that survives the edit itself:
+// some words from the top of the screen, and roughly how far down they were.
+// Offsets alone would not do — saving can change the text above them.
+function readingMark(el) {
+  const y = Math.max(0, main.getBoundingClientRect().top + STICKY_ROOM
+                        - el.getBoundingClientRect().top);
+  const at = offsetAtTop(el, y);
+  let text = strippedMarkup(el.value.slice(at, at + 240)).replace(/^\s+/, '');
+  // The top of the screen usually falls mid-word; start at the next whole one
+  // so the words can be found again in the rendered article.
+  if (at > 0 && /\S/.test(el.value[at - 1])) text = text.replace(/^\S*\s+/, '');
+  const words = text.slice(0, 48);
+  return words.length >= 10 ? { words, fraction: at / Math.max(1, el.value.length) } : null;
+}
+
+// The screen rectangle of one character inside rendered text.
+function rangeRect(root, index) {
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let seen = 0, node;
+  while ((node = walker.nextNode())) {
+    const len = node.textContent.length;
+    if (seen + len > index) {
+      const range = document.createRange();
+      const start = index - seen;
+      range.setStart(node, start);
+      range.setEnd(node, Math.min(len, start + 1));
+      const rect = range.getBoundingClientRect();
+      return rect && rect.height ? rect : null;
+    }
+    seen += len;
+  }
+  return null;
+}
+
+// Put the reading view back where the editing was left off.
+function scrollToMark(mark) {
+  const para = main.querySelector('.index-card-body p');
+  if (!para || !mark) return;
+  const text = para.textContent;
+  const box = para.getBoundingClientRect();
+  const at = nearestIndex(text, mark.words, Math.round(text.length * mark.fraction));
+  const rect = at === -1 ? null : rangeRect(para, at);
+  const y = rect
+    ? rect.top - main.getBoundingClientRect().top
+    : box.top - main.getBoundingClientRect().top + box.height * mark.fraction;
+  main.scrollTop = Math.max(0, main.scrollTop + y - STICKY_ROOM);
+}
+
+// Room to leave under the sticky bar when scrolling something into view.
+const STICKY_ROOM = 78;
+
+// Where a character sits inside the textarea, measured by laying the same text
+// out in a hidden copy of it. A textarea gives no way to ask directly, and the
+// answer is what keeps the edit view lined up with what was just being read.
+function withTextMirror(el, fn) {
+  const cs = getComputedStyle(el);
+  const mirror = document.createElement('div');
+  ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'lineHeight',
+   'textTransform', 'wordSpacing', 'textIndent', 'paddingTop', 'paddingRight',
+   'paddingBottom', 'paddingLeft', 'borderTopWidth', 'borderRightWidth',
+   'borderBottomWidth', 'borderLeftWidth'].forEach(prop => { mirror.style[prop] = cs[prop]; });
+  mirror.style.boxSizing = 'border-box';
+  mirror.style.width = el.offsetWidth + 'px';
+  mirror.style.position = 'absolute';
+  mirror.style.top = '0';
+  mirror.style.left = '-9999px';
+  mirror.style.visibility = 'hidden';
+  mirror.style.whiteSpace = 'pre-wrap';
+  mirror.style.overflowWrap = 'break-word';
+  const text = document.createTextNode('');
+  const marker = document.createElement('span');
+  marker.textContent = '\u200b';
+  mirror.appendChild(text);
+  mirror.appendChild(marker);
+  document.body.appendChild(mirror);
+  try {
+    return fn(offset => {
+      text.nodeValue = el.value.slice(0, offset);
+      return marker.getBoundingClientRect().top - mirror.getBoundingClientRect().top;
+    });
+  } finally {
+    mirror.remove();
+  }
+}
+
+// The last character that still sits at or above y pixels down the textarea.
+function offsetAtTop(el, y) {
+  return withTextMirror(el, topOf => {
+    let lo = 0, hi = el.value.length;
+    while (lo < hi) {
+      const mid = Math.ceil((lo + hi) / 2);
+      if (topOf(mid) <= y) lo = mid; else hi = mid - 1;
+    }
+    return lo;
+  });
+}
+
+function lineStart(value, offset) {
+  return value.lastIndexOf('\n', Math.max(0, offset - 1)) + 1;
+}
+
+function caretFromPoint(x, y) {
+  let spot = null;
+  if (document.caretRangeFromPoint) {
+    const range = document.caretRangeFromPoint(x, y);
+    if (range) spot = { node: range.startContainer, offset: range.startOffset };
+  } else if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(x, y);
+    if (pos) spot = { node: pos.offsetNode, offset: pos.offset };
+  }
+  if (!spot) return null;
+  if (spot.node.nodeType !== 3) {
+    // Some browsers answer with the containing element; step into its text.
+    const child = spot.node.childNodes && spot.node.childNodes[spot.offset];
+    if (!child || child.nodeType !== 3) return null;
+    spot = { node: child, offset: 0 };
+  }
+  return spot;
+}
+
+// Which part of the note is at the top of the screen while reading, as an
+// offset into the stored text. Read by taking the words showing at the top edge
+// and finding them in the source; the rendered text drops the link markup, so
+// matching words is more reliable than counting characters. Falls back to how
+// far down the article the scroll has reached.
+function readingOffset(t) {
+  const para = main.querySelector('.index-card-body p');
+  if (!para) return null;
+  const box = para.getBoundingClientRect();
+  const edge = main.getBoundingClientRect().top + STICKY_ROOM;
+  if (box.bottom <= edge) return t.content.length;
+  const y = Math.max(edge, box.top + 2);
+  const seen = Math.min(1, Math.max(0, (edge - box.top) / Math.max(1, box.height)));
+  const estimate = Math.round(t.content.length * seen);
+  const spot = caretFromPoint(box.left + 6, y);
+  if (spot) {
+    const rest = spot.node.textContent.slice(spot.offset);
+    const lead = rest.search(/\S/);
+    if (lead !== -1) {
+      const snippet = rest.slice(lead, lead + 48);
+      if (snippet.length >= 10) {
+        const at = nearestIndex(t.content, snippet, estimate);
+        if (at !== -1) return at;
+      }
+    }
+  }
+  return estimate;
+}
+
+// How far down the reading area a character currently sits.
+function caretScreenY(el, offset) {
+  return el.getBoundingClientRect().top - main.getBoundingClientRect().top
+       + withTextMirror(el, topOf => topOf(offset));
+}
+
+// Bring a character into view, by default only when it is off screen or hidden
+// under the sticky bar — scrolling on every insert would yank the page about.
+function scrollCaretIntoView(el, offset, always) {
+  const y = caretScreenY(el, offset);
+  if (always || y < STICKY_ROOM || y > main.clientHeight - 40) {
+    main.scrollTop = Math.max(0, main.scrollTop + y - STICKY_ROOM);
+  }
+}
+
+// Put the cursor at a character and scroll it to just under the sticky bar.
+function placeCaretInView(el, offset) {
+  const at = Math.max(0, Math.min(offset, el.value.length));
+  el.focus({ preventScroll: true });       // focusing normally jumps to the end
+  el.setSelectionRange(at, at);
+  el.dispatchEvent(new Event('select'));   // tells the link picker where we are
+  scrollCaretIntoView(el, at, true);
+}
+
+// Inserting a link into the body text, as opposed to relating two notes.
+// The markup written here is what renderBodyHtml() turns back into a clickable
+// link, so the label must stay on one line and free of square brackets.
+// A keyboard hint is noise on a phone, where there is no modifier key to press.
+const LINK_SHORTCUT = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  ? (/Mac/.test(navigator.platform || '') ? '⌘K · ' : 'Ctrl+K · ')
+  : '+ ';
+
+function noteLabel(t) {
+  return t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 70);
+}
+
+function setupBodyLinkPicker(current, bodyEl, autoGrow) {
+  const toggle = document.getElementById('editLinkToggle');
+  const picker = document.getElementById('editLinkPicker');
+  const input = document.getElementById('editLinkInput');
+  const results = document.getElementById('editLinkResults');
+  if (!toggle) return;
+
+  // Opening the picker moves focus off the textarea, which drops the caret and
+  // any selection, so remember where they were while the textarea still has it.
+  let caretStart = bodyEl.value.length, caretEnd = bodyEl.value.length;
+  let aimed = false;      // has the cursor been put anywhere meaningful yet?
+  let ownLine = false;    // insert the link as a line of its own
+  function remember() {
+    caretStart = bodyEl.selectionStart;
+    caretEnd = bodyEl.selectionEnd;
+  }
+  ['keyup', 'mouseup', 'input', 'select', 'touchend'].forEach(e =>
+    bodyEl.addEventListener(e, () => { remember(); aimed = true; }));
+  bodyEl.addEventListener('blur', remember);
+
+  function insert(note) {
+    const selected = bodyEl.value.slice(caretStart, caretEnd).replace(/\s+/g, ' ').trim();
+    const label = (selected || noteLabel(note)).replace(/[\[\]]/g, '').slice(0, 200);
+    const markup = '[' + label + '](thought:' + note.id + ')' + (ownLine && !selected ? '\n' : '');
+    bodyEl.value = bodyEl.value.slice(0, caretStart) + markup + bodyEl.value.slice(caretEnd);
+    close();
+    const caret = caretStart + markup.length;
+    // preventScroll matters: assigning value put the cursor at the very end, so
+    // a plain focus() would scroll to the bottom of the article.
+    bodyEl.focus({ preventScroll: true });
+    bodyEl.setSelectionRange(caret, caret);
+    remember();
+    aimed = true;
+    ownLine = false;
+    autoGrow();
+    scrollCaretIntoView(bodyEl, caret, false);
+  }
+
+  function render(query) {
+    const q = query.trim();
+    const matches = (q ? localSearch(q) : allThoughts)
+      .filter(o => o.id !== current.id)
+      .slice(0, 8);
+    results.innerHTML = matches.length
+      ? matches.map(o => '<button class="link-picker-item" data-id="' + escapeAttr(o.id) +
+          '" type="button">' + escapeHtml(noteLabel(o)) + '</button>').join('')
+      : '<span class="field-value empty" style="padding:6px 8px;display:block;">No matches.</span>';
+    results.querySelectorAll('.link-picker-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const note = findThought(btn.getAttribute('data-id'));
+        if (note) insert(note);
+      });
+    });
+    return matches;
+  }
+
+  function open() {
+    if (document.activeElement === bodyEl) { remember(); aimed = true; }
+    // Nothing has been pointed at, so aim at the first line on screen — with a
+    // long article scrolled halfway down, appending to the end would put the
+    // link somewhere the reader cannot see.
+    ownLine = !aimed;
+    if (!aimed) {
+      const y = Math.max(0, main.getBoundingClientRect().top + STICKY_ROOM
+                            - bodyEl.getBoundingClientRect().top);
+      caretStart = caretEnd = lineStart(bodyEl.value, offsetAtTop(bodyEl, y));
+    }
+    picker.hidden = false;
+    input.value = '';
+    render('');
+    input.focus();
+  }
+  function close() {
+    picker.hidden = true;
+    results.innerHTML = '';
+  }
+
+  toggle.addEventListener('click', () => { picker.hidden ? open() : close(); });
+
+  bodyEl.addEventListener('keydown', ev => {
+    if ((ev.metaKey || ev.ctrlKey) && ev.key.toLowerCase() === 'k') {
+      ev.preventDefault();
+      remember();
+      open();
+    }
+  });
+
+  input.addEventListener('input', () => render(input.value));
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') { close(); bodyEl.focus(); }
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const first = results.querySelector('.link-picker-item');
+      if (first) first.click();
+    }
+  });
+}
+
+// anchorOffset: a character position in the note to open at, so that leaving
+// the reading view halfway down an article does not land at the top of it.
+function startEdit(t, anchorOffset) {
   editingId = t.id;
   closeReference();
   renderList(displayed, searchMode);
@@ -1679,19 +2852,39 @@ function startEdit(t) {
       <div class="edit-field-list">
         <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="editTitle" type="text" value="${escapeAttr(t.title || '')}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="editAuthor" type="text" value="${escapeAttr(t.author || '')}" /></div>
-        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="editPublished" type="text" placeholder="YYYY-MM-DD" value="${escapeAttr(t.published_date || '')}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="editPublished" type="text" placeholder="dd/mm/yyyy" value="${escapeAttr(formatDateInput(t.published_date))}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="editSource" type="text" value="${escapeAttr(t.source || '')}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="editTags" type="text" placeholder="comma, separated, tags" value="${escapeAttr(t.topics.join(', '))}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="editUrl" type="text" value="${escapeAttr(t.source_url || '')}" /></div>
       </div>
       <div class="index-card-foot compose-actions edit-actions">
-        <span class="compose-status" id="editStatus"></span>
-        <button class="compose-cancel" id="editCancel" type="button">Cancel</button>
-        <button class="compose-save" id="editSave" type="button">Save changes</button>
+        <span class="compose-status edit-status"></span>
+        <button class="compose-cancel edit-cancel" type="button">Cancel</button>
+        <button class="compose-save edit-save" type="button">Save changes</button>
       </div>
       <div class="index-card-body">
-        <label class="edit-body-label" for="editContent">Body</label>
+        <div class="edit-body-sticky">
+          <div class="edit-body-head">
+            <label class="edit-body-label" for="editContent">Body</label>
+            <div class="bar-actions">
+              <button class="link-add-toggle top-btn" type="button">↑ Top</button>
+              <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+            </div>
+          </div>
+          <div class="link-picker inline-link-picker" id="editLinkPicker" hidden>
+            <input class="link-picker-input" id="editLinkInput" type="text" placeholder="Search notes to link into the text…" />
+            <div class="link-picker-results" id="editLinkResults"></div>
+            <span class="link-picker-hint">Selected text becomes the link; with nothing selected it lands at the cursor, or on its own line at the top of the screen.</span>
+          </div>
+        </div>
         <textarea class="edit-body-textarea" id="editContent" spellcheck="true">${escapeHtml(t.content)}</textarea>
+      </div>
+      <!-- The same two buttons again, so a long article can be saved from where
+           the reading ends rather than by scrolling back to the header. -->
+      <div class="index-card-foot compose-actions edit-actions edit-actions-bottom">
+        <span class="compose-status edit-status"></span>
+        <button class="compose-cancel edit-cancel" type="button">Cancel</button>
+        <button class="compose-save edit-save" type="button">Save changes</button>
       </div>
     </div>
   `;
@@ -1703,39 +2896,84 @@ function startEdit(t) {
   main.prepend(back);
   app.classList.add('detail-open');
 
-  const cancelBtn = document.getElementById('editCancel');
-  const saveBtn = document.getElementById('editSave');
-  const statusEl = document.getElementById('editStatus');
+  // Two identical action bars, top and bottom; every handler drives both so
+  // they never disagree about whether a save is in flight.
+  const cancelBtns = Array.from(main.querySelectorAll('.edit-cancel'));
+  const saveBtns = Array.from(main.querySelectorAll('.edit-save'));
+  const statusEls = Array.from(main.querySelectorAll('.edit-status'));
   const bodyEl = document.getElementById('editContent');
 
+  function setStatus(message, colour) {
+    statusEls.forEach(el => { el.textContent = message; el.style.color = colour; });
+  }
+  function setBusy(busy) {
+    saveBtns.forEach(b => { b.disabled = busy; b.textContent = busy ? 'Saving…' : 'Save changes'; });
+    cancelBtns.forEach(b => { b.disabled = busy; });
+  }
+
   function autoGrow() {
+    // Collapsing the box to measure it momentarily shortens the page, and the
+    // browser clamps the scroll to the shorter page — which is why editing a
+    // long article used to jump back towards the top. Put the scroll back.
+    const keep = main.scrollTop;
     bodyEl.style.height = 'auto';
     bodyEl.style.height = (bodyEl.scrollHeight + 2) + 'px';
+    if (main.scrollTop !== keep) main.scrollTop = keep;
   }
   bodyEl.addEventListener('input', autoGrow);
   autoGrow();
+  setupBodyLinkPicker(t, bodyEl, autoGrow);
+  wireTopButtons();
+  if (anchorOffset != null) {
+    // After layout, or the textarea has not grown to its full height yet.
+    requestAnimationFrame(() => placeCaretInView(bodyEl, anchorOffset));
+  }
 
-  cancelBtn.addEventListener('click', () => { editingId = null; selectThought(t); });
+  // Whatever form the date was typed in, show it back as dd/mm/yyyy — and say
+  // so plainly when it could not be read, rather than quietly dropping it.
+  const publishedEl = document.getElementById('editPublished');
+  publishedEl.addEventListener('blur', () => {
+    const iso = parseDateInput(publishedEl.value);
+    if (iso === null) {
+      publishedEl.style.borderColor = 'var(--rust)';
+      setStatus('Date not recognised — try 01/08/1974, 1 Aug 1974 or 1974-08-01.', 'var(--rust)');
+      return;
+    }
+    publishedEl.style.borderColor = '';
+    publishedEl.value = formatDateInput(iso);
+    if (statusEls[0].textContent.startsWith('Date not recognised')) setStatus('', '');
+  });
 
-  saveBtn.addEventListener('click', async () => {
+  cancelBtns.forEach(b => b.addEventListener('click', () => {
+    const mark = readingMark(bodyEl);
+    editingId = null;
+    selectThought(t, mark);
+  }));
+
+  saveBtns.forEach(b => b.addEventListener('click', save));
+
+  async function save() {
     const newContent = document.getElementById('editContent').value.trim();
     if (!newContent) {
-      statusEl.textContent = 'Content cannot be empty.';
-      statusEl.style.color = 'var(--rust)';
+      setStatus('Content cannot be empty.', 'var(--rust)');
       return;
     }
     const newTitle = document.getElementById('editTitle').value.trim();
     const newAuthor = document.getElementById('editAuthor').value.trim();
-    const newPublished = document.getElementById('editPublished').value.trim();
+    const newPublished = parseDateInput(document.getElementById('editPublished').value);
+    if (newPublished === null) {
+      setStatus('Date not recognised — try 01/08/1974, 1 Aug 1974 or 1974-08-01.', 'var(--rust)');
+      document.getElementById('editPublished').focus();
+      return;
+    }
     const newSource = document.getElementById('editSource').value.trim();
     const newTags = document.getElementById('editTags').value.split(',').map(s => s.trim()).filter(Boolean);
     const newUrl = document.getElementById('editUrl').value.trim();
 
-    saveBtn.disabled = true;
-    cancelBtn.disabled = true;
-    saveBtn.textContent = 'Saving…';
-    statusEl.style.color = 'var(--ink-faint)';
-    statusEl.textContent = 'Saving changes…';
+    // Read the position before the save: the card is rebuilt afterwards.
+    const mark = readingMark(bodyEl);
+    setBusy(true);
+    setStatus('Saving changes…', 'var(--ink-faint)');
 
     const args = {
       id: t.id,
@@ -1748,18 +2986,28 @@ function startEdit(t) {
     };
     if (newContent !== t.content) args.content = newContent;
 
+    // Stamp the note as revised, but only if this edit really changed
+    // something — opening the editor and saving out of habit is not a revision,
+    // and neither is a housekeeping script tidying tags.
+    const unchanged =
+      newTitle === (t.title || '') &&
+      newAuthor === (t.author || '') &&
+      newPublished === (t.published_date || '') &&
+      newSource === (t.source || '') &&
+      newUrl === (t.source_url || '') &&
+      newContent === t.content &&
+      newTags.join('\u0000') === t.topics.join('\u0000');
+    if (!unchanged) args.updated_date = todayISO();
+
     try {
       await callTool('update_thought', args);
       editingId = null;
-      await refreshAndReselect(t.id);
+      await refreshAndReselect(t.id, mark);
     } catch (err) {
-      saveBtn.disabled = false;
-      cancelBtn.disabled = false;
-      saveBtn.textContent = 'Save changes';
-      statusEl.style.color = 'var(--rust)';
-      statusEl.textContent = 'Could not save — ' + err.message;
+      setBusy(false);
+      setStatus('Could not save — ' + err.message, 'var(--rust)');
     }
-  });
+  }
 }
 
 function showEmptyState() {
@@ -1827,7 +3075,10 @@ function showComposer(prefill, parentId) {
     statusEl.style.color = 'var(--ink-faint)';
     statusEl.textContent = parentId ? 'Sending to the archive and linking back…' : 'Sending to the archive…';
     try {
-      const args = { content };
+      // Written here, now, by you — all three are facts, so they are stated
+      // rather than left to the extractor to infer from the prose. Imported
+      // files go the other way: their own byline and date are detected.
+      const args = { content, author: SELF_AUTHOR, published_date: todayISO() };
       if (parentId) args.parent_thought_id = parentId;
       await callTool('capture_thought', args);
       statusEl.style.color = 'var(--moss)';
@@ -1884,10 +3135,58 @@ async function loadAll() {
     activeTopics = new Set();
     activeAuthors = new Set();
     activeSources = new Set();
+    activePeople = new Set();
     applyFilters();
   } catch (err) {
     showStatus('Could not reach the archive — ' + err.message, true, loadAll);
   }
+}
+
+// Everything worth matching on, flattened once per note and cached: the words
+// people actually search for live in tags, authors and sources as often as in
+// the text.
+function searchableText(t) {
+  if (t._haystack === undefined) {
+    t._haystack = [
+      t.title || '', t.content || '', t.author || '', t.source || '',
+      (t.topics || []).join(' '), (t.people || []).join(' '),
+      t.source_url || ''
+    ].join(' ').toLowerCase().replace(/[^a-z0-9]+/g, ' ');
+  }
+  return t._haystack;
+}
+
+// Word-based, punctuation-blind: "burn tokens" finds "token burn", and
+// "4question" finds "4-Question". Every word must appear somewhere.
+function localSearch(query) {
+  const flat = query.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const words = flat.split(' ').filter(Boolean);
+  if (!words.length) return [];
+  const squashed = flat.replace(/ /g, '');
+  // "tokens" should find "token burn"; a bare substring test misses the plural.
+  const present = (hay, w) =>
+    hay.indexOf(w) !== -1 || (w.length > 3 && w.slice(-1) === 's' && hay.indexOf(w.slice(0, -1)) !== -1);
+  return allThoughts.filter(t => {
+    const hay = searchableText(t);
+    return words.every(w => present(hay, w)) ||
+           hay.replace(/ /g, '').indexOf(squashed) !== -1;
+  }).sort((a, b) => {
+    // A note *about* the thing beats one that mentions it in passing.
+    const at = (a.title || '').toLowerCase(), bt = (b.title || '').toLowerCase();
+    const aHit = words.every(w => present(at, w)) ? 0 : 1;
+    const bHit = words.every(w => present(bt, w)) ? 0 : 1;
+    return aHit - bHit;
+  });
+}
+
+// Instant: match what is already loaded, with no round trip.
+function runLocalSearch(query) {
+  if (!query.trim()) { loadAll(); return; }
+  searchMode = true;
+  lastSearchQuery = query;
+  searchClear.style.display = 'block';
+  displayed.baseResults = localSearch(query);
+  applyFilters();
 }
 
 async function runSearch(query) {
@@ -1895,20 +3194,33 @@ async function runSearch(query) {
   searchMode = true;
   lastSearchQuery = query;
   searchClear.style.display = 'block';
-  showStatus('Searching the archive for "' + query + '"…', false);
+  const local = localSearch(query);
+  if (local.length) {
+    displayed.baseResults = local;
+    applyFilters();
+  } else {
+    showStatus('Searching the archive for "' + query + '"…', false);
+  }
   try {
     const text = await callTool('search_thoughts', { query, limit: 50, format: 'json' });
-    const results = parseJsonThoughts(text);
+    const semantic = parseJsonThoughts(text);
+    // Literal matches first — they are what the typist meant — then anything
+    // the archive found by meaning that the words alone would have missed.
+    const seen = new Set(local.map(t => t.id));
+    const results = local.concat(semantic.filter(t => !seen.has(t.id)));
     displayed.baseResults = results;
     activeTypes = new Set();
     activeTopics = new Set();
     activeAuthors = new Set();
     activeSources = new Set();
+    activePeople = new Set();
     applyFilters();
   } catch (err) {
     showStatus('Search failed — ' + err.message, true, () => runSearch(query));
   }
 }
+
+document.getElementById('lockBtn').addEventListener('click', lockArchive);
 
 refreshBtn.addEventListener('click', () => {
   refreshBtn.classList.add('spinning');
@@ -1924,11 +3236,1175 @@ searchInput.addEventListener('keydown', (e) => {
 });
 searchInput.addEventListener('input', () => {
   clearTimeout(searchTimer);
-  if (searchInput.value.trim() === '') { searchClear.style.display = 'none'; return; }
-  searchTimer = setTimeout(() => runSearch(searchInput.value), 650);
+  const value = searchInput.value;
+  if (value.trim() === '') {
+    searchClear.style.display = 'none';
+    searchMode = false;
+    applyFilters();
+    return;
+  }
+  runLocalSearch(value);                       // instant, from what is loaded
+  searchTimer = setTimeout(() => runSearch(value), 500);   // then by meaning
 });
 
-loadAll();
+// ---------- unlock gate ----------
+const unlockEl = document.getElementById('unlock');
+const unlockForm = document.getElementById('unlockForm');
+const unlockInput = document.getElementById('unlockInput');
+const unlockCopy = document.getElementById('unlockCopy');
+const DEFAULT_UNLOCK_COPY = unlockCopy.textContent.trim();
+
+function showUnlock(message) {
+  unlockCopy.textContent = message || DEFAULT_UNLOCK_COPY;
+  unlockCopy.classList.toggle('error', Boolean(message));
+  unlockEl.hidden = false;
+  unlockInput.value = '';
+  unlockInput.focus();
+}
+
+function hideUnlock() {
+  unlockEl.hidden = true;
+  unlockCopy.textContent = DEFAULT_UNLOCK_COPY;
+  unlockCopy.classList.remove('error');
+}
+
+unlockForm.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const key = unlockInput.value.trim();
+  if (!key) { showUnlock('Enter the key to continue.'); return; }
+  setAccessKey(key);
+  hideUnlock();
+  loadAll();
+});
+
+// Forget the key on this device — useful on a shared or borrowed phone.
+function lockArchive() {
+  setAccessKey('');
+  allThoughts = [];
+  showUnlock('Key forgotten on this device.');
+}
+
+// ---------- import: drag a file onto the catalog ----------
+// PDFs are read here in the browser. That keeps the archive server out of it
+// entirely: no upload, no file-size ceiling, no extra credential.
+
+let pdfLibPromise = null;
+function loadPdfLib() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = new Promise((resolve, reject) => {
+      const tag = document.createElement('script');
+      tag.src = 'pdf.min.js';
+      tag.onload = () => {
+        window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'pdf.worker.min.js';
+        resolve(window.pdfjsLib);
+      };
+      tag.onerror = () => reject(new Error('Could not load the PDF reader.'));
+      document.head.appendChild(tag);
+    });
+  }
+  return pdfLibPromise;
+}
+
+// Rebuild a PDF's hyperlinks as markdown.
+//
+// pdf.js keeps text and links apart: getTextContent() has no URLs, and
+// getAnnotations() has URLs with page coordinates but no text. The two are
+// matched by position — but a link often covers only part of a text run
+// ("Open Brain" inside "Open Brain from the earlier guide"), so the run is
+// split by the proportion of its width the link rectangle covers.
+async function pdfToMarkdown(file) {
+  const lib = await loadPdfLib();
+  const doc = await lib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const pages = [];
+
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const content = await page.getTextContent();
+    const anns = (await page.getAnnotations())
+      .filter(a => a.url)
+      .map(a => ({
+        url: a.url,
+        x1: Math.min(a.rect[0], a.rect[2]), x2: Math.max(a.rect[0], a.rect[2]),
+        y1: Math.min(a.rect[1], a.rect[3]), y2: Math.max(a.rect[1], a.rect[3])
+      }));
+
+    const segment = (item) => {
+      const str = item.str;
+      const x = item.transform[4], y = item.transform[5], w = item.width || 0;
+      if (!str || !w) return [{ str: str, url: null }];
+      const hit = anns.find(a => y >= a.y1 - 2 && y <= a.y2 + 2 && a.x1 < x + w && a.x2 > x);
+      if (!hit) return [{ str: str, url: null }];
+      const a = Math.round(Math.max(0, (hit.x1 - x) / w) * str.length);
+      const b = Math.round(Math.min(1, (hit.x2 - x) / w) * str.length);
+      if (b <= a) return [{ str: str, url: null }];
+      const out = [];
+      if (a > 0) out.push({ str: str.slice(0, a), url: null });
+      out.push({ str: str.slice(a, b), url: hit.url });
+      if (b < str.length) out.push({ str: str.slice(b), url: null });
+      return out;
+    };
+
+    let lastY = null, line = [], lines = [];
+    const flush = () => {
+      if (!line.length) return;
+      let text = '', runUrl = null, run = '';
+      for (const piece of line) {
+        if (piece.url !== runUrl) {
+          if (runUrl && run.trim()) text += '[' + run.trim() + '](' + runUrl + ')';
+          else text += run;
+          run = '';
+          runUrl = piece.url;
+        }
+        run += piece.str;
+      }
+      if (runUrl && run.trim()) text += '[' + run.trim() + '](' + runUrl + ')';
+      else text += run;
+      lines.push(text);
+      line = [];
+    };
+
+    for (const item of content.items) {
+      const y = item.transform[5];
+      if (lastY !== null && Math.abs(y - lastY) > 2) flush();
+      segment(item).forEach(seg => line.push(seg));
+      lastY = y;
+    }
+    flush();
+    pages.push(lines.join('\n'));
+  }
+  return pages.join('\n\n');
+}
+
+// The same link rules fix-links.py applies, minus the parts that need the
+// network. Boilerplate and promo links go; a link to an article already in the
+// archive becomes an in-brain link. Links to articles not held yet are left
+// alone — creating those needs to fetch the page, which the browser cannot do
+// across origins, so fix-links.py picks them up on its next run.
+const IMPORT_DROP_ANCHOR = [
+  /^nate$/i,
+  /learn about all my substack tiers here/i,
+  /grab my prompt tool here/i
+];
+const IMPORT_DROP_HOST = [
+  'unlock-ai.natebjones.com', 'www.heypresto.ai', 'heypresto.ai', 'talent.natebjones.com',
+  // Community invites are newsletter furniture, not part of the article.
+  'join.slack.com', 'discord.gg'
+];
+const IMPORT_DROP_URL = [
+  'https://substack.com/@natesnewsletter',
+  'https://nateszerotoai.substack.com/',
+  'https://cursor.com/pricing'
+];
+
+function applyImportLinkRules(text) {
+  const byUrl = {};
+  allThoughts.forEach(t => {
+    const u = t.source_url;
+    if (u) {
+      const n = u.trim().replace(/[.,;:!?]+$/, '').replace(/^http:\/\//, 'https://');
+      if (!byUrl[n]) byUrl[n] = t.id;
+    }
+  });
+
+  const linked = new Set();
+  const pending = [];
+  const seenPending = new Set();
+  const out = text.replace(/\[([^\]]*)\]\((https?:\/\/[^)]+)\)/g, (whole, anchor, url) => {
+    const n = url.trim().replace(/[.,;:!?]+$/, '').replace(/^http:\/\//, 'https://');
+    const host = n.replace(/^https?:\/\//, '').split('/')[0];
+    if (IMPORT_DROP_ANCHOR.some(re => re.test(anchor.trim())) ||
+        IMPORT_DROP_URL.indexOf(n) !== -1 || IMPORT_DROP_HOST.indexOf(host) !== -1) {
+      return '';
+    }
+    const id = byUrl[n];
+    if (id) {
+      linked.add(id);
+      return '[' + anchor + '](thought:' + id + ')';
+    }
+    // An article from a publication we archive, that we do not hold yet.
+    const suppressed = IMPORT_NO_CAPTURE.some(p => n.toLowerCase().indexOf(p) !== -1);
+    if (IMPORT_CAPTURE_HOST.indexOf(host) !== -1 && !suppressed && !seenPending.has(n)) {
+      seenPending.add(n);
+      pending.push({ url: n, anchor: anchor.trim() });
+    }
+    return whole;
+  });
+
+  return { text: out, linked: Array.from(linked), pending: pending };
+}
+
+// A PDF hard-wraps at the column, so most "lines" are sentence fragments and
+// have to be rejoined or the note reads as stumps. Newsletter furniture (the
+// byline, subscribe pitches, page numbers) is dropped outright.
+function cleanImportedText(raw) {
+  const DROP = [
+    /^watch now$/i, /^nate$/i, /^subscribed?$/i, /^share$/i, /^leave a comment$/i,
+    /^\d{1,3}$/,
+    /^[A-Z]{3}\s+\d{1,2},\s*\d{4}\b.*$/,
+    /^i make this substack thanks to readers/i,
+    /learn about all my substack tiers here/i,
+    /grab my prompt tool here/i,
+    /^upgrade to paid$/i, /^subscribe$/i
+  ];
+
+  const lines = raw
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, ' ')
+    .split('\n')
+    .map(l => l.replace(/[ \t]+/g, ' ').trim())
+    .filter(l => !DROP.some(re => re.test(l)));
+
+  // Work out the column width this file wrapped at: a line close to that width
+  // ran out of room and continues on the next, whatever it starts with. A
+  // markedly shorter line genuinely ended a paragraph, or is a heading.
+  const lengths = lines.filter(Boolean).map(l => l.length).sort((a, b) => a - b);
+  const column = lengths.length ? lengths[Math.floor(lengths.length * 0.9)] : 80;
+  const wrapAt = column * 0.72;
+
+  const out = [];
+  let joinNext = false;
+  for (const line of lines) {
+    if (!line) {
+      if (out.length && out[out.length - 1] !== '') out.push('');
+      joinNext = false;
+      continue;
+    }
+    const prev = out.length ? out[out.length - 1] : '';
+    const continues = joinNext ||
+      (prev && /^[a-z0-9(“"'—–-]/.test(line) && !/[.!?:;”"’)]$/.test(prev));
+    if (continues && prev) out[out.length - 1] = prev + ' ' + line;
+    else out.push(line);
+    joinNext = line.length >= wrapAt;
+  }
+
+  let text = out.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  const firstBreak = text.indexOf('\n');
+  const first = firstBreak === -1 ? text : text.slice(0, firstBreak);
+  if (first && first.length < 200 && first[0] !== '#') text = '# ' + text;
+  return text;
+}
+
+// The byline and date are stripped as boilerplate before the note is saved —
+// they are furniture when reading — but they are also the only author and date
+// the file carries. So they are read out first and applied to the saved note.
+const MONTHS = { JAN: 1, FEB: 2, MAR: 3, APR: 4, MAY: 5, JUN: 6,
+                 JUL: 7, AUG: 8, SEP: 9, OCT: 10, NOV: 11, DEC: 12 };
+
+function detectArticleMeta(raw) {
+  const found = {};
+  const pad = (n) => String(n).padStart(2, '0');
+
+  const date = raw.match(/\b([A-Z]{3})\s+(\d{1,2}),\s*(\d{4})\b/);
+  if (date && MONTHS[date[1]]) {
+    found.published_date = date[3] + '-' + pad(MONTHS[date[1]]) + '-' + pad(date[2]);
+  }
+
+  // A short all-caps line sitting directly above that date is the byline. By
+  // this point it may already be a markdown link, so allow the brackets.
+  const byline = raw.match(
+    /(?:^|\n)[ \t]*\[?([A-Z][A-Z .'’-]{1,28}?)\]?(?:\([^)]*\))?[ \t]*\n[^\n]{0,40}[A-Z]{3}\s+\d{1,2},\s*\d{4}/);
+  if (byline) {
+    found.author = byline[1].trim().replace(/\s+/g, ' ').toLowerCase()
+      .replace(/\b\w/g, c => c.toUpperCase());   // the server expands known short names
+  }
+
+  if (/natesnewsletter\.substack\.com/.test(raw)) found.source_name = "Nate B. Jones Substack";
+  else if (/nateszerotoai\.substack\.com/.test(raw)) found.source_name = "Zero to AI";
+  return found;
+}
+
+// Fill only what is missing: never overwrite something already recorded.
+async function applyDetectedMeta(id, existing) {
+  const args = { id: id };
+  const map = { published_date: 'published_date', author: 'author', source_name: 'source' };
+  Object.keys(map).forEach(key => {
+    const already = existing ? existing[map[key]] : null;
+    if (importMeta[key] && !already) args[key] = importMeta[key];
+  });
+  if (Object.keys(args).length > 1) {
+    try { await callTool('update_thought', args); } catch (err) { /* the note is saved regardless */ }
+  }
+}
+
+let importMeta = {};
+
+const dropVeil = document.getElementById('dropVeil');
+const importPanel = document.getElementById('importPanel');
+const importText = document.getElementById('importText');
+const importFileName = document.getElementById('importFile');
+const importCount = document.getElementById('importCount');
+const importStatus = document.getElementById('importStatus');
+const importPicker = document.getElementById('importPicker');
+const importPickerInput = document.getElementById('importPickerInput');
+const importPickerResults = document.getElementById('importPickerResults');
+const importSaveNew = document.getElementById('importSaveNew');
+const importEditor = document.getElementById('importEditor');
+const importSummary = document.getElementById('importSummary');
+const importSummaryText = document.getElementById('importSummaryText');
+const importMadeList = document.getElementById('importMadeList');
+
+function setImportStatus(msg, isError) {
+  importStatus.textContent = msg || '';
+  importStatus.classList.toggle('error', Boolean(isError));
+}
+
+function updateImportCount() {
+  importCount.textContent = importText.value.length.toLocaleString() + ' characters';
+}
+importText.addEventListener('input', updateImportCount);
+
+function closeImport() {
+  importPanel.hidden = true;
+  importText.value = '';
+  importPicker.classList.remove('on');
+  setImportEmphasis(false);
+  pendingLinks = [];
+  pendingPlaceholders = [];
+  importMeta = {};
+  resetImportPanel();
+  setImportStatus('');
+}
+
+// Links rewritten to notes we already hold, pending the new note's id.
+let pendingLinks = [];
+// Referenced articles with no note yet — placeholders are made on save.
+let pendingPlaceholders = [];
+
+async function recordImportLinks(id) {
+  for (const other of pendingLinks) {
+    if (other === id) continue;
+    try {
+      await callTool('link_thoughts', { id_a: id, id_b: other });
+    } catch (err) {
+      /* the note itself saved; a missing relation is not worth failing over */
+    }
+  }
+  pendingLinks = [];
+}
+
+// Hosts whose articles belong in the archive. A link to one of these that we
+// do not hold yet gets a placeholder note, so the reference points somewhere
+// real straight away and can be completed later by importing the original.
+// Articles that should never become notes, however often they are referenced —
+// a paywall tier you do not have. Kept in step with no-capture.txt.
+const IMPORT_NO_CAPTURE = [
+  'executive-briefing', 'beyond-model-routing',
+  'ai-token-cost-management', 'ai-agent-ownership',
+];
+
+const IMPORT_CAPTURE_HOST = [
+  'natesnewsletter.substack.com', 'nateszerotoai.substack.com', 'promptkit.natebjones.com'
+];
+
+function placeholderContent(anchor, url) {
+  // The anchor is often a fragment of the sentence that linked here ("here",
+  // "in a post yesterday"), which makes a poor title. Fall back to the URL's
+  // own slug when it does not look like a name.
+  let label = (anchor || '').replace(/\s+/g, ' ').trim().replace(/[.,;:]+$/, '');
+  const looksLikeFragment = label.length < 14 || /^[a-z]/.test(label);
+  if (looksLikeFragment) {
+    const slug = url.split('?')[0].replace(/\/$/, '').split('/').pop() || '';
+    if (slug.length > 3) {
+      label = slug.replace(/[-_]+/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+  }
+  const title = label || url;
+  return '# ' + title + '\n\n' +
+    'Referenced by another note, but not in the archive yet.\n\n' +
+    '---\n\n' +
+    '_Source: ' + url + ' — no text has been captured for this one yet. ' +
+    'Import the original article to complete it. Paste the full text here to complete it._';
+}
+
+// Create a note for each referenced article we do not hold, then point the
+// imported text at it. Returns what was made, so the user can be told.
+async function createPlaceholders(text, pending) {
+  const made = [];
+  let out = text;
+  for (const item of pending) {
+    let id = null;
+    try {
+      const res = await callTool('capture_thought',
+        { content: placeholderContent(item.anchor, item.url) });
+      const m = /id: ([0-9a-f-]{36})/.exec(res);
+      id = m && m[1];
+      if (id) await callTool('update_thought', { id: id, source_url: item.url });
+    } catch (err) {
+      continue;                       // leave that link external if this fails
+    }
+    if (!id) continue;
+    const escaped = item.url.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    out = out.replace(new RegExp('\\]\\(' + escaped + '\\)', 'g'), '](thought:' + id + ')');
+    made.push({ id: id, url: item.url,
+               title: (item.anchor || item.url).replace(/[.,;:]+$/, '').slice(0, 70) });
+    pendingLinks.push(id);
+  }
+  return { text: out, made: made };
+}
+
+// Shown in place of the editor after saving, so the follow-up work is explicit
+// rather than left implied.
+function showImportSummary(made) {
+  importEditor.hidden = true;
+  importSummary.hidden = false;
+  importSummaryText.textContent = made.length
+    ? (made.length === 1
+        ? 'One referenced article had no note, so a placeholder was created and linked. ' +
+          'Import the original to complete it:'
+        : made.length + ' referenced articles had no note, so placeholders were created and ' +
+          'linked. Import the original of each to complete them:')
+    : 'Saved and linked.';
+  importMadeList.innerHTML = made.map(function (m) {
+    return '<li><strong>' + escapeHtml(m.title) + '</strong>' +
+           '<span>' + escapeHtml(m.url.replace(/^https?:\/\//, '')) + '</span></li>';
+  }).join('');
+}
+
+function resetImportPanel() {
+  importEditor.hidden = false;
+  importSummary.hidden = true;
+  importMadeList.innerHTML = '';
+}
+
+// Same import flow from a button, because a phone cannot drag a file onto a page.
+async function importFromFile(file) {
+  if (!file) return;
+  importPanel.hidden = false;
+  importFileName.textContent = file.name;
+  importText.value = '';
+  updateImportCount();
+  setImportStatus('Reading…');
+  try {
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+    const raw = isPdf ? await pdfToMarkdown(file) : await file.text();
+    importMeta = detectArticleMeta(raw);
+    const ruled = applyImportLinkRules(raw);
+    pendingLinks = ruled.linked;
+    pendingPlaceholders = ruled.pending;
+    importText.value = cleanImportedText(ruled.text);
+    updateImportCount();
+    const bits = [];
+    if (pendingLinks.length) {
+      bits.push(pendingLinks.length + (pendingLinks.length === 1 ? ' link' : ' links') +
+                ' wired up to notes you already hold');
+    }
+    const metaBits = ['author', 'published_date', 'source_name'].filter(k => importMeta[k]);
+    if (metaBits.length) {
+      bits.push('picked up ' + metaBits.length + ' detail' + (metaBits.length === 1 ? '' : 's') +
+                ' from the file (' + metaBits.join(', ').replace(/_/g, ' ') + ')');
+    }
+    if (pendingPlaceholders.length) {
+      bits.push(pendingPlaceholders.length + ' referenced article' +
+                (pendingPlaceholders.length === 1 ? '' : 's') +
+                ' not in the archive — those links stay external');
+    }
+    const detail = bits.length
+      ? ' ' + bits.join('; ').replace(/^./, c => c.toUpperCase()) + '.'
+      : '';
+    setImportStatus('Check it over, then save.' + detail);
+  } catch (err) {
+    setImportStatus('Could not read that file — ' + err.message, true);
+  }
+}
+
+const importInput = document.getElementById('importInput');
+document.getElementById('importBtn').addEventListener('click', () => importInput.click());
+importInput.addEventListener('change', () => {
+  const file = importInput.files && importInput.files[0];
+  importInput.value = '';
+  importFromFile(file);
+});
+
+let dragDepth = 0;
+window.addEventListener('dragenter', (e) => {
+  if (!e.dataTransfer || Array.from(e.dataTransfer.types).indexOf('Files') === -1) return;
+  if (!unlockEl.hidden) return;              // locked: nothing to import into yet
+  dragDepth++;
+  dropVeil.classList.add('on');
+});
+window.addEventListener('dragover', (e) => {
+  if (dropVeil.classList.contains('on')) e.preventDefault();
+});
+window.addEventListener('dragleave', () => {
+  if (--dragDepth <= 0) { dragDepth = 0; dropVeil.classList.remove('on'); }
+});
+window.addEventListener('drop', async (e) => {
+  if (!e.dataTransfer || !e.dataTransfer.files.length) return;
+  e.preventDefault();
+  dragDepth = 0;
+  dropVeil.classList.remove('on');
+  if (!unlockEl.hidden) return;
+
+  const file = e.dataTransfer.files[0];
+  importPanel.hidden = false;
+  importFileName.textContent = file.name;
+  importText.value = '';
+  updateImportCount();
+  setImportStatus('Reading…');
+
+  try {
+    const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+    const raw = isPdf ? await pdfToMarkdown(file) : await file.text();
+    importMeta = detectArticleMeta(raw);
+    const ruled = applyImportLinkRules(raw);
+    pendingLinks = ruled.linked;
+    pendingPlaceholders = ruled.pending;
+    importText.value = cleanImportedText(ruled.text);
+    updateImportCount();
+    const bits = [];
+    if (pendingLinks.length) {
+      bits.push(pendingLinks.length + (pendingLinks.length === 1 ? ' link' : ' links') +
+                ' wired up to notes you already hold');
+    }
+    const metaBits = ['author', 'published_date', 'source_name'].filter(k => importMeta[k]);
+    if (metaBits.length) {
+      bits.push('picked up ' + metaBits.length + ' detail' + (metaBits.length === 1 ? '' : 's') +
+                ' from the file (' + metaBits.join(', ').replace(/_/g, ' ') + ')');
+    }
+    if (pendingPlaceholders.length) {
+      bits.push(pendingPlaceholders.length + ' referenced article' +
+                (pendingPlaceholders.length === 1 ? '' : 's') +
+                ' not in the archive — those links stay external');
+    }
+    const detail = bits.length
+      ? ' ' + bits.join('; ').replace(/^./, c => c.toUpperCase()) + '.'
+      : '';
+    setImportStatus('Check it over, then save.' + detail);
+  } catch (err) {
+    setImportStatus('Could not read that file — ' + err.message, true);
+  }
+});
+
+document.getElementById('importCancel').addEventListener('click', closeImport);
+document.getElementById('importDone').addEventListener('click', closeImport);
+
+// Confirming the extractor's tags while the note is still on screen.
+// The topics come back from an LLM reading the text with no idea what this
+// archive collects, so on an unusual subject it reaches for the nearest tag it
+// knows. Correcting it here costs one step; finding it months later costs
+// remembering the note exists at all.
+const importTags = document.getElementById('importTags');
+const importTagRow = document.getElementById('importTagRow');
+const importTagInput = document.getElementById('importTagInput');
+const importTagOptions = document.getElementById('importTagOptions');
+const importTagCommon = document.getElementById('importTagCommon');
+const importTagsHead = document.getElementById('importTagsHead');
+
+let tagDraft = [];        // what the note will end up with
+let tagOriginal = [];     // what the extractor proposed, to spot new ones
+let tagResolve = null;    // resolves when the step is finished either way
+let tagNoteId = null;     // the note being confirmed
+
+function renderTagDraft() {
+  if (!tagDraft.length) {
+    importTagRow.innerHTML = '<span class="import-tag-empty">No tags — add at least one.</span>';
+  } else {
+    importTagRow.innerHTML = tagDraft.map(function (t, i) {
+      const isNew = tagOriginal.indexOf(t) === -1;
+      return '<span class="import-tag' + (isNew ? ' is-new' : '') + '">' + escapeHtml(t) +
+             '<button type="button" data-tag-index="' + i + '" ' +
+             'aria-label="Remove ' + escapeAttr(t) + '">&times;</button></span>';
+    }).join('');
+  }
+  document.getElementById('importTagSave').disabled = !tagDraft.length;
+}
+
+function addTag(raw) {
+  const tag = (raw || '').trim().replace(/,+$/, '').trim();
+  if (!tag) return;
+  // Case-insensitive, because "Workflow" and "workflow" filter as two chips and
+  // that is exactly the drift the vocabulary exists to stop.
+  if (tagDraft.some(t => t.toLowerCase() === tag.toLowerCase())) return;
+  tagDraft.push(tag);
+  renderTagDraft();
+}
+
+importTagRow.addEventListener('click', ev => {
+  const btn = ev.target.closest('button[data-tag-index]');
+  if (!btn) return;
+  tagDraft.splice(Number(btn.dataset.tagIndex), 1);
+  renderTagDraft();
+});
+document.getElementById('importTagAdd').addEventListener('click', () => {
+  addTag(importTagInput.value); importTagInput.value = ''; importTagInput.focus();
+});
+importTagInput.addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter' && ev.key !== ',') return;
+  ev.preventDefault();
+  addTag(importTagInput.value); importTagInput.value = '';
+});
+importTagCommon.addEventListener('click', ev => {
+  const btn = ev.target.closest('button[data-tag]');
+  if (btn) addTag(btn.dataset.tag);
+});
+
+// Suggestions come from the tags already in the archive, most-used first. They
+// are not read from topics.txt: the browser cannot see that file, and a third
+// copy of the vocabulary would drift against the two that already exist. The
+// preferred tags rise to the top here anyway, by being the ones actually used.
+function fillTagSuggestions() {
+  const counts = Array.from(topicCounts().values()).sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
+  importTagOptions.innerHTML = counts.map(function (c) {
+    return '<option value="' + escapeAttr(c.label) + '">' + c.n + ' note' + (c.n === 1 ? '' : 's') + '</option>';
+  }).join('');
+  importTagCommon.innerHTML = counts.slice(0, 12).map(function (c) {
+    return '<button type="button" data-tag="' + escapeAttr(c.label) + '">' + escapeHtml(c.label) + '</button>';
+  }).join('');
+}
+
+// Resolves once the user has accepted or corrected the tags. Never rejects —
+// the note is already saved by this point, so a problem here must not read as
+// the save having failed.
+function confirmTags(id) {
+  const note = allThoughts.find(t => t.id === id);
+  if (!note) return Promise.resolve();
+  tagOriginal = (note.topics || []).slice();
+  tagDraft = tagOriginal.slice();
+  importTagsHead.textContent = tagOriginal.length
+    ? 'Suggested tags — change them if they are wrong'
+    : 'No tags were suggested — add one';
+  fillTagSuggestions();
+  renderTagDraft();
+  importEditor.hidden = true;
+  importTags.hidden = false;
+  importTagInput.value = '';
+  importTagInput.focus();
+  return new Promise(resolve => { tagResolve = resolve; });
+}
+
+function finishTags() {
+  importTags.hidden = true;
+  importEditor.hidden = false;
+  const done = tagResolve; tagResolve = null;
+  if (done) done();
+}
+
+document.getElementById('importTagSkip').addEventListener('click', finishTags);
+document.getElementById('importTagSave').addEventListener('click', async ev => {
+  const btn = ev.currentTarget;
+  const same = tagDraft.length === tagOriginal.length &&
+               tagDraft.every((t, i) => t === tagOriginal[i]);
+  if (same) { finishTags(); return; }
+  btn.disabled = true;
+  setImportStatus('Saving tags…');
+  try {
+    await callTool('update_thought', { id: tagNoteId, topics: tagDraft });
+    await loadAll();
+    setImportStatus('');
+  } catch (err) {
+    setImportStatus('Tags not saved — ' + err.message, true);
+  } finally {
+    btn.disabled = false;
+    finishTags();
+  }
+});
+
+importSaveNew.addEventListener('click', async () => {
+  const content = importText.value.trim();
+  if (!content) { setImportStatus('Nothing to save.', true); return; }
+  importSaveNew.disabled = true;
+  setImportStatus('Saving…');
+  try {
+    const body = content;
+    const made = [];
+    setImportStatus('Saving…');
+    const res = await callTool('capture_thought', { content: body });
+    const id = /id: ([0-9a-f-]{36})/.exec(res);
+    if (id) {
+      await applyDetectedMeta(id[1], null);
+      await recordImportLinks(id[1]);
+    }
+    await loadAll();
+    setImportStatus('');
+    if (id) { tagNoteId = id[1]; await confirmTags(id[1]); }
+    showImportSummary(made);
+  } catch (err) {
+    setImportStatus('Could not save — ' + err.message, true);
+  } finally {
+    importSaveNew.disabled = false;
+  }
+});
+
+const importFillToggle = document.getElementById('importFillToggle');
+
+// Whichever action you are actually taking should be the bright one. Leaving
+// "Save as new note" highlighted while the picker is open is what produced a
+// run of duplicate notes.
+function setImportEmphasis(fillingExisting) {
+  importFillToggle.classList.toggle('ghost', !fillingExisting);
+  importSaveNew.classList.toggle('ghost', fillingExisting);
+  importFillToggle.setAttribute('aria-expanded', fillingExisting ? 'true' : 'false');
+}
+
+importFillToggle.addEventListener('click', () => {
+  const open = importPicker.classList.toggle('on');
+  setImportEmphasis(open);
+  if (open) {
+    renderImportPicker('');
+    importPickerInput.focus();
+  }
+});
+
+function renderImportPicker(query) {
+  const q = query.trim().toLowerCase();
+  // Notes still holding only a preview are the usual target, so float them up.
+  // Marker common to every preview note, and absent from ordinary notes that
+  // merely mention them — otherwise the process notes offer themselves up
+  // as something to overwrite.
+  // A preview note carries both the marker and its own source footer. Testing
+  // for both keeps notes that merely *write about* preview notes — the process
+  // notes — from offering themselves up as something to overwrite.
+  const stubs = allThoughts.filter(t => t.content.indexOf('Paste the full text here') !== -1
+                                     && t.content.indexOf('_Source: http') !== -1);
+  // Match on words, ignoring punctuation, so "4question" finds "4-Question"
+  // and "codex claude" finds "Claude vs. Codex".
+  const flatten = (str) => (str || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const terms = flatten(q).split(' ').filter(Boolean);
+  const squashed = flatten(q).replace(/ /g, '');
+  const pool = terms.length
+    ? allThoughts.filter(t => {
+        const hay = flatten((t.title || '') + ' ' + t.content.slice(0, 400));
+        return terms.every(term => hay.indexOf(term) !== -1) ||
+               hay.replace(/ /g, '').indexOf(squashed) !== -1;
+      })
+    : stubs.concat(allThoughts.filter(t => stubs.indexOf(t) === -1));
+  const matches = pool.slice(0, 8);
+  importPickerResults.innerHTML = matches.length
+    ? matches.map(t => '<button class="link-picker-item" data-id="' + escapeAttr(t.id) +
+        '" type="button">' + escapeHtml(t.title ||
+          t.content.replace(/\s+/g, ' ').trim().slice(0, 70)) + '</button>').join('')
+    : '<span class="field-value empty" style="padding:6px 8px;display:block;">No matches.</span>';
+
+  importPickerResults.querySelectorAll('.link-picker-item').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const content = importText.value.trim();
+      if (!content) { setImportStatus('Nothing to save.', true); return; }
+      const id = btn.getAttribute('data-id');
+      btn.disabled = true;
+      setImportStatus('Replacing…');
+      try {
+        const body = content;
+        const made = [];
+        setImportStatus('Saving…');
+        await callTool('update_thought', { id: id, content: body });
+        await applyDetectedMeta(id, findThought(id));
+        await recordImportLinks(id);
+        await loadAll();
+        setImportStatus('');
+        importPicker.classList.remove('on');
+        showImportSummary(made);
+      } catch (err) {
+        btn.disabled = false;
+        setImportStatus('Could not replace — ' + err.message, true);
+      }
+    });
+  });
+}
+importPickerInput.addEventListener('input', () => renderImportPicker(importPickerInput.value));
+
+// ---------- the shape of the archive ----------
+// Every figure here is computed from the notes already in memory, so opening
+// this costs nothing and it can never disagree with what the drawer shows.
+//
+// Palette: the catalog's own accents are muted UI colours and fail as data
+// series (moss and blue separate by only ΔE 9.4 — indistinguishable even with
+// full colour vision). These four are validated for the dark surface: inside
+// the lightness band, above the chroma floor, ΔE 13.9 deutan / 19.6 normal.
+const SERIES = {
+  reference:   '#C4802F',
+  observation: '#4292C4',
+  task:        '#67A84F',
+  idea:        '#AE6FA6',
+  unfiled:     '#766B54',
+};
+const TYPE_ORDER = ['reference', 'observation', 'task', 'idea', 'unfiled'];
+
+const statsPanel = document.getElementById('statsPanel');
+const statsBody = document.getElementById('statsBody');
+
+function isPreview(t) {
+  return t.content.indexOf('Paste the full text here') !== -1 &&
+         t.content.indexOf('_Source: http') !== -1;
+}
+
+function archiveFigures() {
+  const notes = allThoughts;
+  const linkCount = notes.reduce(
+    (n, t) => n + (t.content.match(/\]\(thought:/g) || []).length, 0);
+
+  const degree = new Map();
+  notes.forEach(t => {
+    const ids = new Set([...(t.linked_thought_ids || [])]);
+    (t.content.match(/\]\(thought:([0-9a-f-]{36})\)/g) || []).forEach(m => {
+      const id = m.slice(9, -1);
+      ids.add(id);
+    });
+    degree.set(t.id, (degree.get(t.id) || 0) + ids.size);
+    ids.forEach(id => degree.set(id, (degree.get(id) || 0) + 1));
+  });
+
+  const byType = {};
+  TYPE_ORDER.forEach(k => { byType[k] = 0; });
+  notes.forEach(t => { byType[t.type && byType[t.type] !== undefined ? t.type : 'unfiled'] += 1; });
+
+  const topics = new Map();
+  notes.forEach(t => (t.topics || []).forEach(raw => {
+    const k = raw.trim();
+    if (k) topics.set(k, (topics.get(k) || 0) + 1);
+  }));
+
+  // Bucket by day while the archive is young — weekly buckets over three days
+  // of capturing would draw a single bar and say nothing.
+  const dates = notes.map(t => new Date(t.created_at)).filter(d => !isNaN(d));
+  const spanDays = dates.length
+    ? (Math.max(...dates) - Math.min(...dates)) / 86400000 : 0;
+  const byDay = spanDays <= 60;
+  const weeks = new Map();
+  dates.forEach(d => {
+    const bucket = new Date(d);
+    if (!byDay) bucket.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+    const key = bucket.toISOString().slice(0, 10);
+    weeks.set(key, (weeks.get(key) || 0) + 1);
+  });
+  weeks.byDay = byDay;
+
+  const waiting = notes.filter(isPreview);
+  return {
+    notes, linkCount, degree, byType, topics, weeks, waiting,
+    complete: notes.length - waiting.length,
+    orphans: notes.filter(t => (degree.get(t.id) || 0) === 0),
+    withAuthor: notes.filter(t => t.author).length,
+    withSource: notes.filter(t => t.source_url).length,
+  };
+}
+
+function svg(tag, attrs) {
+  const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  Object.keys(attrs || {}).forEach(k => el.setAttribute(k, attrs[k]));
+  return el;
+}
+
+// One tooltip, moved around, rather than a title on every mark.
+let statsTip;
+function showTip(html, x, y) {
+  if (!statsTip) {
+    statsTip = document.createElement('div');
+    statsTip.className = 'stats-tip';
+    document.body.appendChild(statsTip);
+  }
+  statsTip.innerHTML = html;
+  statsTip.style.display = 'block';
+  statsTip.style.left = Math.min(x + 12, innerWidth - 190) + 'px';
+  statsTip.style.top = (y - 10) + 'px';
+}
+function hideTip() { if (statsTip) statsTip.style.display = 'none'; }
+
+function tileRow(f) {
+  const tiles = [
+    ['notes', f.notes.length],
+    ['complete', f.complete],
+    ['awaiting text', f.waiting.length],
+    ['links between notes', f.linkCount],
+    ['unconnected', f.orphans.length],
+  ];
+  return '<div class="stats-tiles">' + tiles.map(t =>
+    '<div><span class="n">' + t[1] + '</span><span class="k">' + t[0] + '</span></div>').join('') +
+    '</div>';
+}
+
+// Progress is one number's job, so it gets a meter rather than a chart.
+function completeness(f) {
+  const pct = f.notes.length ? Math.round(f.complete / f.notes.length * 100) : 0;
+  return '<div class="stats-card">' +
+    '<h3>Completeness <span class="hint">' + f.complete + ' of ' + f.notes.length +
+    ' notes hold their full text</span></h3>' +
+    '<div class="meter"><div class="meter-fill" style="width:' + pct + '%"></div></div>' +
+    '<p class="meter-label"><strong>' + pct + '%</strong> complete · ' +
+    f.waiting.length + ' waiting on an import</p></div>';
+}
+
+function typeChart(f) {
+  const total = TYPE_ORDER.reduce((n, k) => n + f.byType[k], 0) || 1;
+  const present = TYPE_ORDER.filter(k => f.byType[k] > 0);
+  let x = 0;
+  const segs = present.map(k => {
+    const w = f.byType[k] / total * 100;
+    const seg = '<span class="seg" style="left:' + x + '%;width:' + w + '%;background:' +
+      SERIES[k] + '" data-type="' + k + '" data-count="' + f.byType[k] + '"></span>';
+    x += w;
+    return seg;
+  }).join('');
+  const legend = present.map(k =>
+    '<span class="key"><i style="background:' + SERIES[k] + '"></i>' + k +
+    ' <b>' + f.byType[k] + '</b></span>').join('');
+  return '<div class="stats-card"><h3>What kind of notes <span class="hint">by type</span></h3>' +
+    '<div class="stack" id="typeStack">' + segs + '</div>' +
+    '<div class="legend">' + legend + '</div></div>';
+}
+
+function weeksChart(f) {
+  const keys = [...f.weeks.keys()].sort();
+  if (!keys.length) return '';
+  const max = Math.max(...keys.map(k => f.weeks.get(k)));
+  const W = 640, H = 150, pad = 26;
+  const slot = (W - pad * 2) / keys.length;
+  // Cap the width so a handful of buckets do not draw slabs.
+  const bw = Math.min(30, Math.max(6, slot - 6));
+  let bars = '';
+  keys.forEach((k, i) => {
+    const v = f.weeks.get(k);
+    const h = Math.max(2, (v / max) * (H - pad * 2));
+    const x = pad + i * slot + (slot - bw) / 2;
+    bars += '<rect class="bar" x="' + x + '" y="' + (H - pad - h) + '" width="' + bw +
+      '" height="' + h + '" rx="3" data-week="' + k + '" data-count="' + v + '"></rect>';
+  });
+  const first = new Date(keys[0]).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  const last = new Date(keys[keys.length - 1]).toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return '<div class="stats-card"><h3>When it was captured ' +
+    '<span class="hint">notes per ' + (f.weeks.byDay ? 'day' : 'week') + '</span></h3>' +
+    '<svg class="chart" id="weeksChart" viewBox="0 0 ' + W + ' ' + H + '" role="img" ' +
+    'aria-label="Notes captured per week">' +
+    '<line class="axis" x1="' + pad + '" y1="' + (H - pad) + '" x2="' + (W - pad) +
+    '" y2="' + (H - pad) + '"></line>' + bars + '</svg>' +
+    '<p class="axis-label"><span>' + first + '</span><span>' + last + '</span></p></div>';
+}
+
+function topicsChart(f) {
+  // Tags used once are the extractor's noise, not what the archive is about.
+  const rows = [...f.topics.entries()].filter(r => r[1] > 1)
+    .sort((a, b) => b[1] - a[1]).slice(0, 12);
+  if (!rows.length) return '';
+  const max = rows[0][1];
+  const bars = rows.map(r =>
+    '<li><span class="t">' + escapeHtml(r[0]) + '</span>' +
+    '<span class="track"><span class="fill" style="width:' + (r[1] / max * 100) + '%"></span></span>' +
+    '<span class="v">' + r[1] + '</span></li>').join('');
+  // How the tag vocabulary is distributed. Kept as text rather than bars: these
+  // count *tags*, while the chart above counts *notes*, and one axis cannot
+  // honestly carry both.
+  const vals = [...f.topics.values()];
+  const once = vals.filter(v => v === 1).length;
+  const twice = vals.filter(v => v === 2).length;
+  const more = vals.filter(v => v > 2).length;
+  return '<div class="stats-card"><h3>What it is about ' +
+    '<span class="hint">most used tags, of ' + f.topics.size + '</span></h3>' +
+    '<ol class="bars">' + bars + '</ol>' +
+    '<p class="note-line">Of ' + f.topics.size + ' tags: <strong>' + more +
+    '</strong> used three or more times, <strong>' + twice + '</strong> twice, <strong>' +
+    once + '</strong> once. The long tail is the extractor coining a fresh tag per note.</p></div>';
+}
+
+function hubsList(f) {
+  const rows = [...f.degree.entries()]
+    .map(([id, n]) => [allThoughts.find(t => t.id === id), n])
+    .filter(r => r[0] && r[1] > 0)
+    .sort((a, b) => b[1] - a[1]).slice(0, 8);
+  if (!rows.length) return '';
+  return '<div class="stats-card"><h3>What the archive orbits ' +
+    '<span class="hint">most connected notes</span></h3><ol class="hubs">' +
+    rows.map(r => '<li><button data-open="' + escapeAttr(r[0].id) + '">' +
+      escapeHtml(r[0].title || 'Untitled') + '</button><span>' + r[1] + '</span></li>').join('') +
+    '</ol></div>';
+}
+
+// The graph is the one view that shows structure rather than counts: which
+// notes cluster, and which sit alone.
+function drawGraph(f) {
+  const canvas = document.getElementById('graphCanvas');
+  if (!canvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth, h = 320;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+
+  const index = new Map(allThoughts.map((t, i) => [t.id, i]));
+  const nodes = allThoughts.map((t, i) => ({
+    id: t.id, t: t,
+    x: w / 2 + Math.cos(i) * (40 + (i % 17) * 8),
+    y: h / 2 + Math.sin(i) * (30 + (i % 13) * 6),
+    vx: 0, vy: 0,
+    deg: f.degree.get(t.id) || 0,
+  }));
+  const edges = [];
+  allThoughts.forEach(t => {
+    const seen = new Set();
+    (t.content.match(/\]\(thought:([0-9a-f-]{36})\)/g) || []).forEach(m => seen.add(m.slice(9, -1)));
+    (t.linked_thought_ids || []).forEach(id => seen.add(id));
+    seen.forEach(id => {
+      if (index.has(id) && id !== t.id) edges.push([index.get(t.id), index.get(id)]);
+    });
+  });
+
+  // A few hundred iterations of repulsion + spring is enough at this size.
+  for (let step = 0; step < 220; step++) {
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        let dx = b.x - a.x, dy = b.y - a.y;
+        let d2 = dx * dx + dy * dy || 0.01;
+        const rep = 260 / d2;
+        const d = Math.sqrt(d2);
+        a.vx -= dx / d * rep; a.vy -= dy / d * rep;
+        b.vx += dx / d * rep; b.vy += dy / d * rep;
+      }
+    }
+    edges.forEach(([i, j]) => {
+      const a = nodes[i], b = nodes[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
+      const f2 = (d - 46) * 0.012;
+      a.vx += dx / d * f2; a.vy += dy / d * f2;
+      b.vx -= dx / d * f2; b.vy -= dy / d * f2;
+    });
+    nodes.forEach(n => {
+      n.vx += (w / 2 - n.x) * 0.0016;
+      n.vy += (h / 2 - n.y) * 0.0016;
+      n.x += Math.max(-6, Math.min(6, n.vx));
+      n.y += Math.max(-6, Math.min(6, n.vy));
+      n.vx *= 0.82; n.vy *= 0.82;
+      n.x = Math.max(10, Math.min(w - 10, n.x));
+      n.y = Math.max(10, Math.min(h - 10, n.y));
+    });
+  }
+
+  const paint = (hover) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.strokeStyle = 'rgba(232,223,200,0.16)';
+    ctx.lineWidth = 1;
+    edges.forEach(([i, j]) => {
+      ctx.beginPath();
+      ctx.moveTo(nodes[i].x, nodes[i].y);
+      ctx.lineTo(nodes[j].x, nodes[j].y);
+      ctx.stroke();
+    });
+    nodes.forEach(n => {
+      const r = n.deg ? Math.min(9, 3 + n.deg * 0.7) : 2.5;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = n.deg ? (SERIES[n.t.type] || SERIES.unfiled) : 'rgba(118,107,84,0.75)';
+      ctx.fill();
+      if (hover === n) {
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#E9DFC7';
+        ctx.stroke();
+      }
+    });
+  };
+  paint(null);
+
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    let hit = null;
+    for (const n of nodes) {
+      const r = Math.max(6, n.deg ? 3 + n.deg * 0.7 : 3);
+      if ((n.x - mx) ** 2 + (n.y - my) ** 2 < r * r + 24) { hit = n; break; }
+    }
+    paint(hit);
+    if (hit) {
+      showTip('<strong>' + escapeHtml(hit.t.title || 'Untitled') + '</strong>' +
+              '<span>' + hit.deg + ' connection' + (hit.deg === 1 ? '' : 's') + '</span>',
+              e.clientX, e.clientY);
+      canvas.style.cursor = 'pointer';
+    } else { hideTip(); canvas.style.cursor = 'default'; }
+  };
+  canvas.onmouseleave = () => { hideTip(); paint(null); };
+  canvas.onclick = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    for (const n of nodes) {
+      const r = Math.max(6, n.deg ? 3 + n.deg * 0.7 : 3);
+      if ((n.x - mx) ** 2 + (n.y - my) ** 2 < r * r + 24) {
+        closeStats();
+        selectThought(n.t);
+        return;
+      }
+    }
+  };
+}
+
+function graphCard(f) {
+  return '<div class="stats-card wide"><h3>How it hangs together ' +
+    '<span class="hint">' + f.linkCount + ' links · dots sized by connections · click to open</span></h3>' +
+    '<canvas id="graphCanvas" height="320"></canvas>' +
+    (f.orphans.length
+      ? '<p class="note-line">' + f.orphans.length +
+        ' note' + (f.orphans.length === 1 ? '' : 's') +
+        ' connect to nothing yet — the dim, small dots.</p>'
+      : '<p class="note-line">Every note is connected to at least one other.</p>') + '</div>';
+}
+
+function coverageCard(f) {
+  const n = f.notes.length || 1;
+  const rows = [
+    ['has an author', f.withAuthor],
+    ['has a source link', f.withSource],
+    ['holds full text', f.complete],
+  ];
+  return '<div class="stats-card"><h3>How complete the records are ' +
+    '<span class="hint">metadata coverage</span></h3><ol class="bars">' +
+    rows.map(r => '<li><span class="t">' + r[0] + '</span>' +
+      '<span class="track"><span class="fill" style="width:' + (r[1] / n * 100) + '%"></span></span>' +
+      '<span class="v">' + Math.round(r[1] / n * 100) + '%</span></li>').join('') +
+    '</ol></div>';
+}
+
+function openStats() {
+  if (!allThoughts.length) return;
+  const f = archiveFigures();
+  statsBody.innerHTML = tileRow(f) + completeness(f) + graphCard(f) + weeksChart(f) +
+                        typeChart(f) + topicsChart(f) + hubsList(f) + coverageCard(f);
+  statsPanel.hidden = false;
+  drawGraph(f);
+
+  statsBody.querySelectorAll('#weeksChart .bar').forEach(bar => {
+    bar.addEventListener('mousemove', (e) => {
+      const d = new Date(bar.getAttribute('data-week'));
+      showTip('<strong>' + bar.getAttribute('data-count') + ' notes</strong><span>week of ' +
+        d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' }) + '</span>',
+        e.clientX, e.clientY);
+    });
+    bar.addEventListener('mouseleave', hideTip);
+  });
+  statsBody.querySelectorAll('#typeStack .seg').forEach(seg => {
+    seg.addEventListener('mousemove', (e) => {
+      showTip('<strong>' + seg.getAttribute('data-count') + ' ' +
+        seg.getAttribute('data-type') + '</strong>', e.clientX, e.clientY);
+    });
+    seg.addEventListener('mouseleave', hideTip);
+  });
+  statsBody.querySelectorAll('[data-open]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const found = findThought(btn.getAttribute('data-open'));
+      if (found) { closeStats(); selectThought(found); }
+    });
+  });
+}
+
+function closeStats() {
+  statsPanel.hidden = true;
+  hideTip();
+}
+
+document.getElementById('statsBtn').addEventListener('click', openStats);
+document.getElementById('statsClose').addEventListener('click', closeStats);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !statsPanel.hidden) closeStats();
+});
+
+if (mcpAccessKey) loadAll();
+
+else showUnlock();
+
+// ---------- installable app ----------
+// Only registers over http(s): opened as a file:// the API is unavailable and
+// registration would throw.
+if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* not fatal */ });
+  });
+}
+
 </script>
 
 </body>
