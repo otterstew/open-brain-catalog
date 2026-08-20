@@ -341,6 +341,182 @@ Only extract what's explicitly there.`,
 
 // --- MCP Server Setup ---
 
+// --- Tasks ---
+//
+// Tasks live in their own table, not in thoughts.metadata, because they are
+// queried by state and date rather than by meaning. None of the task tools
+// touch OpenRouter: capturing a task must be one insert and nothing else, or
+// the two-second pause turns the app into somewhere tasks go to be forgotten.
+
+// A single literal rather than a concatenation: supabase-js reads the column
+// list at the type level, and it can only do that if the string stays literal.
+const TASK_COLUMNS =
+  "id, title, notes, status, project, due_date, defer_until, recur, recur_from, parent_id, thought_id, source, created_at, updated_at, completed_at" as const;
+
+const TASK_STATUSES = ["inbox", "next", "waiting", "done", "dropped"] as const;
+const OPEN_STATUSES = ["inbox", "next", "waiting"];
+
+interface TaskRecord {
+  id: string;
+  title: string;
+  notes: string | null;
+  status: string;
+  project: string | null;
+  due_date: string | null;
+  defer_until: string | null;
+  recur: string | null;
+  recur_from: string;
+  parent_id: string | null;
+  thought_id: string | null;
+  source: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+// Due dates are calendar days, never instants, so every piece of arithmetic
+// below is done in UTC. Local time would let a task due "tomorrow" become due
+// "today" purely because the server sits in a different timezone from the
+// person who wrote it down.
+function parseISODate(iso: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec((iso || "").trim());
+  if (!m) return null;
+  const [y, mo, d] = [+m[1], +m[2], +m[3]];
+  const probe = new Date(Date.UTC(y, mo - 1, d));
+  // Rejects 31 February, which Date would otherwise roll forward into March.
+  if (probe.getUTCFullYear() !== y || probe.getUTCMonth() !== mo - 1 || probe.getUTCDate() !== d) {
+    return null;
+  }
+  return probe;
+}
+
+function formatISODate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+type RecurSpec =
+  | { kind: "interval"; unit: "day" | "week" | "month" | "year"; n: number }
+  | { kind: "weekday"; weekday: number }  // 0 = Sunday
+  | { kind: "weekdays" };                 // any Monday to Friday
+
+const WEEKDAY_NAMES = [
+  "sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday",
+];
+
+const NAMED_RECURRENCES: Record<string, RecurSpec> = {
+  "daily": { kind: "interval", unit: "day", n: 1 },
+  "every day": { kind: "interval", unit: "day", n: 1 },
+  "weekly": { kind: "interval", unit: "week", n: 1 },
+  "every week": { kind: "interval", unit: "week", n: 1 },
+  "fortnightly": { kind: "interval", unit: "week", n: 2 },
+  "biweekly": { kind: "interval", unit: "week", n: 2 },
+  "every other week": { kind: "interval", unit: "week", n: 2 },
+  "monthly": { kind: "interval", unit: "month", n: 1 },
+  "every month": { kind: "interval", unit: "month", n: 1 },
+  "quarterly": { kind: "interval", unit: "month", n: 3 },
+  "yearly": { kind: "interval", unit: "year", n: 1 },
+  "annually": { kind: "interval", unit: "year", n: 1 },
+  "every year": { kind: "interval", unit: "year", n: 1 },
+  "weekdays": { kind: "weekdays" },
+  "every weekday": { kind: "weekdays" },
+};
+
+const RECUR_HELP =
+  "'daily', 'weekly', 'fortnightly', 'monthly', 'quarterly', 'yearly', " +
+  "'weekdays', 'every 3 days', 'every 2 weeks', 'every 6 months', or 'every tuesday'";
+
+// Recurrence is a phrase rather than an RRULE, so this only has to understand
+// the handful of shapes people actually type. Anything else returns null and
+// the caller refuses the task outright — a repeat rule that is silently
+// ignored is worse than one that is rejected, because you find out months
+// later when the thing never came back.
+function parseRecur(phrase: string): RecurSpec | null {
+  const s = (phrase || "").trim().toLowerCase().replace(/\s+/g, " ");
+  if (!s) return null;
+  if (NAMED_RECURRENCES[s]) return NAMED_RECURRENCES[s];
+
+  let m: RegExpExecArray | null;
+  if ((m = /^every (\d+) (day|week|month|year)s?$/.exec(s))) {
+    const n = +m[1];
+    if (n < 1 || n > 365) return null;
+    return { kind: "interval", unit: m[2] as "day" | "week" | "month" | "year", n };
+  }
+  if ((m = /^every ([a-z]+)$/.exec(s))) {
+    const i = WEEKDAY_NAMES.indexOf(m[1]);
+    if (i >= 0) return { kind: "weekday", weekday: i };
+  }
+  return null;
+}
+
+// One month after 31 January is 28 February, not 3 March. Clamping to the end
+// of the shorter month is what every calendar app does and what people expect
+// of a monthly task first created on the 31st.
+function addMonthsUTC(d: Date, months: number): Date {
+  const day = d.getUTCDate();
+  const probe = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + months, 1));
+  const lastDay = new Date(
+    Date.UTC(probe.getUTCFullYear(), probe.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  probe.setUTCDate(Math.min(day, lastDay));
+  return probe;
+}
+
+function advanceOnce(d: Date, spec: RecurSpec): Date {
+  const next = new Date(d.getTime());
+  if (spec.kind === "interval") {
+    if (spec.unit === "day") next.setUTCDate(next.getUTCDate() + spec.n);
+    else if (spec.unit === "week") next.setUTCDate(next.getUTCDate() + 7 * spec.n);
+    else if (spec.unit === "month") return addMonthsUTC(d, spec.n);
+    else return addMonthsUTC(d, 12 * spec.n);
+    return next;
+  }
+  if (spec.kind === "weekday") {
+    // Strictly after d: completing a Tuesday task on a Tuesday means next
+    // Tuesday, not today.
+    let delta = (spec.weekday - d.getUTCDay() + 7) % 7;
+    if (delta === 0) delta = 7;
+    next.setUTCDate(next.getUTCDate() + delta);
+    return next;
+  }
+  do {
+    next.setUTCDate(next.getUTCDate() + 1);
+  } while (next.getUTCDay() === 0 || next.getUTCDay() === 6);
+  return next;
+}
+
+// The next instance has to land in the future. A weekly task three weeks
+// overdue should come back next week, not spawn another copy that is already
+// two weeks late — so from a due date we keep stepping until today is cleared.
+function nextRecurrence(spec: RecurSpec, base: Date, today: Date): Date {
+  let next = advanceOnce(base, spec);
+  let guard = 0;
+  while (next.getTime() <= today.getTime() && guard++ < 1000) {
+    next = advanceOnce(next, spec);
+  }
+  return next;
+}
+
+// One task per line, in the shape you would want read out to you: what state
+// it is in, what it is called, when it is due and whether that has already
+// passed. The id trails so the line stays readable but a follow-up tool call
+// still has something to quote.
+function formatTask(t: TaskRecord, i: number, today: string): string {
+  const bits: string[] = [];
+  if (t.due_date) {
+    bits.push(t.due_date < today ? `overdue ${t.due_date}` : `due ${t.due_date}`);
+  }
+  if (t.defer_until && t.defer_until > today) bits.push(`hidden until ${t.defer_until}`);
+  if (t.project) bits.push(t.project);
+  if (t.recur) bits.push(`repeats ${t.recur}`);
+  const tail = bits.length ? ` — ${bits.join(", ")}` : "";
+  const notes = t.notes ? `\n   ${t.notes.replace(/\s+/g, " ").trim().slice(0, 160)}` : "";
+  return `${i + 1}. [${t.status}] ${t.title}${tail}${notes}\n   [id: ${t.id}]`;
+}
+
 function buildServer(): McpServer {
   const server = new McpServer({
     name: "open-brain",
@@ -1410,6 +1586,479 @@ function buildServer(): McpServer {
         let summary = `Backfilled ${updated}/${candidates.length} thought(s); ${foundSomething} had a title or published date to extract.`;
         if (errors.length) summary += `\n${errors.length} error(s):\n` + errors.join("\n");
         return { content: [{ type: "text" as const, text: summary }] };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 14: Create Task
+  server.registerTool(
+    "create_task",
+    {
+      title: "Create Task",
+      description:
+        "Add a task to Open Brain. Deliberately cheap — no embedding, no AI metadata extraction, just one insert — so that capturing something you have to do is instant. Use this whenever the user says they need to do something, rather than capture_thought, which is for things they want to remember.",
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+      },
+      inputSchema: {
+        title: z.string().describe("The task in one line, as the user would say it out loud"),
+        notes: z.string().optional().describe("Anything else worth keeping: context, a phone number, what 'done' looks like"),
+        status: z
+          .enum(TASK_STATUSES)
+          .optional()
+          .describe("inbox (captured, not yet thought about — the default), next (actionable now), waiting (blocked on someone else), done, dropped (decided against, kept as a record)"),
+        project: z.string().optional().describe("A grouping label, e.g. 'house' or 'open brain'"),
+        due_date: z.string().optional().describe("YYYY-MM-DD. The day it is actually due — not the day you hope to do it."),
+        defer_until: z
+          .string()
+          .optional()
+          .describe("YYYY-MM-DD. Hides the task from the default list until this date. Use it for anything that cannot be started yet, so the list stays a list of things that are actually doable."),
+        recur: z
+          .string()
+          .optional()
+          .describe(`How often it repeats: ${RECUR_HELP}. The next instance is created when this one is completed.`),
+        recur_from: z
+          .enum(["due", "completion"])
+          .optional()
+          .describe("Whether the next instance counts from the due date ('due' — bins go out every Tuesday whether or not you did it) or from when you actually finished ('completion' — water the plants 5 days after you last watered them). Defaults to completion."),
+        parent_id: z.string().optional().describe("The id of a task this one is a subtask of"),
+        thought_id: z.string().optional().describe("The id of the thought this task came out of, linking the task back to the note that prompted it"),
+        source: z.string().optional().describe("Where it was captured, e.g. 'claude' or 'catalog'. Defaults to 'mcp'."),
+      },
+    },
+    async (args) => {
+      try {
+        const title = (args.title || "").trim();
+        if (!title) {
+          return {
+            content: [{ type: "text" as const, text: "A task needs a title." }],
+            isError: true,
+          };
+        }
+
+        // Dates and repeat rules are checked before the insert so a bad one
+        // comes back as an explanation rather than a Postgres constraint error.
+        for (const field of ["due_date", "defer_until"] as const) {
+          const value = args[field];
+          if (value !== undefined && !parseISODate(value)) {
+            return {
+              content: [{ type: "text" as const, text: `${field} must be a real date as YYYY-MM-DD — got "${value}".` }],
+              isError: true,
+            };
+          }
+        }
+        if (args.recur !== undefined && !parseRecur(args.recur)) {
+          return {
+            content: [{ type: "text" as const, text: `Could not read the repeat rule "${args.recur}". Try one of: ${RECUR_HELP}.` }],
+            isError: true,
+          };
+        }
+
+        const row = {
+          title,
+          notes: args.notes ?? null,
+          status: args.status ?? "inbox",
+          project: args.project ?? null,
+          due_date: args.due_date ?? null,
+          defer_until: args.defer_until ?? null,
+          recur: args.recur ?? null,
+          recur_from: args.recur_from ?? "completion",
+          parent_id: args.parent_id ?? null,
+          thought_id: args.thought_id ?? null,
+          source: args.source ?? "mcp",
+        };
+
+        const { data, error } = await supabase
+          .from("tasks")
+          .insert(row)
+          .select(TASK_COLUMNS)
+          .single();
+
+        if (error) {
+          return {
+            content: [{ type: "text" as const, text: `Could not create the task: ${error.message}` }],
+            isError: true,
+          };
+        }
+
+        const t = data as TaskRecord;
+        const when = t.due_date ? `, due ${t.due_date}` : "";
+        return {
+          content: [{ type: "text" as const, text: `Created task "${t.title}" [${t.status}]${when}. [id: ${t.id}]` }],
+        };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 15: List Tasks
+  server.registerTool(
+    "list_tasks",
+    {
+      title: "List Tasks",
+      description:
+        "List tasks, open ones by default. Deferred tasks and finished ones are left out unless asked for, so the default answer is a list of things that can actually be done now.",
+      annotations: {
+        readOnlyHint: true,
+      },
+      inputSchema: {
+        status: z
+          .array(z.enum(TASK_STATUSES))
+          .optional()
+          .describe("Which statuses to include. Defaults to the open ones: inbox, next, waiting."),
+        project: z.string().optional().describe("Only tasks in this project"),
+        due_before: z.string().optional().describe("YYYY-MM-DD — only tasks due on or before this date. Pass today's date for 'what is due now'."),
+        include_deferred: z
+          .boolean()
+          .optional()
+          .describe("Include tasks deferred to a future date. Off by default — the whole point of deferring is not to see them."),
+        search: z.string().optional().describe("Case-insensitive substring match on the title"),
+        limit: z.number().optional().describe("Maximum tasks to return (default 50)"),
+        format: z
+          .enum(["text", "json"])
+          .optional()
+          .describe("\"text\" (default) for one readable line per task. \"json\" for an array of full task objects, used by the Open Brain Catalog GUI."),
+      },
+    },
+    async ({ status, project, due_before, include_deferred, search, limit, format }) => {
+      try {
+        const today = todayISO();
+        const wanted = status && status.length ? status : OPEN_STATUSES;
+
+        let q = supabase
+          .from("tasks")
+          .select(TASK_COLUMNS)
+          .in("status", wanted)
+          .order("due_date", { ascending: true, nullsFirst: false })
+          .order("created_at", { ascending: true })
+          .limit(limit ?? 50);
+
+        if (project) q = q.eq("project", project);
+        if (due_before) {
+          if (!parseISODate(due_before)) {
+            return {
+              content: [{ type: "text" as const, text: `due_before must be a real date as YYYY-MM-DD — got "${due_before}".` }],
+              isError: true,
+            };
+          }
+          q = q.lte("due_date", due_before);
+        }
+        // A task with no defer date has nothing to hide behind, so it always
+        // counts as available.
+        if (!include_deferred) q = q.or(`defer_until.is.null,defer_until.lte.${today}`);
+        if (search) q = q.ilike("title", `%${search}%`);
+
+        const { data, error } = await q;
+
+        if (error) {
+          return {
+            content: [{ type: "text" as const, text: `Error: ${error.message}` }],
+            isError: true,
+          };
+        }
+
+        const tasks = (data || []) as TaskRecord[];
+
+        if (format === "json") {
+          return { content: [{ type: "text" as const, text: JSON.stringify(tasks) }] };
+        }
+
+        if (!tasks.length) {
+          return { content: [{ type: "text" as const, text: "No tasks match." }] };
+        }
+
+        const lines = tasks.map((t, i) => formatTask(t, i, today));
+        return {
+          content: [{ type: "text" as const, text: `${tasks.length} task(s):\n\n${lines.join("\n\n")}` }],
+        };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 16: Update Task
+  server.registerTool(
+    "update_task",
+    {
+      title: "Update Task",
+      description:
+        "Change a task. Only the fields you pass are touched; pass null to clear an optional one. Use this to reschedule, defer, file into a project, or move a task to waiting or dropped. To finish a task use complete_task instead, which also handles repeats.",
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+      },
+      inputSchema: {
+        id: z.string().describe("The id of the task to update"),
+        title: z.string().optional().describe("New title"),
+        notes: z.string().nullable().optional().describe("New notes (null to clear)"),
+        status: z.enum(TASK_STATUSES).optional().describe("New status"),
+        project: z.string().nullable().optional().describe("New project (null to clear)"),
+        due_date: z.string().nullable().optional().describe("New due date, YYYY-MM-DD (null to clear)"),
+        defer_until: z.string().nullable().optional().describe("New defer date, YYYY-MM-DD (null to clear)"),
+        recur: z.string().nullable().optional().describe(`New repeat rule (null to stop repeating): ${RECUR_HELP}`),
+        recur_from: z.enum(["due", "completion"]).optional().describe("Whether repeats count from the due date or from completion"),
+        parent_id: z.string().nullable().optional().describe("New parent task id (null to detach)"),
+        thought_id: z.string().nullable().optional().describe("New linked thought id (null to unlink)"),
+      },
+    },
+    async (args) => {
+      try {
+        const { id, ...fields } = args;
+
+        const update: Record<string, unknown> = {};
+        for (const [key, value] of Object.entries(fields)) {
+          if (value !== undefined) update[key] = value;
+        }
+
+        if (typeof update.title === "string") {
+          update.title = update.title.trim();
+          if (!update.title) {
+            return {
+              content: [{ type: "text" as const, text: "A task needs a title." }],
+              isError: true,
+            };
+          }
+        }
+
+        for (const field of ["due_date", "defer_until"] as const) {
+          const value = update[field];
+          if (typeof value === "string" && !parseISODate(value)) {
+            return {
+              content: [{ type: "text" as const, text: `${field} must be a real date as YYYY-MM-DD — got "${value}".` }],
+              isError: true,
+            };
+          }
+        }
+        if (typeof update.recur === "string" && !parseRecur(update.recur)) {
+          return {
+            content: [{ type: "text" as const, text: `Could not read the repeat rule "${update.recur}". Try one of: ${RECUR_HELP}.` }],
+            isError: true,
+          };
+        }
+
+        if (!Object.keys(update).length) {
+          return {
+            content: [{ type: "text" as const, text: "Nothing to update — pass at least one field to change." }],
+            isError: true,
+          };
+        }
+
+        const { data, error } = await supabase
+          .from("tasks")
+          .update(update)
+          .eq("id", id)
+          .select(TASK_COLUMNS)
+          .maybeSingle();
+
+        if (error) {
+          return {
+            content: [{ type: "text" as const, text: `Could not update the task: ${error.message}` }],
+            isError: true,
+          };
+        }
+        if (!data) {
+          return {
+            content: [{ type: "text" as const, text: `No task with id "${id}".` }],
+            isError: true,
+          };
+        }
+
+        const t = data as TaskRecord;
+        const changed = Object.keys(update).join(", ");
+        return {
+          content: [{ type: "text" as const, text: `Updated ${changed} on "${t.title}" [${t.status}]. [id: ${t.id}]` }],
+        };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 17: Complete Task
+  server.registerTool(
+    "complete_task",
+    {
+      title: "Complete Task",
+      description:
+        "Mark a task done. If it repeats, the next instance is created automatically with its due date worked out from the repeat rule. Completing an already-completed task does nothing, so it is safe to call twice.",
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false,
+        idempotentHint: true,
+      },
+      inputSchema: {
+        id: z.string().describe("The id of the task to complete"),
+      },
+    },
+    async ({ id }) => {
+      try {
+        const { data: existing, error: fetchError } = await supabase
+          .from("tasks")
+          .select(TASK_COLUMNS)
+          .eq("id", id)
+          .maybeSingle();
+
+        if (fetchError || !existing) {
+          return {
+            content: [{ type: "text" as const, text: `No task with id "${id}"${fetchError ? ` — ${fetchError.message}` : ""}.` }],
+            isError: true,
+          };
+        }
+
+        const task = existing as TaskRecord;
+
+        // Calling twice must not spawn a second copy of a repeating task.
+        if (task.status === "done") {
+          return {
+            content: [{ type: "text" as const, text: `"${task.title}" was already completed${task.completed_at ? ` on ${task.completed_at.slice(0, 10)}` : ""}.` }],
+          };
+        }
+
+        const { error: updErr } = await supabase
+          .from("tasks")
+          .update({ status: "done" })
+          .eq("id", id);
+
+        if (updErr) {
+          return {
+            content: [{ type: "text" as const, text: `Could not complete the task: ${updErr.message}` }],
+            isError: true,
+          };
+        }
+
+        const spec = task.recur ? parseRecur(task.recur) : null;
+        if (!spec) {
+          return { content: [{ type: "text" as const, text: `Completed "${task.title}".` }] };
+        }
+
+        const todayStr = todayISO();
+        const today = parseISODate(todayStr)!;
+        // From the due date, the schedule is the thing that matters and the
+        // next instance follows the old one. From completion, it follows what
+        // actually happened — which is today.
+        const base =
+          task.recur_from === "due" && task.due_date
+            ? parseISODate(task.due_date) ?? today
+            : today;
+        const nextDue = formatISODate(nextRecurrence(spec, base, today));
+
+        // A task deferred until a week before it was due should stay deferred
+        // until a week before it is next due, so the gap travels with it.
+        let nextDefer: string | null = null;
+        if (task.defer_until && task.due_date) {
+          const oldDefer = parseISODate(task.defer_until);
+          const oldDue = parseISODate(task.due_date);
+          const newDue = parseISODate(nextDue);
+          if (oldDefer && oldDue && newDue) {
+            const gap = oldDue.getTime() - oldDefer.getTime();
+            nextDefer = formatISODate(new Date(newDue.getTime() - gap));
+          }
+        }
+
+        const { data: spawned, error: insErr } = await supabase
+          .from("tasks")
+          .insert({
+            title: task.title,
+            notes: task.notes,
+            // The repeat carries on in whatever state it was being worked in,
+            // but a finished or abandoned one comes back as actionable.
+            status: OPEN_STATUSES.includes(task.status) ? task.status : "next",
+            project: task.project,
+            due_date: nextDue,
+            defer_until: nextDefer,
+            recur: task.recur,
+            recur_from: task.recur_from,
+            parent_id: task.parent_id,
+            thought_id: task.thought_id,
+            source: task.source,
+          })
+          .select(TASK_COLUMNS)
+          .single();
+
+        if (insErr) {
+          return {
+            content: [{ type: "text" as const, text: `Completed "${task.title}", but could not create the next instance: ${insErr.message}` }],
+            isError: true,
+          };
+        }
+
+        const next = spawned as TaskRecord;
+        return {
+          content: [{ type: "text" as const, text: `Completed "${task.title}". Next one due ${next.due_date}. [id: ${next.id}]` }],
+        };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 18: Delete Task
+  server.registerTool(
+    "delete_task",
+    {
+      title: "Delete Task",
+      description:
+        "Permanently delete a task and any subtasks under it. This is for mistakes — a task captured twice, or one typed into the wrong place. For something you have decided not to do, set its status to dropped instead, which keeps the record of having decided.",
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: true,
+        idempotentHint: true,
+      },
+      inputSchema: {
+        id: z.string().describe("The id of the task to delete"),
+      },
+    },
+    async ({ id }) => {
+      try {
+        const { data, error } = await supabase
+          .from("tasks")
+          .delete()
+          .eq("id", id)
+          .select("id, title")
+          .maybeSingle();
+
+        if (error) {
+          return {
+            content: [{ type: "text" as const, text: `Could not delete the task: ${error.message}` }],
+            isError: true,
+          };
+        }
+        if (!data) {
+          return {
+            content: [{ type: "text" as const, text: `No task with id "${id}".` }],
+            isError: true,
+          };
+        }
+
+        return {
+          content: [{ type: "text" as const, text: `Deleted "${(data as { title: string }).title}".` }],
+        };
       } catch (err: unknown) {
         return {
           content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
