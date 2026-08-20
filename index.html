@@ -64,11 +64,21 @@
 
   .app {
     display: grid;
-    grid-template-columns: 380px 1fr;
+    /* The drawer keeps its full width on a roomy screen but gives ground on a
+       laptop, so the reading pane is never squeezed down to a sliver beside it. */
+    grid-template-columns: clamp(260px, 30%, 380px) 1fr;
     height: 100vh;
   }
 
-  .app.ref-open { grid-template-columns: 380px 1fr 320px; }
+  .app.ref-open {
+    grid-template-columns: clamp(260px, 30%, 380px) 1fr clamp(240px, 24%, 320px);
+  }
+
+  /* A grid item will not shrink below its content's minimum width unless told
+     to, and an item that outgrows its track spills across the next column — one
+     long unbroken title in the drawer would otherwise paint over the reading
+     pane and hide it behind the left-hand bar. */
+  .drawer, .main, .ref-panel { min-width: 0; }
 
   /* ---------- DRAWER (left column) ---------- */
   .drawer {
@@ -89,6 +99,10 @@
     align-items: baseline;
     justify-content: space-between;
     gap: 8px;
+    /* On a narrow drawer the six header buttons leave the title too little room
+       and it breaks across two lines. Wrapping the row instead drops the button
+       strip below an intact title. */
+    flex-wrap: wrap;
   }
 
   .header-actions {
@@ -103,6 +117,7 @@
     font-size: 21px;
     letter-spacing: 0.01em;
     margin: 0;
+    white-space: nowrap;
   }
 
   .drawer-count {
@@ -1323,7 +1338,6 @@
        single long title or nowrap line inside the drawer pushes the whole column
        wider than the screen — taking its right-hand edge out of view. */
     .app, .app.detail-open, .app.ref-open { grid-template-columns: minmax(0, 1fr); }
-    .drawer, .main { min-width: 0; }
 
     .facet-toggle {
       display: flex;
@@ -1529,7 +1543,7 @@
   <div class="drawer">
     <div class="drawer-header">
       <div class="drawer-title-row">
-        <h1 class="drawer-title">Open Brain</h1>
+        <h1 class="drawer-title" title="Build 2026-08-20 · shell v31">Open Brain</h1>
         <div class="header-actions">
           <button class="refresh-btn" id="newBtn" title="New thought" aria-label="New thought">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
