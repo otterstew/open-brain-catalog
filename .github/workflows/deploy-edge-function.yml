@@ -1,0 +1,61 @@
+# Deploys the Open Brain MCP edge function to Supabase.
+#
+# The catalog itself is served by GitHub Pages straight from the repo root, so
+# it needs no build and no workflow — merging to main publishes it. The edge
+# function is a separate target that Pages knows nothing about, and until this
+# workflow existed it was deployed by hand from somebody's laptop, which is how
+# its source came to exist nowhere but the deployment.
+#
+# Requires one repository secret: SUPABASE_ACCESS_TOKEN, from
+# https://supabase.com/dashboard/account/tokens
+# The project ref is not a secret — it is already public in index.html.
+
+name: Deploy edge function
+
+on:
+  push:
+    branches: [main]
+    # Only when the function actually changed. Editing the catalog should not
+    # redeploy a server that did not move.
+    paths:
+      - 'supabase/functions/**'
+      - '.github/workflows/deploy-edge-function.yml'
+  # Lets you deploy from a branch without merging first.
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-edge-function
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # The date and recurrence logic is pure and testable, so it runs before
+      # anything reaches the live server. A repeat rule that miscounts is not
+      # noticed until the task fails to come back weeks later.
+      - name: Test task logic
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/recurrence_test.ts
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      # --no-verify-jwt is required, not cosmetic: the function authenticates
+      # requests itself on the x-brain-key header. Deploying with JWT
+      # verification on rejects every catalog request before it reaches the code.
+      - name: Deploy
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy open-brain-mcp \
+            --project-ref uftlxeahciewiitclkbu \
+            --no-verify-jwt \
+            --import-map supabase/functions/open-brain-mcp/deno.json \
+            --use-api
