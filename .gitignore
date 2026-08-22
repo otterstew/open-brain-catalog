@@ -1,0 +1,3 @@
+# Personal Claude Code settings for this checkout — permissions and the like.
+# Not the project's business; .claude/settings.json is the shared one.
+.claude/settings.local.json

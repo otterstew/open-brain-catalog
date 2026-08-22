@@ -1430,6 +1430,236 @@
     * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
     .card-row:hover .card-row-body { transform: none; }
   }
+  /* The hidden attribute carries only UA-stylesheet weight, so any class that
+     sets display beats it and the element stays on screen. These are the ones
+     the mode switch toggles, so grant them the specificity to actually go. */
+  .refresh-btn[hidden],
+  .facet-bar[hidden],
+  .search-row[hidden] { display: none; }
+
+  /* ---------- tasks ----------
+     The drawer shows one of two things: the archive, or the list of what needs
+     doing. They share the shell but almost nothing else, because reading and
+     doing want different furniture. */
+
+  .mode-row {
+    display: flex;
+    gap: 2px;
+    margin: 0 0 12px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .mode-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--ink-faint);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 7px 4px 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    margin-bottom: -1px;
+  }
+  .mode-btn:hover { color: var(--ink-dim); }
+  .mode-btn[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--brass); }
+  .mode-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+
+  /* The count only earns its place when there is something waiting. */
+  .mode-n {
+    font-size: 10px;
+    color: var(--rust);
+  }
+  .mode-btn[aria-pressed="true"] .mode-n { color: var(--brass); }
+
+  .task-group {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    padding: 16px 18px 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+  .task-group.overdue { color: var(--rust); }
+  .task-group:first-child { padding-top: 6px; }
+
+  .task-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+    padding: 11px 18px 11px 15px;
+    border-bottom: 1px solid var(--ruled);
+    transition: background 120ms;
+  }
+  .task-row:hover { background: rgba(232,223,200,0.03); }
+  .task-row.selected { background: rgba(201,162,39,0.08); }
+  .task-row.settling { opacity: 0.35; }
+
+  /* Ticking something off is the most-used control in the whole view, so it is
+     a real target rather than a checkbox glyph. */
+  .task-tick {
+    flex-shrink: 0;
+    width: 17px;
+    height: 17px;
+    margin-top: 1px;
+    border: 1.5px solid var(--ink-faint);
+    border-radius: 50%;
+    background: none;
+    cursor: pointer;
+    padding: 0;
+    position: relative;
+    transition: border-color 120ms, background 120ms;
+  }
+  .task-tick:hover { border-color: var(--moss); background: rgba(124,154,110,0.15); }
+  .task-tick:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .task-tick.done { border-color: var(--moss); background: var(--moss); }
+  .task-tick svg { position: absolute; inset: 0; margin: auto; opacity: 0; }
+  .task-tick:hover svg, .task-tick.done svg { opacity: 1; }
+  .task-tick.done svg { color: var(--paper); }
+
+  .task-open {
+    flex: 1;
+    min-width: 0;
+    text-align: left;
+    background: none;
+    border: none;
+    padding: 0;
+    color: inherit;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .task-open:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  .task-title {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--ink-dim);
+    overflow-wrap: anywhere;
+  }
+  .task-row.selected .task-title { color: var(--ink); }
+  .task-row.is-done .task-title { text-decoration: line-through; color: var(--ink-faint); }
+
+  .task-sub {
+    margin-top: 3px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    color: var(--ink-faint);
+  }
+  .task-sub .due.late { color: var(--rust); }
+  .task-sub .due.soon { color: var(--brass); }
+  .task-sub .proj { color: var(--moss); }
+  .task-sub .note-link { color: var(--blue); }
+  .task-sub .repeat { color: var(--plum); }
+
+  .task-status-tag {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    padding: 1px 5px;
+  }
+
+  /* ---------- task detail ---------- */
+
+  .task-detail { padding: 40px 48px 80px; max-width: 640px; }
+
+  .task-field { margin-top: 18px; }
+
+  .task-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+    margin-bottom: 5px;
+  }
+
+  .task-input, .task-textarea, .task-select {
+    width: 100%;
+    background: var(--panel);
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 15px;
+    padding: 9px 11px;
+    line-height: 1.5;
+  }
+  .task-textarea { min-height: 90px; resize: vertical; }
+  .task-select { font-family: var(--font-mono); font-size: 12px; }
+  .task-input:focus, .task-textarea:focus, .task-select:focus {
+    outline: none;
+    border-color: var(--brass);
+  }
+
+  .task-row-fields { display: flex; gap: 14px; flex-wrap: wrap; }
+  .task-row-fields .task-field { flex: 1; min-width: 150px; }
+
+  .task-hint {
+    margin-top: 4px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--ink-faint);
+    line-height: 1.5;
+  }
+  .task-hint.bad { color: var(--rust); }
+
+  .task-actions {
+    margin-top: 26px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .task-btn {
+    background: var(--brass);
+    border: 1px solid var(--brass);
+    color: var(--paper);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 8px 14px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  .task-btn.ghost { background: none; color: var(--ink-dim); border-color: var(--hairline); }
+  .task-btn.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
+  .task-btn.danger { background: none; color: var(--rust); border-color: transparent; }
+  .task-btn:disabled { opacity: 0.5; cursor: default; }
+  .task-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
+  .task-detail-status {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--ink-faint);
+  }
+  .task-detail-status.bad { color: var(--rust); }
+  .task-detail-status.good { color: var(--moss); }
+
+  @media (max-width: 860px) {
+    .task-detail { padding: 28px 22px 70px; }
+  }
+
 </style>
 </head>
 <body>
@@ -1551,9 +1781,21 @@
         </div>
       </div>
 
-      <div class="search-row">
+      <div class="mode-row" id="modeRow">
+        <button class="mode-btn" id="modeNotes" type="button" aria-pressed="true">Notes</button>
+        <button class="mode-btn" id="modeTasks" type="button" aria-pressed="false">
+          Tasks<span class="mode-n" id="modeTasksN"></span>
+        </button>
+      </div>
+
+      <div class="search-row" id="searchRow">
         <input class="search-input" id="searchInput" type="text" placeholder="Search by meaning…" />
         <button class="search-clear" id="searchClear" style="display:none" aria-label="Clear search">×</button>
+      </div>
+
+      <div class="search-row" id="taskAddRow" hidden>
+        <input class="search-input" id="taskAddInput" type="text"
+               placeholder="Add a task…  #project  due:friday" />
       </div>
 
       <div class="chip-row" id="chipRow"></div>
@@ -3305,7 +3547,9 @@ document.getElementById('lockBtn').addEventListener('click', lockArchive);
 refreshBtn.addEventListener('click', () => {
   refreshBtn.classList.add('spinning');
   setTimeout(() => refreshBtn.classList.remove('spinning'), 700);
-  searchMode ? runSearch(lastSearchQuery) : loadAll();
+  if (viewMode === 'tasks') loadTasks(true);
+  else if (searchMode) runSearch(lastSearchQuery);
+  else loadAll();
 });
 
 searchClear.addEventListener('click', () => { loadAll(); });
@@ -4499,6 +4743,601 @@ document.getElementById('statsBtn').addEventListener('click', openStats);
 document.getElementById('statsClose').addEventListener('click', closeStats);
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape' && !statsPanel.hidden) closeStats();
+});
+
+// ---------- quick add ----------
+//
+// Typing a task must stay one action, so the quick-add box understands a small,
+// explicit syntax rather than guessing. Two markers, both optional:
+//
+//   #project      files it (the last one wins)
+//   due:<when>    takes everything after the colon, so "due:1 sep" works
+//
+// <when> is today, tomorrow, a weekday name (the next one, never today), or any
+// date parseDateInput already reads. Anything it cannot read is left in the
+// title rather than silently dropped — a task that quietly loses its due date is
+// worse than one that keeps a stray word.
+
+const WEEKDAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+function parseWhen(text, today) {
+  const s = (text || '').trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!s) return null;
+
+  const base = today ? new Date(today + 'T00:00:00Z') : new Date();
+  const iso = d => d.toISOString().slice(0, 10);
+
+  if (s === 'today') return iso(base);
+  if (s === 'tomorrow') {
+    const d = new Date(base.getTime());
+    d.setUTCDate(d.getUTCDate() + 1);
+    return iso(d);
+  }
+  // "friday" means the next Friday. Saying it on a Friday means a week today,
+  // because a task you are writing down is not one you have already done.
+  const wd = WEEKDAYS.findIndex(n => n === s || n.slice(0, 3) === s);
+  if (wd >= 0) {
+    const d = new Date(base.getTime());
+    let delta = (wd - d.getUTCDay() + 7) % 7;
+    if (delta === 0) delta = 7;
+    d.setUTCDate(d.getUTCDate() + delta);
+    return iso(d);
+  }
+  return parseDateInput(s) || null;
+}
+
+function parseQuickAdd(raw, today) {
+  let text = (raw || '').trim();
+  let due = null;
+  let project = null;
+
+  // due: runs to the end of the line, so multi-word dates need no quoting.
+  const dueAt = text.search(/(^|\s)due:/i);
+  if (dueAt >= 0) {
+    const after = text.slice(dueAt).replace(/^\s*due:/i, '');
+    const parsed = parseWhen(after, today);
+    if (parsed) {
+      due = parsed;
+      text = text.slice(0, dueAt);
+    }
+  }
+
+  text = text.replace(/(^|\s)#([^\s#]+)/g, (_m, lead, word) => {
+    project = word;
+    return lead;
+  });
+
+  return {
+    title: text.replace(/\s+/g, ' ').trim(),
+    due_date: due,
+    project: project,
+  };
+}
+
+/* ---------- tasks ----------
+   The drawer shows either the archive or the list of what needs doing. They
+   share the shell and the access key and nothing else: a note is found by
+   meaning, a task by when it is due. */
+
+let viewMode = 'notes';        // 'notes' | 'tasks'
+let allTasks = [];
+let selectedTaskId = null;
+let taskFilter = 'open';       // 'open' | 'inbox' | 'next' | 'waiting' | 'done'
+
+const TASK_STATUS_LABELS = {
+  inbox: 'Inbox', next: 'Next', waiting: 'Waiting', done: 'Done', dropped: 'Dropped',
+};
+
+const RECUR_HINT = "daily · weekly · fortnightly · monthly · quarterly · yearly · " +
+                   "weekdays · every 3 days · every 2 weeks · every tuesday";
+
+function daysBetween(fromISO, toISO) {
+  const a = Date.parse(fromISO + 'T00:00:00Z');
+  const b = Date.parse(toISO + 'T00:00:00Z');
+  if (isNaN(a) || isNaN(b)) return null;
+  return Math.round((b - a) / 86400000);
+}
+
+// Group by when, not by status: what you want from a task list is what is late,
+// what is today, and what can wait — status is a detail inside that.
+function groupTasks(tasks, today) {
+  const groups = [
+    { key: 'overdue', label: 'Overdue', tasks: [] },
+    { key: 'today', label: 'Today', tasks: [] },
+    { key: 'week', label: 'This week', tasks: [] },
+    { key: 'later', label: 'Later', tasks: [] },
+    { key: 'someday', label: 'No date', tasks: [] },
+  ];
+  const by = {};
+  groups.forEach(g => { by[g.key] = g; });
+
+  tasks.forEach(t => {
+    if (!t.due_date) { by.someday.tasks.push(t); return; }
+    const d = daysBetween(today, t.due_date);
+    if (d === null) by.someday.tasks.push(t);
+    else if (d < 0) by.overdue.tasks.push(t);
+    else if (d === 0) by.today.tasks.push(t);
+    else if (d <= 7) by.week.tasks.push(t);
+    else by.later.tasks.push(t);
+  });
+
+  // Oldest-due first inside a group; undated tasks by when they were captured,
+  // so the inbox reads in the order things occurred to you.
+  groups.forEach(g => {
+    g.tasks.sort((a, b) => {
+      if (a.due_date && b.due_date && a.due_date !== b.due_date) {
+        return a.due_date < b.due_date ? -1 : 1;
+      }
+      return (a.created_at || '') < (b.created_at || '') ? -1 : 1;
+    });
+  });
+
+  return groups.filter(g => g.tasks.length);
+}
+
+function dueLabel(iso, today) {
+  const d = daysBetween(today, iso);
+  if (d === null) return { text: iso, tone: '' };
+  if (d < -1) return { text: Math.abs(d) + ' days late', tone: 'late' };
+  if (d === -1) return { text: 'yesterday', tone: 'late' };
+  if (d === 0) return { text: 'today', tone: 'soon' };
+  if (d === 1) return { text: 'tomorrow', tone: 'soon' };
+  if (d <= 7) {
+    const day = new Date(iso + 'T00:00:00Z')
+      .toLocaleDateString(undefined, { weekday: 'long', timeZone: 'UTC' });
+    return { text: day, tone: 'soon' };
+  }
+  return { text: formatDate(iso + 'T00:00:00Z'), tone: '' };
+}
+
+// ---------- loading ----------
+
+function normalizeTask(raw) {
+  return {
+    id: raw.id,
+    title: raw.title || '',
+    notes: raw.notes || '',
+    status: raw.status || 'inbox',
+    project: raw.project || '',
+    due_date: raw.due_date || '',
+    defer_until: raw.defer_until || '',
+    recur: raw.recur || '',
+    recur_from: raw.recur_from || 'completion',
+    thought_id: raw.thought_id || null,
+    created_at: raw.created_at || null,
+    completed_at: raw.completed_at || null,
+  };
+}
+
+async function loadTasks(keepSelection) {
+  showStatus('Looking at what needs doing…', false);
+  const args = { format: 'json', limit: 200 };
+  if (taskFilter === 'done') args.status = ['done'];
+  else if (taskFilter !== 'open') args.status = [taskFilter];
+  // Deferred tasks come back only when you go looking for them: the point of
+  // deferring something is not to see it.
+  if (taskFilter !== 'open') args.include_deferred = true;
+
+  try {
+    const text = await callTool('list_tasks', args);
+    let raw;
+    try { raw = JSON.parse(text); } catch (_) { raw = []; }
+    allTasks = (Array.isArray(raw) ? raw : []).map(normalizeTask);
+    if (!keepSelection) selectedTaskId = null;
+    renderTaskList();
+    renderTaskCount();
+  } catch (err) {
+    showStatus('Could not reach the archive — ' + err.message, true, () => loadTasks(keepSelection));
+  }
+}
+
+function renderTaskCount() {
+  const el = document.getElementById('modeTasksN');
+  if (!el) return;
+  const today = todayISO();
+  // The badge counts what is actually pressing, not the size of the list —
+  // a number that only ever grows stops meaning anything.
+  const pressing = allTasks.filter(t =>
+    t.status !== 'done' && t.status !== 'dropped' &&
+    t.due_date && daysBetween(today, t.due_date) <= 0).length;
+  el.textContent = pressing ? String(pressing) : '';
+}
+
+// ---------- the list ----------
+
+const TICK_SVG = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+  'stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+function renderTaskList() {
+  listScroll.innerHTML = '';
+
+  if (!allTasks.length) {
+    const status = document.createElement('div');
+    status.className = 'list-status';
+    status.textContent = taskFilter === 'done'
+      ? 'Nothing finished yet.'
+      : 'Nothing to do. Type above to add something.';
+    listScroll.appendChild(status);
+    return;
+  }
+
+  const today = todayISO();
+  groupTasks(allTasks, today).forEach(group => {
+    const head = document.createElement('div');
+    head.className = 'task-group' + (group.key === 'overdue' ? ' overdue' : '');
+    head.innerHTML = `<span>${group.label}</span><span>${group.tasks.length}</span>`;
+    listScroll.appendChild(head);
+    group.tasks.forEach(t => listScroll.appendChild(taskRow(t, today)));
+  });
+}
+
+function taskRow(t, today) {
+  const row = document.createElement('div');
+  const done = t.status === 'done';
+  row.className = 'task-row' + (selectedTaskId === t.id ? ' selected' : '') + (done ? ' is-done' : '');
+
+  const bits = [];
+  if (t.due_date) {
+    const d = dueLabel(t.due_date, today);
+    bits.push(`<span class="due ${d.tone}">${escapeHtml(d.text)}</span>`);
+  }
+  if (t.project) bits.push(`<span class="proj">${escapeHtml(t.project)}</span>`);
+  if (t.recur) bits.push(`<span class="repeat">repeats ${escapeHtml(t.recur)}</span>`);
+  if (t.defer_until && daysBetween(today, t.defer_until) > 0) {
+    bits.push(`<span>hidden until ${escapeHtml(t.defer_until)}</span>`);
+  }
+  if (t.thought_id) bits.push('<span class="note-link">from a note</span>');
+  if (t.status !== 'inbox' && t.status !== 'done') {
+    bits.push(`<span class="task-status-tag">${escapeHtml(TASK_STATUS_LABELS[t.status] || t.status)}</span>`);
+  }
+
+  const tick = document.createElement('button');
+  tick.className = 'task-tick' + (done ? ' done' : '');
+  tick.type = 'button';
+  tick.innerHTML = TICK_SVG;
+  tick.title = done ? 'Already done' : 'Mark done';
+  tick.setAttribute('aria-label', done ? 'Already done' : 'Mark done: ' + t.title);
+
+  const open = document.createElement('button');
+  open.className = 'task-open';
+  open.type = 'button';
+  open.innerHTML =
+    `<div class="task-title">${escapeHtml(t.title)}</div>` +
+    (bits.length ? `<div class="task-sub">${bits.join('')}</div>` : '');
+
+  if (!done) tick.addEventListener('click', () => completeTask(t, row));
+  open.addEventListener('click', () => selectTask(t));
+
+  row.appendChild(tick);
+  row.appendChild(open);
+  return row;
+}
+
+async function completeTask(t, row) {
+  // Fade it immediately. The round trip is short but not instant, and a tick
+  // that does nothing for half a second feels broken.
+  row.classList.add('settling');
+  try {
+    await callTool('complete_task', { id: t.id });
+    await loadTasks(true);
+    if (selectedTaskId === t.id) showTaskEmptyState();
+  } catch (err) {
+    row.classList.remove('settling');
+    showToastStatus('Could not complete that — ' + err.message);
+  }
+}
+
+// A failure here has nowhere else to go: the row is still in the list and the
+// detail pane may be showing something else entirely.
+function showToastStatus(msg) {
+  const head = document.querySelector('.task-group') || listScroll.firstChild;
+  const el = document.createElement('div');
+  el.className = 'list-status';
+  el.style.color = 'var(--rust)';
+  el.textContent = msg;
+  listScroll.prepend(el);
+  setTimeout(() => el.remove(), 6000);
+  if (head) { /* keep the list where it was */ }
+}
+
+// ---------- quick add ----------
+
+async function quickAddTask(text) {
+  const parsed = parseQuickAdd(text, todayISO());
+  if (!parsed.title) return;
+  const args = { title: parsed.title, source: 'catalog' };
+  if (parsed.due_date) args.due_date = parsed.due_date;
+  if (parsed.project) args.project = parsed.project;
+  try {
+    await callTool('create_task', args);
+    await loadTasks(true);
+  } catch (err) {
+    showToastStatus('Could not add that — ' + err.message);
+  }
+}
+
+// ---------- the detail pane ----------
+
+function showTaskEmptyState() {
+  selectedTaskId = null;
+  renderTaskList();
+  main.innerHTML = `
+    <div class="empty-state">
+      <div class="glyph">✓</div>
+      <p>Pick a task to change it, or tick it off from the drawer.</p>
+    </div>
+  `;
+  app.classList.remove('detail-open');
+}
+
+function taskFieldRow(label, id, value, placeholder, hint) {
+  return `
+    <div class="task-field">
+      <label class="task-label" for="${id}">${label}</label>
+      <input class="task-input" id="${id}" type="text" value="${escapeAttr(value || '')}"
+             placeholder="${escapeAttr(placeholder || '')}" />
+      ${hint ? `<div class="task-hint" id="${id}Hint">${hint}</div>` : ''}
+    </div>`;
+}
+
+function selectTask(t) {
+  selectedTaskId = t.id;
+  renderTaskList();
+
+  const statusOptions = Object.keys(TASK_STATUS_LABELS)
+    .map(s => `<option value="${s}"${s === t.status ? ' selected' : ''}>${TASK_STATUS_LABELS[s]}</option>`)
+    .join('');
+
+  main.innerHTML = `
+    <div class="task-detail">
+      <div class="task-field">
+        <label class="task-label" for="tdTitle">Task</label>
+        <input class="task-input" id="tdTitle" type="text" value="${escapeAttr(t.title)}" />
+      </div>
+
+      <div class="task-field">
+        <label class="task-label" for="tdNotes">Notes</label>
+        <textarea class="task-textarea" id="tdNotes"
+          placeholder="Context, a phone number, what done looks like…">${escapeHtml(t.notes)}</textarea>
+      </div>
+
+      <div class="task-row-fields">
+        <div class="task-field">
+          <label class="task-label" for="tdStatus">Status</label>
+          <select class="task-select" id="tdStatus">${statusOptions}</select>
+        </div>
+        ${taskFieldRow('Project', 'tdProject', t.project, 'e.g. house')}
+      </div>
+
+      <div class="task-row-fields">
+        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'friday, 1 Sep, 2026-09-01')}
+        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'nothing to do before then')}
+      </div>
+
+      <div class="task-row-fields">
+        ${taskFieldRow('Repeats', 'tdRecur', t.recur, 'weekly, every 2 weeks…', RECUR_HINT)}
+        <div class="task-field">
+          <label class="task-label" for="tdRecurFrom">Counting from</label>
+          <select class="task-select" id="tdRecurFrom">
+            <option value="completion"${t.recur_from === 'completion' ? ' selected' : ''}>When I finish it</option>
+            <option value="due"${t.recur_from === 'due' ? ' selected' : ''}>Its due date</option>
+          </select>
+        </div>
+      </div>
+
+      ${t.thought_id ? `
+      <div class="task-field">
+        <label class="task-label">Came from</label>
+        <button class="task-btn ghost" id="tdOpenNote" type="button">Open the note</button>
+      </div>` : ''}
+
+      <div class="task-actions">
+        <button class="task-btn" id="tdSave" type="button">Save</button>
+        ${t.status !== 'done'
+          ? '<button class="task-btn ghost" id="tdDone" type="button">Mark done</button>'
+          : '<button class="task-btn ghost" id="tdReopen" type="button">Reopen</button>'}
+        <button class="task-btn danger" id="tdDelete" type="button">Delete</button>
+        <span class="task-detail-status" id="tdStatusMsg"></span>
+      </div>
+    </div>
+  `;
+
+  const back = document.createElement('button');
+  back.className = 'back-btn';
+  back.textContent = '← Back to the list';
+  back.addEventListener('click', () => app.classList.remove('detail-open'));
+  main.prepend(back);
+  app.classList.add('detail-open');
+
+  wireTaskDetail(t);
+}
+
+function wireTaskDetail(t) {
+  const msg = document.getElementById('tdStatusMsg');
+  const say = (text, tone) => {
+    msg.textContent = text || '';
+    msg.className = 'task-detail-status' + (tone ? ' ' + tone : '');
+  };
+
+  const saveBtn = document.getElementById('tdSave');
+
+  saveBtn.addEventListener('click', async () => {
+    const title = document.getElementById('tdTitle').value.trim();
+    if (!title) { say('A task needs a title.', 'bad'); return; }
+
+    // Dates are read the way people write them, and a date that cannot be read
+    // stops the save rather than being quietly dropped.
+    const dueRaw = document.getElementById('tdDue').value.trim();
+    const deferRaw = document.getElementById('tdDefer').value.trim();
+    const due = dueRaw ? parseWhen(dueRaw, todayISO()) : '';
+    const defer = deferRaw ? parseWhen(deferRaw, todayISO()) : '';
+    if (dueRaw && !due) { say('Due date not recognised — try friday, 1 Sep or 2026-09-01.', 'bad'); return; }
+    if (deferRaw && !defer) { say('Hide-until date not recognised.', 'bad'); return; }
+
+    const recur = document.getElementById('tdRecur').value.trim();
+
+    const args = {
+      id: t.id,
+      title: title,
+      notes: document.getElementById('tdNotes').value.trim() || null,
+      status: document.getElementById('tdStatus').value,
+      project: document.getElementById('tdProject').value.trim() || null,
+      due_date: due || null,
+      defer_until: defer || null,
+      recur: recur || null,
+      recur_from: document.getElementById('tdRecurFrom').value,
+    };
+
+    saveBtn.disabled = true;
+    say('Saving…');
+    try {
+      await callTool('update_task', args);
+      await loadTasks(true);
+      const fresh = allTasks.find(x => x.id === t.id);
+      if (fresh) selectTask(fresh); else showTaskEmptyState();
+    } catch (err) {
+      saveBtn.disabled = false;
+      say(String(err.message || err), 'bad');
+    }
+  });
+
+  const doneBtn = document.getElementById('tdDone');
+  if (doneBtn) doneBtn.addEventListener('click', async () => {
+    doneBtn.disabled = true;
+    say('Finishing…');
+    try {
+      const out = await callTool('complete_task', { id: t.id });
+      await loadTasks(true);
+      // complete_task says when the next instance is due; worth repeating,
+      // because a repeating task vanishing off the list looks like a bug.
+      showTaskEmptyState();
+      if (/Next one due/.test(out)) showToastStatus(out);
+    } catch (err) {
+      doneBtn.disabled = false;
+      say(String(err.message || err), 'bad');
+    }
+  });
+
+  const reopenBtn = document.getElementById('tdReopen');
+  if (reopenBtn) reopenBtn.addEventListener('click', async () => {
+    reopenBtn.disabled = true;
+    try {
+      await callTool('update_task', { id: t.id, status: 'next' });
+      await loadTasks(true);
+      const fresh = allTasks.find(x => x.id === t.id);
+      if (fresh) selectTask(fresh); else showTaskEmptyState();
+    } catch (err) {
+      reopenBtn.disabled = false;
+      say(String(err.message || err), 'bad');
+    }
+  });
+
+  const delBtn = document.getElementById('tdDelete');
+  delBtn.addEventListener('click', async () => {
+    if (delBtn.getAttribute('data-armed') !== 'yes') {
+      delBtn.setAttribute('data-armed', 'yes');
+      delBtn.textContent = 'Really delete';
+      say('Deleting is permanent. To keep the record, set the status to Dropped instead.');
+      return;
+    }
+    try {
+      await callTool('delete_task', { id: t.id });
+      await loadTasks(false);
+      showTaskEmptyState();
+    } catch (err) {
+      say(String(err.message || err), 'bad');
+    }
+  });
+
+  const noteBtn = document.getElementById('tdOpenNote');
+  if (noteBtn) noteBtn.addEventListener('click', async () => {
+    const found = findThought(t.thought_id);
+    if (found) { setViewMode('notes'); selectThought(found); return; }
+    // The note may be older than the hundred the drawer holds.
+    noteBtn.disabled = true;
+    noteBtn.textContent = 'Fetching…';
+    try {
+      const text = await callTool('fetch', { id: t.thought_id });
+      const doc = JSON.parse(text);
+      setViewMode('notes');
+      selectThought(normalizeThought({
+        id: doc.id, content: doc.text, created_at: doc.metadata && doc.metadata.created_at,
+        metadata: doc.metadata || {},
+      }));
+    } catch (err) {
+      noteBtn.disabled = false;
+      noteBtn.textContent = 'Open the note';
+      say('Could not fetch that note — ' + err.message, 'bad');
+    }
+  });
+}
+
+// ---------- switching between the two ----------
+
+function renderTaskFilters() {
+  chipRow.innerHTML = '';
+  [['open', 'To do'], ['inbox', 'Inbox'], ['next', 'Next'],
+   ['waiting', 'Waiting'], ['done', 'Done']].forEach(([key, label]) => {
+    const chip = document.createElement('button');
+    chip.className = 'chip' + (taskFilter === key ? ' active' : '');
+    chip.type = 'button';
+    if (taskFilter === key) chip.style.background = 'var(--brass)';
+    chip.textContent = label;
+    chip.addEventListener('click', () => {
+      taskFilter = key;
+      renderTaskFilters();
+      loadTasks(false);
+    });
+    chipRow.appendChild(chip);
+  });
+}
+
+function setViewMode(mode) {
+  viewMode = mode;
+  const tasks = mode === 'tasks';
+
+  document.getElementById('modeNotes').setAttribute('aria-pressed', String(!tasks));
+  document.getElementById('modeTasks').setAttribute('aria-pressed', String(tasks));
+  document.getElementById('searchRow').hidden = tasks;
+  document.getElementById('taskAddRow').hidden = !tasks;
+  document.querySelector('.facet-bar').hidden = tasks;
+  if (tasks) document.getElementById('facetPanel').hidden = true;
+
+  // The note-only header buttons have nothing to act on in task mode.
+  ['newBtn', 'statsBtn', 'importBtn'].forEach(id => {
+    const b = document.getElementById(id);
+    if (b) b.hidden = tasks;
+  });
+
+  app.classList.remove('detail-open');
+  closeReference();
+
+  if (tasks) {
+    renderTaskFilters();
+    showTaskEmptyState();
+    loadTasks(false);
+  } else {
+    chipRow.innerHTML = '';
+    renderChips();
+    showEmptyState();
+    renderFacets();
+  }
+}
+
+document.getElementById('modeNotes').addEventListener('click', () => {
+  if (viewMode !== 'notes') setViewMode('notes');
+});
+document.getElementById('modeTasks').addEventListener('click', () => {
+  if (viewMode !== 'tasks') setViewMode('tasks');
+});
+
+document.getElementById('taskAddInput').addEventListener('keydown', ev => {
+  if (ev.key !== 'Enter') return;
+  const input = ev.currentTarget;
+  const text = input.value;
+  if (!text.trim()) return;
+  input.value = '';
+  quickAddTask(text);
 });
 
 if (mcpAccessKey) loadAll();
