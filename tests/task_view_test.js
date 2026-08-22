@@ -50,7 +50,12 @@ function handle(body) {
   const name = params.name, args = params.arguments || {};
   calls.push({ name, args });
 
-  if (name === 'list_thoughts') return reply('[]');
+  if (name === 'list_thoughts') return reply(JSON.stringify([
+    { id: 'th-9', content: 'A note that exists so the facet bar has something to show.',
+      created_at: '2026-08-01T00:00:00Z',
+      metadata: { type: 'reference', title: 'A note', topics: ['x'], author: 'Someone',
+                  source_name: 'Somewhere', people: ['A Person'] } },
+  ]));
   if (name === 'list_tasks') {
     const open = ['inbox', 'next', 'waiting'];
     const want = args.status && args.status.length ? args.status : open;
@@ -159,10 +164,23 @@ function handle(body) {
   const noteLink = await page.$$eval('.task-sub .note-link', els => els.length);
   check('linked-note marker shown', noteLink === 1, noteLink);
 
-  // search box swapped for the quick-add box
-  const searchHidden = await page.$eval('#searchRow', e => e.hidden);
-  const addShown = await page.$eval('#taskAddRow', e => !e.hidden);
-  check('search hidden, quick-add shown', searchHidden && addShown, { searchHidden, addShown });
+  // Visibility is asserted from computed style, never from the hidden
+  // attribute: any class that sets display overrides it, which is exactly the
+  // bug an attribute check sails straight past.
+  const shown = sel => page.evaluate(s => {
+    const e = document.querySelector(s);
+    return !!e && getComputedStyle(e).display !== 'none';
+  }, sel);
+
+  check('search box hidden in task mode', !(await shown('#searchRow')));
+  check('quick-add box shown', await shown('#taskAddRow'));
+  check('facet bar hidden in task mode', !(await shown('.facet-bar')));
+  for (const id of ['newBtn', 'statsBtn', 'importBtn']) {
+    check(id + ' hidden in task mode', !(await shown('#' + id)));
+  }
+  for (const id of ['lockBtn', 'refreshBtn']) {
+    check(id + ' still shown', await shown('#' + id));
+  }
 
   // --- quick add, with the little syntax ---
   await page.fill('#taskAddInput', 'Pay the window cleaner #house due:tomorrow');
@@ -232,9 +250,10 @@ function handle(body) {
   // --- back to notes ---
   await page.click('#modeNotes');
   await page.waitForTimeout(400);
-  const searchBack = await page.$eval('#searchRow', e => !e.hidden);
-  const addHidden = await page.$eval('#taskAddRow', e => e.hidden);
-  check('notes mode restores the search box', searchBack && addHidden, { searchBack, addHidden });
+  check('notes mode restores the search box', await shown('#searchRow'));
+  check('notes mode hides the quick-add box', !(await shown('#taskAddRow')));
+  check('notes mode restores the facet bar', await shown('.facet-bar'));
+  check('notes mode restores the new-note button', await shown('#newBtn'));
 
   // --- the done filter asks the server for done tasks ---
   await page.click('#modeTasks');

@@ -1430,6 +1430,13 @@
     * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
     .card-row:hover .card-row-body { transform: none; }
   }
+  /* The hidden attribute carries only UA-stylesheet weight, so any class that
+     sets display beats it and the element stays on screen. These are the ones
+     the mode switch toggles, so grant them the specificity to actually go. */
+  .refresh-btn[hidden],
+  .facet-bar[hidden],
+  .search-row[hidden] { display: none; }
+
   /* ---------- tasks ----------
      The drawer shows one of two things: the archive, or the list of what needs
      doing. They share the shell but almost nothing else, because reading and
