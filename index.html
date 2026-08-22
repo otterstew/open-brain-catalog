@@ -131,6 +131,35 @@
   .refresh-btn.spinning svg { animation: spin 700ms linear; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* The held-notes pill. Sized like the icon buttons but wider, because a
+     count is the whole point of it: "something of yours has not landed yet"
+     is only reassuring if you can see how much. Hidden entirely at zero —
+     an always-present "0 held" trains you to stop reading it. */
+  .held-btn {
+    background: none;
+    border: 1px solid var(--brass);
+    color: var(--brass);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: border-color 120ms, color 120ms;
+    flex-shrink: 0;
+  }
+  .held-btn[hidden] { display: none; }
+  .held-btn:hover { border-color: var(--ink); color: var(--ink); }
+  .held-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .held-btn.sending { opacity: 0.6; pointer-events: none; }
+  /* A queue that stopped for a reason other than the network — a rejected key,
+     a server that answered no — is not a waiting state, so it stops looking
+     like one. */
+  .held-btn.stuck { border-color: var(--rust); color: var(--rust); }
+
   .search-row {
     margin-top: 14px;
     position: relative;
@@ -1761,6 +1790,11 @@
       <div class="drawer-title-row">
         <h1 class="drawer-title">Open Brain</h1>
         <div class="header-actions">
+          <button class="held-btn" id="heldBtn" type="button" hidden
+                  title="Notes written while the archive was unreachable. Click to send them now.">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <span id="heldCount"></span>
+          </button>
           <button class="refresh-btn" id="newBtn" title="New thought" aria-label="New thought">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
           </button>
@@ -2035,7 +2069,13 @@ async function mcpRequest(method, params) {
   try {
     response = await fetch(MCP_URL, { method: 'POST', headers, body: JSON.stringify(body) });
   } catch (err) {
-    throw new Error('Could not reach the archive server. This is usually a network problem, or the server may not be allowing direct browser requests (CORS). (' + err.message + ')');
+    // Flagged, not just worded: a note written on a dead connection is held in
+    // the outbox rather than lost, and the only way to tell that case from
+    // "the archive answered, and said no" is which side of this try the
+    // failure came from. A rejection here means nothing reached the server.
+    const unreachable = new Error('Could not reach the archive server. This is usually a network problem, or the server may not be allowing direct browser requests (CORS). (' + err.message + ')');
+    unreachable.unreachable = true;
+    throw unreachable;
   }
 
   const sid = response.headers.get('Mcp-Session-Id');
@@ -2088,6 +2128,177 @@ async function callTool(name, args) {
   const block = ((result && result.content) || []).find(b => b.type === 'text');
   if (!block) throw new Error('The archive returned no readable content for "' + name + '".');
   return block.text;
+}
+
+/* ---------- the outbox: notes written while the archive was unreachable ----------
+
+   The catalog's shell is cached by the service worker, so it opens on a dead
+   connection and lets you type. Until this existed, pressing Save then threw
+   and the note stayed in a textarea that the next navigation cleared — the
+   worst possible moment to lose one, because it is exactly the moment you are
+   in a meeting with no signal.
+
+   Only captures are held. Edits, links and tasks all name a row by id and
+   assume the server's current state, so replaying them minutes or hours later
+   can quietly overwrite something changed since. A capture is append-only and
+   carries everything it needs, so replaying it is always safe. Anything else
+   still fails loudly, as before.
+
+   localStorage rather than IndexedDB, deliberately: this is a handful of short
+   text notes waiting minutes, not an offline mirror of the archive. The 5MB
+   ceiling is far past what a queue like that ever reaches, the access key
+   already lives here so nothing new is being exposed, and a synchronous store
+   needs no open, no versioning and no transactions in a page that has none of
+   that anywhere else. Quota is handled where it can happen rather than hoped
+   about: a write that will not fit refuses in front of you instead of
+   pretending to have saved. */
+
+const OUTBOX_STORAGE = 'openbrain.outbox';
+let outboxSending = false;
+
+function outboxRead() {
+  // Every read is defensive. Storage can be unavailable (a locked-down browser,
+  // a private window), and a half-written value from a killed tab must not take
+  // the whole page down on load.
+  try {
+    const raw = localStorage.getItem(OUTBOX_STORAGE);
+    if (!raw) return [];
+    const list = JSON.parse(raw);
+    return Array.isArray(list) ? list.filter(r => r && typeof r.content === 'string') : [];
+  } catch (_) {
+    return [];
+  }
+}
+
+function outboxWrite(list) {
+  try {
+    if (list.length) localStorage.setItem(OUTBOX_STORAGE, JSON.stringify(list));
+    else localStorage.removeItem(OUTBOX_STORAGE);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+function outboxAdd(args) {
+  const record = {
+    // Date plus a random tail: two notes held in the same millisecond is
+    // implausible, but an id collision would silently drop one of them.
+    id: 'held-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8),
+    content: args.content,
+    author: args.author,
+    published_date: args.published_date,
+    written_at: new Date().toISOString(),
+  };
+  if (args.parent_thought_id) record.parent_thought_id = args.parent_thought_id;
+
+  const list = outboxRead();
+  list.push(record);
+  if (!outboxWrite(list)) return null;
+  renderOutbox();
+  return record;
+}
+
+function outboxRemove(id) {
+  outboxWrite(outboxRead().filter(r => r.id !== id));
+}
+
+function renderOutbox(message) {
+  const btn = document.getElementById('heldBtn');
+  const count = document.getElementById('heldCount');
+  if (!btn || !count) return;
+  const held = outboxRead();
+  btn.hidden = held.length === 0;
+  count.textContent = held.length + ' held';
+  btn.classList.toggle('sending', outboxSending);
+  btn.classList.toggle('stuck', !!message);
+  btn.title = message
+    ? message + ' Click to try again.'
+    : (held.length === 1 ? 'One note is' : held.length + ' notes are') +
+      ' waiting for the archive. Click to send now.';
+}
+
+// Replayed in the order they were written, and stopped at the first failure
+// rather than skipped past: a note that refers to "the above" reads as nonsense
+// if the note above it went in an hour later. Stopping also keeps a rejected
+// key from burning through the whole queue producing the same error each time.
+async function flushOutbox() {
+  if (outboxSending) return { sent: 0 };
+  if (!mcpAccessKey) return { sent: 0 };   // locked: nothing to send with
+  const held = outboxRead();
+  if (!held.length) return { sent: 0 };
+
+  outboxSending = true;
+  renderOutbox();
+
+  // Every held note has already had one send fail — that failure is the only
+  // way into the outbox — and a failed send may still have landed: fetch()
+  // rejects identically whether the request never left the machine or the reply
+  // was lost on the way back. upsert_thought is a plain insert with no dedupe,
+  // so replaying the second case files the note twice. Hence: ask the archive
+  // what it already has before replaying anything into it.
+  //
+  // Read once per flush, not once per note, and deliberately not updated with
+  // what this flush sends: two identical notes really written twice must both
+  // survive, and they only do if the second is checked against the archive as
+  // it stood before either went in.
+  //
+  // Exact content rather than a semantic search, because the question is "is
+  // this same note already filed" — search_thoughts answers a different one and
+  // would happily match last week's note on the same subject and bin today's.
+  let filed = null;
+  const alreadyFiled = async (record) => {
+    if (filed === null) {
+      try {
+        filed = parseJsonThoughts(await callTool('list_thoughts', { limit: 100, format: 'json' }))
+          .map(t => (t.content || '').trim());
+      } catch (_) {
+        // Cannot tell. Send it: a duplicate you can see and delete beats a note
+        // quietly dropped on a maybe.
+        filed = [];
+      }
+    }
+    return filed.includes(record.content.trim());
+  };
+
+  let sent = 0;
+  let failure = null;
+  for (const record of held) {
+    if (await alreadyFiled(record)) {
+      outboxRemove(record.id);
+      continue;
+    }
+    const args = {
+      content: record.content,
+      author: record.author || SELF_AUTHOR,
+      published_date: record.published_date || todayISO(),
+    };
+    if (record.parent_thought_id) args.parent_thought_id = record.parent_thought_id;
+    try {
+      await callTool('capture_thought', args);
+      outboxRemove(record.id);
+      sent++;
+    } catch (err) {
+      failure = err;
+      break;
+    }
+  }
+
+  outboxSending = false;
+  // Still no network is the expected state, not an error worth shouting about:
+  // it stays a quiet count. Anything else means the archive answered and
+  // refused, which you do need to see.
+  renderOutbox(failure && !failure.unreachable
+    ? ('The archive refused a held note — ' + failure.message)
+    : null);
+
+  // Refreshing mid-search would throw away the results being read. The held
+  // notes are safely in the archive either way; the list catches up on the
+  // next refresh.
+  if (sent && viewMode === 'notes' && !searchMode && !app.classList.contains('detail-open')) {
+    try { await loadAll(); } catch (_) { /* the notes are saved regardless */ }
+  }
+  return { sent, failure };
 }
 
 /* ---------- Normalizing the tool's JSON output into cards ----------
@@ -3411,6 +3622,32 @@ function showComposer(prefill, parentId) {
         if (saved) await confirmTags(saved[1]);
       }, 500);
     } catch (err) {
+      // An unreachable archive is not a lost note. Hold it and say so — the
+      // composer closes exactly as it does on a real save, because being made
+      // to sit and stare at a failed textarea is the thing this replaces.
+      if (err.unreachable) {
+        const held = outboxAdd({ content, author: SELF_AUTHOR, published_date: todayISO(),
+                                 parent_thought_id: parentId });
+        if (held) {
+          statusEl.style.color = 'var(--brass)';
+          statusEl.textContent = 'No connection — held on this device. It will be sent when the archive is reachable again.';
+          // Long enough to read, and checked on the way out: if you have
+          // started another note in the meantime this is a different textarea,
+          // and clearing it would throw away what you have just typed.
+          setTimeout(() => {
+            if (document.getElementById('composeText') === textEl) showEmptyState();
+          }, 1400);
+          return;
+        }
+        // Storage refused it, so there is nowhere to put the note but the
+        // textarea it is already in. Leave it there and say why.
+        saveBtn.disabled = false;
+        cancelBtn.disabled = false;
+        saveBtn.textContent = 'Save to archive';
+        statusEl.style.color = 'var(--rust)';
+        statusEl.textContent = 'No connection, and this device has no room to hold the note. Copy it somewhere before leaving this page.';
+        return;
+      }
       saveBtn.disabled = false;
       cancelBtn.disabled = false;
       saveBtn.textContent = 'Save to archive';
@@ -3599,13 +3836,23 @@ unlockForm.addEventListener('submit', (e) => {
   setAccessKey(key);
   hideUnlock();
   loadAll();
+  // A note held while locked out — a rejected key, or a lock on a shared
+  // machine — has had nothing to send with until now.
+  flushOutbox();
 });
 
 // Forget the key on this device — useful on a shared or borrowed phone.
 function lockArchive() {
   setAccessKey('');
   allThoughts = [];
-  showUnlock('Key forgotten on this device.');
+  // Held notes are not thrown away with the key — unsent writing is the one
+  // thing here that exists nowhere else. But it does stay on this device, so
+  // say so rather than let it be a surprise on a machine you share.
+  const waiting = outboxRead().length;
+  showUnlock('Key forgotten on this device.' + (waiting
+    ? ' ' + (waiting === 1 ? 'One note is' : waiting + ' notes are') +
+      ' still held here, unsent — unlock to send them.'
+    : ''));
 }
 
 // ---------- import: drag a file onto the catalog ----------
@@ -5340,7 +5587,18 @@ document.getElementById('taskAddInput').addEventListener('keydown', ev => {
   quickAddTask(text);
 });
 
-if (mcpAccessKey) loadAll();
+// ---------- held notes ----------
+// Three ways the queue drains, because none of them is reliable alone:
+// the browser's own online event (which lies often enough on captive portals
+// and VPNs that it cannot be the only trigger), every load (which covers the
+// note written offline yesterday and reopened this morning), and the pill
+// itself, for when you can see the connection is back and the browser cannot.
+document.getElementById('heldBtn').addEventListener('click', () => { flushOutbox(); });
+window.addEventListener('online', () => { flushOutbox(); });
+
+renderOutbox();
+
+if (mcpAccessKey) { loadAll(); flushOutbox(); }
 
 else showUnlock();
 

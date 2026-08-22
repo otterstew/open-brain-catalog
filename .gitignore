@@ -1,3 +1,9 @@
 # Personal Claude Code settings for this checkout — permissions and the like.
 # Not the project's business; .claude/settings.json is the shared one.
 .claude/settings.local.json
+
+# The browser tests are run by hand with `npm i playwright` (see the header of
+# tests/task_view_test.js). The install is a local convenience, not part of the
+# catalog, which is served straight from the repo root by GitHub Pages.
+node_modules/
+package-lock.json
