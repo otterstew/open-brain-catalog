@@ -99,3 +99,20 @@ because you cannot see it here.
 
 A copy of this skill belongs in `~/Documents/open-brain/.claude/skills/` too, so
 it fires during work done there and not only during work done in this repo.
+
+## The monthly routine
+
+A scheduled routine — *Monthly Build Portfolio review*,
+`trig_01Lgy6ZVYH7Uy3A8mvG4T1Cf`, 08:00 UTC on the 1st — wakes a fresh session to
+do this review even when nobody is working. It is the belt to this skill's
+braces: the skill only fires while work is happening, and pieces go stale while
+nobody is touching them.
+
+Its expected outcome most months is **no change**. That is a successful run, not
+a wasted one.
+
+**Its known weakness:** it was created from a remote session, which could not
+attach MCP connectors, so its sessions may wake without the `mcp__Open_Brain__*`
+tools and be unable to read the note at all. The routine is written to stop and
+say so rather than fail quietly. If a monthly run reports that, the fix is to
+add the Open Brain connector to the routine in the claude.ai Routines UI.
