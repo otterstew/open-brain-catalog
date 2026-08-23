@@ -1,7 +1,13 @@
 # Sponsor approach: the AI / Copilot owner
 
-Cold approach. Two pieces: an email that does the persuading and asks for twenty
-minutes, and a two-page note attached to it. Placeholders in `[brackets]`.
+Cold approach, **demo-first**. Two pieces: an email that asks for permission
+rather than resources, and a two-page note attached to it. Placeholders in
+`[brackets]`.
+
+The ask is deliberately not a pilot. It is permission to build the thing for
+one person — me — in the tenant, and twenty minutes to show it working. The
+pilot proposal in `organisational-case.md` becomes phase two, put forward only
+once there is something to look at.
 
 ---
 
@@ -37,6 +43,30 @@ The reframe that makes it safe, and actually makes it strong:
 - **Lead with the fact you have already built it.** Cold approaches from people
   with a working thing get read. Cold approaches with an idea get filed.
 
+### Why the ask is permission, not resources
+
+The earlier version of this asked for three to five days of a Power Platform
+person's time. That is the right number — the build does not scale with
+headcount, because it is one list, a handful of flows and one agent whether it
+serves one person or twelve — but it is the wrong *ask*.
+
+Three to five days of a specialist is somebody's headcount, a scheduling
+conversation, and a named owner, requested cold, by a stranger, for something
+unproven. Every one of those is a reason to say not now.
+
+Permission to build it for yourself costs the sponsor nothing. No budget line,
+no resource to find, no one else's calendar. It converts the whole conversation
+from *fund my idea* to *look at this thing that works* — and the second one is
+a different kind of meeting entirely.
+
+It also gets the governance right way round. Building automation in a corporate
+tenant without asking is precisely what IT means by shadow IT, and being the
+person who asked first is worth more than the fortnight it might cost you.
+
+The cost lands on you instead, and it is real: several evenings, and the first
+flow will take longer than all the rest together while you learn the idioms.
+That is the trade, and it is a good one.
+
 One thing to leave out entirely: the comparison between what Microsoft can do
 and what a purpose-built stack can do. It is the most interesting part of the
 work and it is the wrong conversation for a first contact — it invites a debate
@@ -63,16 +93,18 @@ not get read.
 > anywhere retrievable, so Copilot cannot cite it.
 >
 > I have been running a system that fixes this for myself for the past few
-> months. Capture takes about ten seconds, a model does the tagging, and search
-> across it genuinely works. I have since mapped what it would take to rebuild
-> in SharePoint, Power Automate and Copilot: three to five days of build, and
-> under $20 of AI processing for an eight-week pilot with one team.
+> months, on my own kit. Capture takes about ten seconds, a model does the
+> tagging, and search across it genuinely works. I have mapped what it would
+> take to rebuild in SharePoint, Power Automate and Copilot, and I would like to
+> build that version — for myself, in my own time, as one user.
 >
-> No new platform and no new supplier — it is a way to improve the input to
-> something you already own.
+> I am not asking for budget or anyone's time. I am asking whether you are
+> content for me to build it, and for twenty minutes to show you the result
+> once it works. If it is any good we can talk about what a proper pilot would
+> look like; if it is not, it cost nothing.
 >
-> Could I have twenty minutes? Two-page note attached. And if you already have
-> something in flight covering this, I would rather know and drop it.
+> Short note attached. And if you already have something in flight covering
+> this, I would rather know and drop it.
 >
 > [your name]
 
@@ -153,34 +185,37 @@ The Microsoft build has been mapped component by component against it. The
 remaining unknown is not whether it can be built; it is whether the habit
 spreads beyond one person, which is what a pilot answers.
 
-#### What a pilot would be
+#### What I am asking for
 
-One team of 8–12 people, eight weeks. Success measured behaviourally rather than
-as hours saved, because no knowledge tool can evidence a productivity figure in
-eight weeks:
-
-- At least 60% of participants still capturing in week 6, unprompted
-- At least one retrieval per person per week
-- At least five logged instances of someone finding something they would
-  otherwise have re-derived or re-asked
-
-And a stopping condition agreed before we start: **if week-6 capture volume is
-below 30% of week-2, we stop.**
-
-#### Cost and effort
+To build it for myself, as one user, in my own time — and twenty minutes to show
+you the result.
 
 | | |
 |---|---|
-| Build | 3–5 days of Power Platform time |
-| Ongoing | ~0.1 FTE to own it |
-| AI processing, whole pilot | under $20 at list price |
+| Your budget | none |
+| Anyone else's time | none |
 | New platforms, suppliers or licences | none |
+| What I need | a SharePoint site, and enough AI Builder capacity for one person |
+| AI processing, one user for a month | pennies |
 
-At scale the arithmetic stays small: roughly 2.5 cents per capture, so a single
-capacity unit covers around 500 people capturing five notes a week. Worth
-noting that seeded AI Builder credits are withdrawn on 1 November 2026 and new
-capacity comes through Copilot Credits — a pilot starting now runs across that
-change, which is an argument for starting on existing capacity.
+The build is a handful of Power Automate flows and one SharePoint list. It costs
+me several evenings, which is my problem, not a line in anyone's plan.
+
+#### What would come after, if it is any good
+
+Only worth discussing once you have seen it, but so you know where this goes: a
+pilot with one team of 8–12 for eight weeks, measured behaviourally rather than
+as hours saved — are people still capturing unprompted in week 6 — with a
+stopping condition agreed in advance, so the answer is allowed to be no. The
+build does not grow with the headcount; the same list and flows serve twelve
+people as easily as one. At full scale the arithmetic stays small: roughly 2.5
+cents per capture, so a single capacity unit covers around 500 people capturing
+five notes a week.
+
+Worth flagging that seeded AI Builder credits are withdrawn on 1 November 2026,
+with new capacity coming through Copilot Credits. Building now runs across that
+change, which is an argument for starting on existing capacity rather than
+against starting.
 
 #### Two risks worth naming now
 
@@ -194,25 +229,29 @@ told plainly what is visible to whom and that content is discoverable.
 service account from the start, rather than becoming one person's personal
 automation that breaks when they change role.
 
-#### The ask
+#### The ask, again, plainly
 
-Eight weeks, one team, three to five days of build time, a named owner, and
-existing capacity. In return, a measured answer to whether a ten-second capture
-habit produces content that makes Copilot materially more useful — and a
-stopping condition agreed in advance, so the answer is allowed to be no.
+Permission to build it for myself, a SharePoint site to build it in, and twenty
+minutes when it works. If the demo is unconvincing, that is the end of it and it
+cost the organisation nothing at all.
 
 ---
 
 ## 3. If they say yes
 
-Worth having ready, because the first question after "interesting" is usually
-"what do you need from me this week":
+Have this ready, because the first question after "go on then" is "what do you
+actually need":
 
-- A named Power Platform person for three to five days
-- One team of 8–12 who will actually participate, chosen with their lead
-- A SharePoint site, and term store contributor rights
-- Confirmation of which side of the licensing line the agent falls on for this
-  population — existing Copilot licences, or pay-as-you-go credits
+- A SharePoint site you own, with term store contributor rights
+- Confirmation that AI Builder prompts are available to you, and roughly what
+  capacity you may use
+- Whether the HTTP connector is permitted by DLP — this decides whether the
+  Retrieval API is available to you or you fall back to structured lookup
+- A steer on whether anything you capture at work needs to stay off the tenant
+
+Then build it, use it for a month, and come back with the demo and a month of
+your own capture data. That conversation is the pilot proposal, and it will
+almost write itself.
 
 The build detail sits in `microsoft-365-equivalent.md`; the fuller argument,
 including the organisation-wide case, in `organisational-case.md`. Neither
