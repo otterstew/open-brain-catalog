@@ -1090,6 +1090,10 @@
     border: 2px dashed var(--brass);
   }
   .drop-veil.on { display: flex; }
+  .drop-veil.locked { border-color: var(--rust); }
+  .drop-veil .drop-locked { display: none; }
+  .drop-veil.locked .drop-open { display: none; }
+  .drop-veil.locked .drop-locked { display: block; }
   .drop-veil p {
     font-family: var(--font-display);
     font-size: 24px;
@@ -1673,8 +1677,11 @@
 </svg>
 
 <div class="drop-veil" id="dropVeil">
-  <p>Drop it in
+  <p class="drop-open">Drop it in
     <small>PDF, text or markdown — becomes a note</small>
+  </p>
+  <p class="drop-locked">Unlock first
+    <small>the file is held — it imports once the key is in</small>
   </p>
 </div>
 
@@ -3599,6 +3606,12 @@ unlockForm.addEventListener('submit', (e) => {
   setAccessKey(key);
   hideUnlock();
   loadAll();
+  // A file dropped on the locked gate is waiting; carry it through now.
+  if (heldImportFile) {
+    const file = heldImportFile;
+    heldImportFile = null;
+    importFromFile(file);
+  }
 });
 
 // Forget the key on this device — useful on a shared or borrowed phone.
@@ -4039,63 +4052,52 @@ importInput.addEventListener('change', () => {
 });
 
 let dragDepth = 0;
+
+// A file dropped while the archive is locked used to be dropped on the floor:
+// the handlers returned early and said nothing, which is indistinguishable from
+// a broken import. Hold the file instead, say so on the gate, and import it as
+// soon as the key goes in.
+let heldImportFile = null;
+
+function dragCarriesFiles(e) {
+  return Boolean(e.dataTransfer) && Array.from(e.dataTransfer.types).indexOf('Files') !== -1;
+}
+
+function clearDropVeil() {
+  dragDepth = 0;
+  dropVeil.classList.remove('on');
+  dropVeil.classList.remove('locked');
+}
+
 window.addEventListener('dragenter', (e) => {
-  if (!e.dataTransfer || Array.from(e.dataTransfer.types).indexOf('Files') === -1) return;
-  if (!unlockEl.hidden) return;              // locked: nothing to import into yet
+  if (!dragCarriesFiles(e)) return;
   dragDepth++;
   dropVeil.classList.add('on');
+  // Shown either way. Locked, the veil says why rather than never appearing.
+  dropVeil.classList.toggle('locked', !unlockEl.hidden);
 });
 window.addEventListener('dragover', (e) => {
+  // Must be cancelled for the drop event to fire at all — without it the
+  // browser navigates away to open the file instead.
   if (dropVeil.classList.contains('on')) e.preventDefault();
 });
 window.addEventListener('dragleave', () => {
-  if (--dragDepth <= 0) { dragDepth = 0; dropVeil.classList.remove('on'); }
+  if (--dragDepth <= 0) clearDropVeil();
 });
 window.addEventListener('drop', async (e) => {
   if (!e.dataTransfer || !e.dataTransfer.files.length) return;
   e.preventDefault();
-  dragDepth = 0;
-  dropVeil.classList.remove('on');
-  if (!unlockEl.hidden) return;
+  clearDropVeil();
 
   const file = e.dataTransfer.files[0];
-  importPanel.hidden = false;
-  importFileName.textContent = file.name;
-  importText.value = '';
-  updateImportCount();
-  setImportStatus('Reading…');
 
-  try {
-    const isPdf = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
-    const raw = isPdf ? await pdfToMarkdown(file) : await file.text();
-    importMeta = detectArticleMeta(raw);
-    const ruled = applyImportLinkRules(raw);
-    pendingLinks = ruled.linked;
-    pendingPlaceholders = ruled.pending;
-    importText.value = cleanImportedText(ruled.text);
-    updateImportCount();
-    const bits = [];
-    if (pendingLinks.length) {
-      bits.push(pendingLinks.length + (pendingLinks.length === 1 ? ' link' : ' links') +
-                ' wired up to notes you already hold');
-    }
-    const metaBits = ['author', 'published_date', 'source_name'].filter(k => importMeta[k]);
-    if (metaBits.length) {
-      bits.push('picked up ' + metaBits.length + ' detail' + (metaBits.length === 1 ? '' : 's') +
-                ' from the file (' + metaBits.join(', ').replace(/_/g, ' ') + ')');
-    }
-    if (pendingPlaceholders.length) {
-      bits.push(pendingPlaceholders.length + ' referenced article' +
-                (pendingPlaceholders.length === 1 ? '' : 's') +
-                ' not in the archive — those links stay external');
-    }
-    const detail = bits.length
-      ? ' ' + bits.join('; ').replace(/^./, c => c.toUpperCase()) + '.'
-      : '';
-    setImportStatus('Check it over, then save.' + detail);
-  } catch (err) {
-    setImportStatus('Could not read that file — ' + err.message, true);
+  if (!unlockEl.hidden) {
+    heldImportFile = file;
+    showUnlock('Unlock to import "' + file.name + '".');
+    return;
   }
+
+  await importFromFile(file);
 });
 
 document.getElementById('importCancel').addEventListener('click', closeImport);
