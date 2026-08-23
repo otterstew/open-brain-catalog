@@ -113,8 +113,13 @@ not get read.
 - *"You will know this better than I do"* is doing real work. Keep it.
 - *"for myself"* matters — it says this is a habit you already have, not a
   project you want funded.
-- *"under $20"* is the most persuasive number in the email. It should stay in
-  the first half.
+- **"I am not asking for budget or anyone's time"** is the most persuasive
+  sentence in it. Do not bury it, and do not soften it into "minimal resource".
+- *"on my own kit"* forestalls the obvious worry that you have already been
+  building unapproved things in the tenant.
+- Deliberately no cost figures anywhere. The moment a number appears, someone
+  starts working out who approves it. The point is that there is nothing to
+  approve.
 - The last line is the one most likely to get a reply. People answer a question
   they can answer easily.
 - If you have any connection at all — a shared project, someone in common, a

@@ -23,8 +23,8 @@ know tonight than on evening three.
 | Can I create a SharePoint site? | SharePoint start page → *Create site* | Ask for one site. This is the one thing you cannot work around. |
 | Can I create flows? | make.powerautomate.com → *Create* | Ask for maker access to the default environment. Usually already granted. |
 | Is the AI Builder prompt action available? | In a new flow, search actions for *Run a prompt* | Fall back: no automatic metadata. Still worth building — you type the title yourself. |
-| Do I have AI Builder capacity? | AI Hub → build a prompt → *Test*. Testing is free and shows projected credits. | Ask for capacity, or check whether Power Automate Premium is assigned to you. |
-| Is the HTTP connector permitted? | Add an *HTTP* action to a draft flow; DLP blocks show as a policy error on save | Skip the Retrieval API entirely. Structured lookup covers most of it. |
+| Do I have AI Builder capacity? | See below — testing is free, running is the real test | Ask for capacity, or check whether Power Automate Premium is assigned to you. |
+| Is the HTTP connector permitted? | See below — the failure signature tells you which problem you have | Skip the Retrieval API entirely. Structured lookup covers most of it. |
 | Do I have a Copilot licence? | Does Copilot appear in Teams / M365 app launcher | You can still build capture and browse; the agent step waits. |
 
 ### What you actually need, in licensing terms
@@ -52,6 +52,58 @@ people say no.
 
 Deliberately not asked for yet: app registration, admin consent, Copilot Studio,
 a service account. All of those are pilot-phase, and each one is a conversation.
+
+### How to answer the two checks you cannot answer by looking
+
+Both of these are usually gated behind the Power Platform admin centre, which
+you almost certainly cannot open. Both are answerable anyway, because each
+failure has a distinct signature.
+
+#### AI Builder capacity
+
+Three steps, cheapest first.
+
+1. **Check what is assigned to you.** myaccount.microsoft.com → *Subscriptions*,
+   or portal.office.com/account. You are looking for **Power Automate Premium**
+   (previously Per User Plan). If it is there, you have historically had seeded
+   AI Builder credits — 5,000 per user per month. Note that seeded credits are
+   withdrawn on **1 November 2026**, after which capacity comes through Copilot
+   Credits, so a yes here has a shelf life.
+2. **Test the prompt.** AI Hub → your prompt → *Test*. **Testing is free** and
+   does not consume credits, and the panel shows the projected credit cost of a
+   real run. This tells you what a capture will cost but not whether you may
+   spend it.
+3. **Run it once in a flow.** This is the only definitive test. Either it
+   succeeds — you have capacity — or it fails, and the error names which of two
+   problems you have:
+   - *"…requires an AI Builder capacity / credits"* or similar → no capacity.
+     Ask for an add-on, or for pay-as-you-go to be enabled.
+   - *"…not licensed"* → the plan is missing rather than the credits. Different
+     ask, different person.
+
+One run is worth more than an hour of hunting. Do step 3.
+
+#### The HTTP connector
+
+The important thing is that **a licence problem and a DLP problem look different**,
+and they need different asks of different people.
+
+1. Add an **HTTP** action to a throwaway flow.
+2. Look at the action in the designer. A **Premium** tag on the connector means
+   it is a licensing question — you need Power Automate Premium.
+3. **Save the flow.** This is the test. DLP violations surface at *save* time,
+   not while you build, with an error along the lines of *this flow cannot be
+   saved because it uses connectors from different data groups*. That names a
+   policy, and only an admin can change it.
+
+So: **Premium tag and it saves** → licensing, ask for a Premium seat.
+**Saves fine, no complaint** → you are clear.
+**Refuses to save with a data-group error** → DLP, and that is an admin
+conversation you probably do not want to have for a demo.
+
+If it is DLP, do not fight it. Drop the Retrieval API from the plan, use the
+structured lookup in step 4.2, and note it as a question for the pilot phase.
+Nothing else in the build needs a premium connector.
 
 ---
 
