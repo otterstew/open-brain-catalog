@@ -32,6 +32,27 @@ use: Open it when you start building, not before. Part 0 is fifteen minutes of p
 holds: The licensing table, the exact permissions to ask for in one go, the internal-column-name trap, the extraction prompt's JSON shape, the Outlook and Teams flows step by step, and a collected traps list.
 
 ## entry
+id: build-portfolio
+title: The Build Portfolio
+url: https://claude.ai/code/artifact/3d0a0c83-a91d-45ec-a569-152495d1a9c2
+audience: Anyone asking what you have actually built
+role: How it works
+summary: How the archive, the agent, the task layer and the skills fit together — the layered spine, the three rules underneath it, and how mature each piece is.
+use: The answer to "show me what you have built". Also the right thing to read yourself before extending anything, because it names the gap to close next rather than pretending there isn't one.
+holds: The spine diagram, the three rules, the maturity table, the two-notions-of-task problem, and the bar a piece has to clear before it is listed at all.
+
+## entry
+id: firm-scale
+title: Open Brain at Firm Scale
+url: https://claude.ai/code/artifact/3b875b8f-7f4c-41e3-acf8-59fbbf1b3d23
+audience: A sponsor or partner asking whether this belongs in the firm
+role: The honest bridge
+summary: What the system does, where the same pattern fits inside a professional services firm, and the six structural things that would have to change first.
+review: no
+use: The bridge between the personal system and the firm, in your own words. The blockers section is what makes the rest credible — never send this with that section cut.
+holds: The eight things it does, four places the pattern fits in a legal firm, six structural blockers from authentication to data residency, and what is safely usable today.
+
+## entry
 id: build-plan
 title: Open Brain on Microsoft 365
 url: https://claude.ai/code/artifact/d9ce050c-686e-48af-9bf9-91df2bb476fa
