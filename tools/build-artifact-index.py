@@ -139,17 +139,17 @@ def render(entries):
   <p class="standfirst">Everything written about putting this system inside Microsoft — what each page is, who it is for, and the order to use them in.</p>
   <div class="factbar">
     <span><b>Pages</b> {len(entries)}</span>
-    <span><b>Send</b> only the third one</span>
+    <span><b>Send</b> only the first one</span>
     <span><b>Index refreshed</b> weekly</span>
   </div>
 </header>
 
 <h2>The order that matters</h2>
-<p>These are not ranked by importance. They are in the order you would actually reach for them: the opening move, then what it needs behind it, then what comes next if it lands.</p>
+<p>These are not ranked by importance. They are in the order you would actually reach for them — ask permission, build the thing, show it, and only then argue for scale.</p>
 <div class="note">
   <div class="label">The one rule</div>
-  <p class="lead">Only the Sponsor Approach Note is meant to be sent.</p>
-  <p>The others are yours. Handing a first-time reader the build plan reads as over-engineering; handing them the organisational case before they have seen anything working reads as asking for money. Both are good documents at the wrong moment.</p>
+  <p class="lead">Only the first one is meant to be sent. The rest are yours.</p>
+  <p>Handing a first-time reader the technical map reads as over-engineering; handing them the organisational case before they have seen anything working reads as asking for money. Both are good documents at the wrong moment.</p>
 </div>
 
 <div class="order">

@@ -5,11 +5,31 @@ it is for, and when to reach for it. `tools/build-artifact-index.py` renders
 this into the published overview.
 
 **Editing rules.** Entries are ordered by the sequence you would actually use
-them, not by date. The scheduled job appends new entries it finds and marks them
+them, not by date — the opening move first, then what you do next. The scheduled job appends new entries it finds and marks them
 `review: yes`; it never rewrites an existing entry. Anything marked for review
 needs a human sentence before it is worth reading.
 
 ---
+
+## entry
+id: sponsor-approach
+title: Sponsor Approach Note
+url: https://claude.ai/code/artifact/8647e7d8-564b-445a-8d1d-cdf9d7b53914
+audience: One named sponsor who owns AI or Copilot
+role: The opening move
+summary: A cold email asking for permission rather than resources, plus the two-page note attached to it, written to avoid reading as criticism of their programme.
+use: Start here. It is the only document meant to be sent. Everything else supports it or follows it.
+holds: The email itself, the reasoning behind each line, why the ask is permission rather than budget, and what to have ready if they say yes.
+
+## entry
+id: build-guide
+title: Building It Yourself
+url: https://claude.ai/code/artifact/7e210cc9-b8fd-41f8-97c6-109cb00aa57b
+audience: You, on the evenings you actually build it
+role: The manual
+summary: Step by step for the single-user demo — pre-flight checks, the apps and permissions to ask for, the list schema, the capture flows, and the traps that cost time.
+use: Open it when you start building, not before. Part 0 is fifteen minutes of pre-flight that tells you whether the plan survives your tenant, and two of those checks can stop the build dead — do them first.
+holds: The licensing table, the exact permissions to ask for in one go, the internal-column-name trap, the extraction prompt's JSON shape, the Outlook and Teams flows step by step, and a collected traps list.
 
 ## entry
 id: build-plan
@@ -30,16 +50,6 @@ role: The argument
 summary: Why a ten-second capture habit is what closes the gap between what Copilot can retrieve and what people actually know, costed, with a stated kill criterion.
 use: This is phase two. Do not lead with it. It becomes the right document once a demo has landed and the conversation turns to "what would it take to do this properly".
 holds: The three reasons knowledge bases die, the four things that only work at scale, the candour and visibility-tier problem, the cost arithmetic, and the pilot metrics.
-
-## entry
-id: sponsor-approach
-title: Sponsor Approach Note
-url: https://claude.ai/code/artifact/8647e7d8-564b-445a-8d1d-cdf9d7b53914
-audience: One named sponsor who owns AI or Copilot
-role: The opening move
-summary: A cold email asking for permission rather than resources, plus the two-page note attached to it, written to avoid reading as criticism of their programme.
-use: Start here. It is the only document meant to be sent. Everything else supports it or follows it.
-holds: The email itself, the reasoning behind each line, why the ask is permission rather than budget, and what to have ready if they say yes.
 
 ## entry
 id: life-engine
