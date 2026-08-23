@@ -1,7 +1,8 @@
 # Could the Life Engine be built with Microsoft functionality?
 
-Mostly yes — and in several respects it would be better. One part does not port,
-and one property of the current design quietly becomes expensive.
+Mostly yes — and in several respects it would be better. The retrieval step is
+closer than it first looks, one part genuinely does not port, and one property
+of the current design quietly becomes expensive.
 
 Companion to `microsoft-365-equivalent.md`, which covers the archive. This covers
 the heartbeat.
@@ -36,7 +37,7 @@ entirely on which of two architectures you pick.
 | A session that decides | AI Builder `Run a prompt`, or a Copilot Studio agent as a step in the workflow | Depends — see below |
 | Calendar (via the Mac) | Office 365 Outlook connector, *Get calendar events* | **Better** — a first-class API, no Automation permission to grant |
 | Apple Reminders, read-only, unreadable under launchd | Microsoft To Do or Planner | **Better** — readable *and writable*, which removes a stated limitation |
-| Search Open Brain for context | Nothing callable from a flow | **The gap** |
+| Search Open Brain for context | The Copilot Retrieval API, called over HTTP | Close, with conditions |
 | Telegram out | Teams DM from the Flow bot | Even — and it lands on a phone you already carry |
 | Telegram in | A Copilot Studio agent in Teams | **Better** — replies immediately rather than on the next tick |
 | Bot token, one poller only | No token, no polling | **Better** — the three silently-swallowed messages cannot happen |
@@ -53,10 +54,10 @@ A recurrence flow every 30 minutes: pull calendar and tasks, assemble the
 situation into text, hand it to `Run a prompt`, and post to Teams if the model
 says something is worth saying.
 
-This works, and it needs nothing you do not already have. Its limit is that the
-model gets **one shot**: you assemble the context up front, ask once, and take
-what comes back. It cannot decide halfway through that it should go and look
-something up. The Life Engine's session can.
+This works, and with the Retrieval API in front of the prompt it covers more
+than it looks. Its limit is that the model gets **one shot**: you assemble the
+context up front, ask once, and take what comes back. It cannot decide halfway
+through that it should go and look something up. The Life Engine's session can.
 
 ### B. A Copilot Studio agent inside a workflow
 
@@ -74,31 +75,47 @@ It costs money in a way A does not. See below.
 
 ---
 
-## The one thing that does not port
+## Retrieval: closer than it looks, with conditions
 
-**There is no way to call Copilot's semantic index from a flow.** Copilot is a
-chat surface, not a retrieval API. So in architecture A, step 4 — the *so what* —
-has no direct equivalent. That step is what makes the Life Engine more than a
-calendar alert, so this matters.
+The obvious worry is that step 4 — the *so what* — has no equivalent, because
+Copilot is a chat surface rather than something a flow can query. That was true
+until recently and is not any more.
 
-The mitigation is better than it first looks. Meeting prep is mostly a **lookup
-by name**, not a semantic question: who is in this meeting, what do I know about
-them. If the archive has a `People` column, a flow can filter the Notes list on
-that name and get exactly the right notes back, deterministically. Structured
-lookup beats fuzzy search for this particular job.
+**The Microsoft 365 Copilot Retrieval API** is a Graph REST endpoint that queries
+the tenant's semantic index directly and returns ranked, chunked extracts with
+their source references. A Power Automate flow can call it with an HTTP action.
+That is a real equivalent of the enrich step, and it means architecture A is
+much less compromised than it first appears.
 
-What you lose is the open-ended half — "what is relevant to this meeting" as
-opposed to "what do I know about Sarah". Architecture B recovers most of it,
-because a Copilot Studio agent can be given the Notes list as a knowledge source
-and asked the fuzzy question directly.
+Three conditions attach to it, and they are the things to check before designing
+around it:
 
-The other genuine loss is the weekly self-modification. A flow cannot safely
-rewrite its own prompt, and an agent cannot edit itself. The honest degradation
-is a monthly message that reviews which briefings got a response and proposes
-one change for you to make by hand — which is arguably what should have been
-happening anyway.
+- **Licensing.** No extra cost with a Microsoft 365 Copilot licence. Without
+  one, it is available pay-as-you-go for tenant sources such as SharePoint.
+- **The HTTP action is a premium connector**, so DLP policy may block it. This
+  is the single most likely thing to stop it working, and it is a policy
+  question rather than a technical one.
+- **It is retrieval, not judgement.** It hands back relevant chunks; deciding
+  what matters is still a separate model call.
 
----
+Even with the API available, the cheap structured path is worth keeping for
+meeting prep specifically. "Who is in this meeting and what do I know about
+them" is a **lookup by name**, not a semantic question — filtering the Notes
+list on the `People` column returns exactly the right notes, deterministically,
+for free. Use the Retrieval API for the open-ended half, and a list filter for
+the part that is really a join.
+
+## What genuinely does not port
+
+The weekly self-modification. A flow cannot safely rewrite its own prompt and an
+agent cannot edit itself. The honest degradation is a monthly message that
+reviews which briefings got a response and proposes one change for you to make
+by hand — which is arguably what should have been happening anyway.
+
+Beyond that, in architecture A the model still gets **one shot**: you assemble
+context, ask once, and take what comes back. Retrieval before the call is not
+the same as a session that can decide halfway through to go and look something
+up. Architecture B recovers that.
 
 ## The cost trap, and the design that avoids it
 
@@ -138,8 +155,9 @@ Start with A plus the gate, and add B only where it earns its place.
    check on a SharePoint `sent` list so nothing goes twice. Exits silently on
    most ticks.
 2. **A briefing flow** it calls when something is worth considering: pull the
-   attendees, look up each by name in the Notes list, assemble, `Run a prompt`,
-   post to Teams as a DM from the Flow bot.
+   attendees, look each up by name in the Notes list, add a Retrieval API call
+   for the open-ended context if DLP allows it, assemble, `Run a prompt`, post
+   to Teams as a DM from the Flow bot.
 3. **Capture in** via the Teams *Save to Brain* message action you would already
    have built for the archive — DM yourself a note, right-click, save. Not
    conversational, but it is the same capture, and it costs nothing extra.
@@ -159,8 +177,10 @@ current one — it does not sleep, it can write to the task list, it cannot lose
 messages to a competing poller, and it replies instantly if you go as far as an
 agent.
 
-What you would lose is the open-ended enrichment, unless you pay for Copilot
-Studio, and the ability to have it propose changes to itself.
+What you would lose is the ability to have it propose changes to itself, and —
+in the cheap architecture — a session that can decide mid-thought to go and look
+something else up. The enrichment itself survives, via the Retrieval API, so
+long as DLP lets a flow make an HTTP call.
 
 And the same caveat from the original note applies unchanged: whether it is
 *worth* it depends on what is in the calendar and the archive. A cloud-hosted

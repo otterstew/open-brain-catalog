@@ -36,7 +36,7 @@ that sentence — it is the part Microsoft makes hardest.
 |---|---|---|
 | `thoughts` table | A SharePoint **list** in a dedicated site | Even |
 | `metadata` jsonb | Site columns + the **managed metadata term store** | **Better** — the term store does synonyms and aliases properly, which `topics.txt` and `NAME_ALIASES` fake by hand |
-| `embedding` + `match_thoughts` | Copilot's semantic index over SharePoint, reached through a Copilot agent or Notebook | **Worse, and opaque** — no scores, no threshold, no "5 nearest notes to this one" |
+| `embedding` + `match_thoughts` | Copilot's semantic index, via an agent, a Notebook, or the Copilot Retrieval API | Worse, but not closed — the API returns ranked chunks; you just do not own the index |
 | keyword fallback pass | SharePoint search + indexed list columns | Even |
 | `capture_thought` + LLM extraction | Power Automate flow + AI Builder **Run a prompt** with JSON output | Even — this part works well |
 | MCP tools (models can **write**) | Copilot cannot write. Only a Copilot Studio / declarative agent with a flow as an *action* can | **The core gap** |
@@ -138,13 +138,21 @@ folder, and the OneNote section, and it grounds every answer on that set. Up to
 300 files. This is the closest thing to sitting down with a subset of the
 archive.
 
-What you do not get, and should stop expecting: similarity scores, a tunable
-threshold, "notes near this note", or the hybrid vector+keyword blend that makes
-`search` here work on both vague and literal queries. If that specific capability
-turns out to be load-bearing, the honest answer is Azure AI Search plus Azure
-OpenAI embeddings — a real Azure subscription, a real cost centre, and a real
-conversation with IT. Don't start there. Find out first whether Copilot's index
-is good enough on your actual notes.
+**The Copilot Retrieval API** is the third surface, and the one that matters if
+you want retrieval inside an automation rather than a chat window. It is a Graph
+REST endpoint that queries the tenant semantic index and hands back ranked,
+chunked extracts with source references — callable from a flow via an HTTP
+action. No extra cost with a Copilot licence, pay-as-you-go without one, and
+subject to whatever DLP says about premium connectors.
+
+What you still do not get: control of the index. No choice of embedding model,
+no tunable threshold, no similarity scores to reason about, no "notes near this
+note", and no hybrid vector-and-keyword blend of your own design. You get
+somebody else's retrieval, and it is a black box. If owning that turns out to be
+load-bearing, the honest answer is Azure AI Search plus Azure OpenAI embeddings —
+a real subscription, a real cost centre, a real conversation with IT. Don't start
+there. Find out first whether Copilot's index is good enough on your actual
+notes.
 
 Also: indexing is not instant. Capture-then-immediately-ask does not work the way
 it does here. Expect minutes, sometimes longer.
@@ -213,7 +221,10 @@ imagined ones.
    it to capture the answer — has to be rebuilt as two deliberate steps, or as a
    Copilot Studio agent with flow actions, which is its own licensing
    conversation.
-2. **No vector search you control.** No scores, no threshold, no nearest-neighbour.
+2. **No vector search you own.** The Retrieval API will query the tenant index
+   from a flow, but you choose neither the embedding model nor the ranking, and
+   you get no scores or threshold to tune. Fine for grounding, not a substitute
+   for a retrieval layer you can reason about.
 3. **20,000 items** is the cap on a list used as agent knowledge, and it must be
    one list. **300 files** in a Notebook. **5,000 items** is where unindexed list
    views break.
