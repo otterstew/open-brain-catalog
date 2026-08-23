@@ -109,12 +109,43 @@ Nothing else in the build needs a premium connector.
 
 ## Part 1 — The store
 
-### Step 1.1 · Create the site
+### Step 1.1 · Create the site, and name it properly
 
 SharePoint start page → *Create site* → **Communication site**. Not a Team site:
 that creates a Microsoft 365 group, a mailbox and a Teams team you do not want,
 and it entangles the lifetime of your archive with a group someone may later
-tidy up. Name it something boring and durable.
+tidy up — many organisations expire unused groups automatically, and the site
+goes with the group.
+
+**The name is the decision to get right now**, because the URL is the part that
+is painful to change later. Every flow references it.
+
+| | |
+|---|---|
+| URL | `/sites/readingroom` |
+| Display name | The Reading Room |
+| Description | Captured reading, with the reasoning attached |
+
+Three rules behind that choice, worth knowing so you can defend it:
+
+- **No personal name in it.** "Stew's SharePoint" tells a sponsor this is a side
+  project. The plan is build-small-then-show, so name it now as though it will
+  scale, and the demo becomes *here is a tool* rather than *here is my thing*.
+- **No over-claiming.** Anything with Platform, Hub, Centre or Enterprise in it
+  reads as pompous the moment someone opens it and finds a SharePoint list.
+  Modesty is strategically correct: the pitch is that this cost nothing.
+- **No "AI" in the name.** It dates instantly and invites governance attention
+  the demo does not need. Avoid collisions with Microsoft's own vocabulary too —
+  Viva, Knowledge Center, Delve.
+
+One thing to be aware of rather than to fix: in a legal setting **"reading room"
+occasionally means a due-diligence document room**. It is not the usual term —
+that is *data room* — but if anyone hears it that way, the display name is
+freely changeable even after the URL is fixed.
+
+**If you already made a site with the wrong address**, change it before you
+build anything: Settings → *Site information* → *Change site address*. Doing it
+after the flows exist breaks every reference to the site, so now is the moment.
 
 ### Step 1.2 · Create the list, and mind the internal names
 
