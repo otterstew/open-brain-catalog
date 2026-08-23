@@ -324,7 +324,7 @@ async function extractMetadata(text: string): Promise<Record<string, unknown>> {
 - "topics": array of 1-3 short topic tags (always at least one). These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:
 ${PREFERRED_TOPICS.join(", ")}
 The list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag. Never use "Reading", "Work" or "Projects": those are collection tags, applied later from the source.
-- "type": one of "observation", "task", "idea", "reference", "person_note"
+- "type": one of "observation", "task", "idea", "reference", "person_note", "journal". Use "journal" only for a dated personal entry about the writer's own day, mood or state — how they are, not what they read.
 Only extract what's explicitly there.`,
         },
         { role: "user", content: text },
@@ -354,6 +354,66 @@ import {
   nextRecurrence,
   formatTask,
 } from "./tasks.ts";
+
+import {
+  JOURNAL_TYPE,
+  JOURNAL_LINK_THRESHOLD,
+  JOURNAL_LINK_COUNT,
+  DEFAULT_JOURNAL_QUESTION,
+  formatJournalContent,
+  embeddingText,
+  journalTitle,
+  journalTopics,
+  pickJournalLinks,
+  type LinkCandidate,
+} from "./journal.ts";
+
+// Today in UTC, which is what capture_journal falls back to when the caller
+// does not say which day the entry belongs to. Callers that know their own
+// local date should pass it: a check-in answered at 00:30 BST belongs to the
+// day the person thinks they are in, not to the one the server is in.
+function utcToday(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// Adds `newId` to each target's linked_thought_ids, so a link written into a
+// new note is visible from the other end too. Returns which targets exist and
+// were updated — a target that does not exist must be dropped from the new
+// note as well, or it carries a link to nothing.
+async function backlinkThoughts(
+  newId: string,
+  targetIds: string[],
+): Promise<{ linked: string[]; failed: string[] }> {
+  if (!targetIds.length) return { linked: [], failed: [] };
+
+  const { data: rows, error } = await supabase
+    .from("thoughts")
+    .select("id, metadata")
+    .in("id", targetIds);
+  if (error) return { linked: [], failed: [...targetIds] };
+
+  const found = new Map<string, Record<string, unknown>>();
+  for (const row of (rows || []) as ThoughtRecord[]) {
+    found.set(row.id, (row.metadata || {}) as Record<string, unknown>);
+  }
+
+  const linked: string[] = [];
+  const failed: string[] = [];
+  for (const id of targetIds) {
+    const meta = found.get(id);
+    if (!meta) { failed.push(id); continue; }
+    const existing = Array.isArray(meta.linked_thought_ids)
+      ? (meta.linked_thought_ids as string[])
+      : [];
+    if (existing.includes(newId)) { linked.push(id); continue; }
+    const { error: updErr } = await supabase
+      .from("thoughts")
+      .update({ metadata: { ...meta, linked_thought_ids: [...existing, newId] } })
+      .eq("id", id);
+    if (updErr) failed.push(id); else linked.push(id);
+  }
+  return { linked, failed };
+}
 
 function buildServer(): McpServer {
   const server = new McpServer({
@@ -619,7 +679,7 @@ function buildServer(): McpServer {
       },
       inputSchema: {
         limit: z.number().optional().default(10),
-        type: z.string().optional().describe("Filter by type: observation, task, idea, reference, person_note"),
+        type: z.string().optional().describe("Filter by type: observation, task, idea, reference, person_note, journal"),
         topic: z.string().optional().describe("Filter by topic tag"),
         person: z.string().optional().describe("Filter by person mentioned"),
         days: z.number().optional().describe("Only thoughts from the last N days"),
@@ -929,7 +989,197 @@ function buildServer(): McpServer {
     }
   );
 
-  // Tool 5: Delete Thought
+  // Tool 5: Capture Journal
+  //
+  // The write end of the Life Engine's midday check-in. It asks "How are you
+  // feeling today?" over Telegram; whatever comes back is sent here rather than
+  // to capture_thought, so the entry is typed as a journal, dated, and linked to
+  // the notes it is about in the same call. See journal.ts for why each of those
+  // is decided here rather than left to the extractor.
+  server.registerTool(
+    "capture_journal",
+    {
+      title: "Capture Journal Entry",
+      description:
+        "Log a dated journal entry — the answer to a check-in like \"How are you feeling today?\", or any diary note about how the day is going. Files it as type \"journal\", titles it by date, and automatically links it to the notes it is about (and to the previous entry) so the diary sits next to the meetings, people and projects it refers to. Use this instead of capture_thought for anything the user says about their own day, mood or state.",
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+      },
+      inputSchema: {
+        content: z
+          .string()
+          .describe("What the user actually said, in their own words. Do not summarize or tidy it — a journal is only worth keeping if it is the real answer."),
+        question: z
+          .string()
+          .optional()
+          .describe(`The question they were answering, kept so the entry still makes sense on its own later. Defaults to "${DEFAULT_JOURNAL_QUESTION}".`),
+        mood: z
+          .string()
+          .optional()
+          .describe("A word or two for how they are, if they said plainly enough to name it (e.g. \"flat\", \"buoyant\", \"frazzled\"). Leave it out rather than guessing."),
+        entry_date: z
+          .string()
+          .optional()
+          .describe("YYYY-MM-DD — the day the entry belongs to. Defaults to today in UTC, so pass the caller's own local date if it might differ."),
+        source_name: z
+          .string()
+          .optional()
+          .describe("Where the answer came from. Defaults to \"Telegram\"."),
+        author: z
+          .string()
+          .optional()
+          .describe("Who wrote it. A journal entry is the owner's own words, so set this when the owner's name is known."),
+        link_ids: z
+          .array(z.string())
+          .optional()
+          .describe("Ids of thoughts you already know are relevant — the meeting just prepped for, the person just discussed. These are always linked, on top of anything found by similarity."),
+        auto_link: z
+          .boolean()
+          .optional()
+          .describe("Search the archive for what this entry is about and link the closest matches. On by default; turn it off for an entry that is purely about the day itself."),
+      },
+    },
+    async ({ content, question, mood, entry_date, source_name, author, link_ids, auto_link }) => {
+      try {
+        const day = entry_date || utcToday();
+        const asked = question?.trim() || DEFAULT_JOURNAL_QUESTION;
+        const body = formatJournalContent(day, asked, content, mood);
+
+        // Embed the answer, not the framing — see embeddingText in journal.ts.
+        const [embedding, metadata] = await Promise.all([
+          getEmbedding(embeddingText(content, mood)),
+          extractMetadata(content),
+        ]);
+
+        // What is this entry about? Asked of the archive before the entry is
+        // written, so the entry cannot match itself.
+        let candidates: LinkCandidate[] = [];
+        if (auto_link !== false) {
+          const { data: matches } = await supabase.rpc("match_thoughts", {
+            query_embedding: embedding,
+            match_threshold: JOURNAL_LINK_THRESHOLD,
+            match_count: JOURNAL_LINK_COUNT + 10,
+            filter: {},
+          });
+          candidates = ((matches || []) as ThoughtMatch[]).map((m) => ({
+            id: m.id,
+            type: (m.metadata || {}).type,
+            similarity: m.similarity,
+          }));
+        }
+
+        const { data: prevRows } = await supabase
+          .from("thoughts")
+          .select("id")
+          .eq("metadata->>type", JOURNAL_TYPE)
+          .order("created_at", { ascending: false })
+          .limit(1);
+        const previousJournalId = prevRows?.[0]?.id ?? null;
+
+        const wanted = pickJournalLinks({
+          candidates,
+          explicitIds: link_ids,
+          previousJournalId,
+          limit: JOURNAL_LINK_COUNT,
+        });
+
+        // Only link to notes that are actually there. An id the caller invented
+        // would otherwise be written into the entry as a link to nothing.
+        let targets: string[] = [];
+        let missing: string[] = [];
+        if (wanted.length) {
+          const { data: existing } = await supabase
+            .from("thoughts")
+            .select("id")
+            .in("id", wanted);
+          const present = new Set((existing || []).map((r: { id: string }) => r.id));
+          targets = wanted.filter((id) => present.has(id));
+          missing = wanted.filter((id) => !present.has(id));
+        }
+
+        const meta = metadata as Record<string, unknown>;
+        // The extractor is asked what the entry is about, not what kind of note
+        // it is: the caller already knows that, and a check-in answer mentioning
+        // a deadline comes back typed "task" often enough to matter.
+        meta.type = JOURNAL_TYPE;
+        meta.title = journalTitle(day, meta.title);
+        meta.topics = journalTopics(meta.topics);
+        meta.published_date = day;
+        meta.source_name = source_name ?? "Telegram";
+        meta.journal_question = asked;
+        if (mood?.trim()) meta.mood = mood.trim();
+        if (author !== undefined) meta.author = author;
+
+        const { data: upsertResult, error: upsertError } = await supabase.rpc("upsert_thought", {
+          p_content: body,
+          p_payload: {
+            ...meta,
+            source: "mcp",
+            extracted_links: extractLinksFromContent(body),
+            linked_thought_ids: targets,
+          },
+        });
+
+        if (upsertError) {
+          return {
+            content: [{ type: "text" as const, text: `Failed to log journal entry: ${upsertError.message}` }],
+            isError: true,
+          };
+        }
+
+        const thoughtId = upsertResult?.id;
+        const { error: embError } = await supabase
+          .from("thoughts")
+          .update({ embedding })
+          .eq("id", thoughtId);
+
+        if (embError) {
+          return {
+            content: [{ type: "text" as const, text: `Logged journal entry ${thoughtId}, but failed to save its embedding: ${embError.message}. It will not be findable by search until that is fixed.` }],
+            isError: true,
+          };
+        }
+
+        const { linked, failed } = await backlinkThoughts(thoughtId, targets);
+
+        // Name what it linked to, so the bot can say so in its reply and the
+        // user can correct a wrong link while they still remember the entry.
+        let linkedSummary = "";
+        if (linked.length) {
+          const { data: linkedRows } = await supabase
+            .from("thoughts")
+            .select("id, content, metadata, created_at")
+            .in("id", linked);
+          const titles = (linkedRows || []).map((r: ThoughtRecord) =>
+            `"${thoughtTitle(r.content, r.created_at, r.metadata)}"`);
+          linkedSummary = ` | Linked to ${linked.length} note(s): ${titles.join(", ")}`;
+        }
+
+        let confirmation = `Logged journal entry for ${day}: "${meta.title}"`;
+        if (mood?.trim()) confirmation += ` | Mood: ${mood.trim()}`;
+        if (Array.isArray(meta.people) && meta.people.length)
+          confirmation += ` | People: ${(meta.people as string[]).join(", ")}`;
+        if (Array.isArray(meta.action_items) && meta.action_items.length)
+          confirmation += ` | Actions: ${(meta.action_items as string[]).join("; ")}`;
+        confirmation += linkedSummary;
+        if (failed.length) confirmation += ` | Warning: could not link back from ${failed.join(", ")}`;
+        if (missing.length) confirmation += ` | Warning: no such thought(s) ${missing.join(", ")} — not linked`;
+        confirmation += ` | id: ${thoughtId}`;
+
+        return { content: [{ type: "text" as const, text: confirmation }] };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 6: Delete Thought
   server.registerTool(
     "delete_thought",
     {
@@ -999,7 +1249,7 @@ function buildServer(): McpServer {
     }
   );
 
-  // Tool 6: Backfill Author/Source
+  // Tool 7: Backfill Author/Source
   server.registerTool(
     "backfill_author_source",
     {
@@ -1087,7 +1337,7 @@ function buildServer(): McpServer {
     }
   );
 
-  // Tool 7: Normalize known name aliases
+  // Tool 8: Normalize known name aliases
   server.registerTool(
     "normalize_names",
     {
@@ -1138,7 +1388,7 @@ function buildServer(): McpServer {
     }
   );
 
-  // Tool 8: Update Thought
+  // Tool 9: Update Thought
   server.registerTool(
     "update_thought",
     {
@@ -1154,7 +1404,7 @@ function buildServer(): McpServer {
       inputSchema: {
         id: z.string().describe("The id of the thought to update"),
         content: z.string().optional().describe("New content for the thought"),
-        type: z.enum(["observation", "task", "idea", "reference", "person_note"])
+        type: z.enum(["observation", "task", "idea", "reference", "person_note", "journal"])
           .nullable().optional()
           .describe("New type (pass null to clear). The AI extractor's guess is often wrong for notes it has not seen the shape of before, so this allows a correction."),
         title: z.string().nullable().optional().describe("New title (pass null to clear)"),
@@ -1223,7 +1473,7 @@ function buildServer(): McpServer {
     }
   );
 
-  // Tool 9: Link Thoughts
+  // Tool 10: Link Thoughts
   server.registerTool(
     "link_thoughts",
     {
@@ -1289,7 +1539,7 @@ function buildServer(): McpServer {
     }
   );
 
-  // Tool 10: Unlink Thoughts
+  // Tool 11: Unlink Thoughts
   server.registerTool(
     "unlink_thoughts",
     {
@@ -1347,7 +1597,7 @@ function buildServer(): McpServer {
     }
   );
 
-  // Tool 11: Backfill Title/Published Date
+  // Tool 12: Backfill Title/Published Date
   server.registerTool(
     "backfill_title_published",
     {

@@ -43,6 +43,12 @@ jobs:
       - name: Test task logic
         run: deno run --no-config supabase/functions/open-brain-mcp/tests/recurrence_test.ts
 
+      # Same reasoning for the journal helpers: a check-in answer that is filed
+      # under the wrong type, or linked to the wrong notes, is not noticed by
+      # anyone until the diary is read back weeks later.
+      - name: Test journal logic
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/journal_test.ts
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest

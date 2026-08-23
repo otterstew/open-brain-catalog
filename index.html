@@ -28,6 +28,7 @@
     --rust: #B15B45;
     --blue: #6C93A8;
     --plum: #9A79A0;
+    --teal: #63A395;
     --unfiled: #766B54;
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
@@ -1870,6 +1871,7 @@ const TYPE_STYLES = {
   task:         { color: 'var(--rust)',  label: 'Task' },
   reference:    { color: 'var(--blue)',  label: 'Reference' },
   person_note:  { color: 'var(--plum)',  label: 'Person note' },
+  journal:      { color: 'var(--teal)',  label: 'Journal' },
 };
 const UNFILED = { color: 'var(--unfiled)', label: 'Unfiled' };
 
@@ -4362,14 +4364,22 @@ importPickerInput.addEventListener('input', () => renderImportPicker(importPicke
 // series (moss and blue separate by only ΔE 9.4 — indistinguishable even with
 // full colour vision). These four are validated for the dark surface: inside
 // the lightness band, above the chroma floor, ΔE 13.9 deutan / 19.6 normal.
+//
+// Journal was added as a sixth series and leads the order rather than sitting
+// next to idea, which is not a stylistic choice: journal beside the mauve of
+// idea measures ΔE 5.5 deutan, below the floor, while leading the stack leaves
+// every adjacent pair at the margins the original five had. Re-run
+// `node scripts/validate_palette.js` (dataviz skill) against surface #16140F
+// before moving anything here.
 const SERIES = {
+  journal:     '#3FA894',
   reference:   '#C4802F',
   observation: '#4292C4',
   task:        '#67A84F',
   idea:        '#AE6FA6',
   unfiled:     '#766B54',
 };
-const TYPE_ORDER = ['reference', 'observation', 'task', 'idea', 'unfiled'];
+const TYPE_ORDER = ['journal', 'reference', 'observation', 'task', 'idea', 'unfiled'];
 
 const statsPanel = document.getElementById('statsPanel');
 const statsBody = document.getElementById('statsBody');
