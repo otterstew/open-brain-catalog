@@ -193,15 +193,16 @@ spreads beyond one person, which is what a pilot answers.
 #### What I am asking for
 
 To build it for myself, as one user, in my own time — and twenty minutes to show
-you the result.
+you the result. I already have the access this needs; what I do not have is
+anyone senior knowing I am doing it, which is the part worth fixing before
+rather than after.
 
 | | |
 |---|---|
 | Your budget | none |
 | Anyone else's time | none |
 | New platforms, suppliers or licences | none |
-| What I need | a SharePoint site, and enough AI Builder capacity for one person |
-| AI processing, one user for a month | pennies |
+| What I need | your knowing consent, and nothing else |
 
 The build is a handful of Power Automate flows and one SharePoint list. It costs
 me several evenings, which is my problem, not a line in anyone's plan.
@@ -236,9 +237,10 @@ automation that breaks when they change role.
 
 #### The ask, again, plainly
 
-Permission to build it for myself, a SharePoint site to build it in, and twenty
-minutes when it works. If the demo is unconvincing, that is the end of it and it
-cost the organisation nothing at all.
+Your agreement that I may build it, and twenty minutes when it works. Nothing
+else — no budget, no access request, no one else's time. If the demo is
+unconvincing that is the end of it, and it will have cost the organisation
+nothing at all.
 
 ---
 
