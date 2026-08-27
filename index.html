@@ -1020,7 +1020,29 @@
   .hubs button:hover { color: var(--brass); }
   .hubs span { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); }
 
-  #graphCanvas { width: 100%; height: 320px; display: block; }
+  #graphCanvas { width: 100%; height: 580px; display: block; }
+  @media (max-width: 700px) { #graphCanvas { height: 380px; } }
+
+  /* The graph is the only view showing structure rather than counts, so it gets
+     the height. Everything that is a number or a word list sits two-up beneath
+     it. */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 14px; align-items: start; }
+  .stats-grid .stats-card { margin-bottom: 0; }
+
+  /* Tasks filed from the note being read — the task detail's "Came from"
+     button, followed backwards. */
+  .note-tasks { padding: 12px 18px 4px; border-top: 1px solid var(--ruled); }
+  .note-tasks[hidden] { display: none; }
+  .note-task { display: flex; align-items: baseline; gap: 10px; width: 100%;
+               background: none; border: none; border-bottom: 1px solid var(--ruled);
+               padding: 7px 0; text-align: left; cursor: pointer; font-family: var(--font-body); }
+  .note-task:last-child { border-bottom: none; }
+  .note-task:hover .note-task-title { color: var(--brass); }
+  .note-task-title { flex: 1; font-size: 13.5px; color: var(--ink); }
+  .note-task.is-closed .note-task-title { color: var(--ink-faint); text-decoration: line-through; }
+  .note-task-meta { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em;
+                    text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
 
   .stats-tip { position: fixed; z-index: 90; pointer-events: none; display: none;
                background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 3px;
@@ -2624,6 +2646,7 @@ function selectThought(t, mark) {
       ${linksHtml}
       ${linkedNotesHtml}
       </div>
+      <div class="note-tasks" id="noteTasks" hidden></div>
       <div class="index-card-confirm" id="cardConfirm"></div>
       <div class="index-card-body">
         <div class="read-body-bar">
@@ -2657,6 +2680,8 @@ function selectThought(t, mark) {
   if (editHereBtn) {
     editHereBtn.addEventListener('click', () => startEdit(t, readingOffset(t)));
   }
+
+  renderNoteTasks(t.realId || t.id);
 
   deleteBtn.addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
@@ -4565,7 +4590,9 @@ function drawGraph(f) {
   const canvas = document.getElementById('graphCanvas');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth, h = 320;
+  // Height comes from the stylesheet so the media query can shrink it on a
+  // phone without the hit-testing drifting out of step with what is drawn.
+  const w = canvas.clientWidth, h = canvas.clientHeight || 320;
   canvas.width = w * dpr; canvas.height = h * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
@@ -4619,6 +4646,22 @@ function drawGraph(f) {
       n.y = Math.max(10, Math.min(h - 10, n.y));
     });
   }
+
+  // The simulation settles at a size of its own choosing, set by the repulsion
+  // constant rather than by the canvas. Without this the taller card would just
+  // be the same blob with more empty paper around it, so scale the finished
+  // layout to fill the box — uniformly, so the shape is not distorted.
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  });
+  const pad = 18;
+  const spanX = maxX - minX || 1, spanY = maxY - minY || 1;
+  const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
+  const offX = (w - spanX * scale) / 2 - minX * scale;
+  const offY = (h - spanY * scale) / 2 - minY * scale;
+  nodes.forEach(n => { n.x = n.x * scale + offX; n.y = n.y * scale + offY; });
 
   const paint = (hover) => {
     ctx.clearRect(0, 0, w, h);
@@ -4678,8 +4721,8 @@ function drawGraph(f) {
 
 function graphCard(f) {
   return '<div class="stats-card wide"><h3>How it hangs together ' +
-    '<span class="hint">' + f.linkCount + ' links · dots sized by connections · click to open</span></h3>' +
-    '<canvas id="graphCanvas" height="320"></canvas>' +
+    '<span class="hint">' + f.linkCount + ' links · dots sized by connections · click a dot to open its note</span></h3>' +
+    '<canvas id="graphCanvas"></canvas>' +
     (f.orphans.length
       ? '<p class="note-line">' + f.orphans.length +
         ' note' + (f.orphans.length === 1 ? '' : 's') +
@@ -4705,8 +4748,10 @@ function coverageCard(f) {
 function openStats() {
   if (!allThoughts.length) return;
   const f = archiveFigures();
-  statsBody.innerHTML = tileRow(f) + completeness(f) + graphCard(f) + weeksChart(f) +
-                        typeChart(f) + topicsChart(f) + hubsList(f) + coverageCard(f);
+  statsBody.innerHTML = tileRow(f) + graphCard(f) +
+                        '<div class="stats-grid">' + completeness(f) + weeksChart(f) +
+                        typeChart(f) + topicsChart(f) + hubsList(f) + coverageCard(f) +
+                        '</div>';
   statsPanel.hidden = false;
   drawGraph(f);
 
@@ -4911,6 +4956,7 @@ function normalizeTask(raw) {
 
 async function loadTasks(keepSelection) {
   showStatus('Looking at what needs doing…', false);
+  noteTaskIndex = null;   // the note view's copy is now stale
   const args = { format: 'json', limit: 200 };
   if (taskFilter === 'done') args.status = ['done'];
   else if (taskFilter !== 'open') args.status = [taskFilter];
@@ -4941,6 +4987,79 @@ function renderTaskCount() {
     t.status !== 'done' && t.status !== 'dropped' &&
     t.due_date && daysBetween(today, t.due_date) <= 0).length;
   el.textContent = pressing ? String(pressing) : '';
+}
+
+// ---------- tasks shown on the note they came from ----------
+
+// A task cites its note; the note holds no pointer back. The task detail has a
+// "Came from → Open the note" button, and this is that link followed the other
+// way, so a note answers "what did this make me do?".
+//
+// allTasks is only populated when the task view opens, and loadTasks() rewrites
+// listScroll — which in note mode holds the note list — so this cannot reuse
+// either. It takes its own copy instead: one call for the whole table, every
+// status, cached for the session. Under a hundred rows, so the breadth is free.
+let noteTaskIndex = null;
+
+async function noteTasksFor(id) {
+  if (!noteTaskIndex) {
+    const text = await callTool('list_tasks', {
+      format: 'json', limit: 200, include_deferred: true,
+      status: ['inbox', 'next', 'waiting', 'done', 'dropped'],
+    });
+    let raw;
+    try { raw = JSON.parse(text); } catch (_) { raw = []; }
+    noteTaskIndex = new Map();
+    (Array.isArray(raw) ? raw : []).map(normalizeTask).forEach(t => {
+      if (!t.thought_id) return;
+      const list = noteTaskIndex.get(t.thought_id) || [];
+      list.push(t);
+      noteTaskIndex.set(t.thought_id, list);
+    });
+  }
+  return noteTaskIndex.get(id) || [];
+}
+
+async function renderNoteTasks(noteId) {
+  const box = document.getElementById('noteTasks');
+  if (!box || !noteId) return;
+
+  let tasks;
+  try {
+    tasks = await noteTasksFor(noteId);
+  } catch (err) {
+    // A silent empty section and a failed lookup look identical, so say which.
+    if (document.getElementById('noteTasks') !== box) return;
+    box.hidden = false;
+    box.innerHTML = '<div class="section-label"><span>Tasks from this note</span></div>' +
+      '<p class="note-line">Could not load tasks — ' + escapeHtml(err.message) + '</p>';
+    return;
+  }
+
+  // The reader may have moved on while that was in flight; the card is rebuilt
+  // wholesale on every selection, so a stale box is no longer in the document.
+  if (document.getElementById('noteTasks') !== box) return;
+  if (!tasks.length) { box.hidden = true; box.innerHTML = ''; return; }
+
+  const today = todayISO();
+  const open = tasks.filter(t => t.status !== 'done' && t.status !== 'dropped').length;
+  box.hidden = false;
+  box.innerHTML = '<div class="section-label"><span>Tasks from this note</span>' +
+    '<span class="note-task-meta">' + open + ' open of ' + tasks.length + '</span></div>';
+
+  tasks.forEach(t => {
+    const closed = t.status === 'done' || t.status === 'dropped';
+    const meta = [];
+    if (t.due_date && !closed) meta.push(dueLabel(t.due_date, today).text);
+    meta.push(TASK_STATUS_LABELS[t.status] || t.status);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'note-task' + (closed ? ' is-closed' : '');
+    btn.innerHTML = '<span class="note-task-title">' + escapeHtml(t.title) + '</span>' +
+                    '<span class="note-task-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
+    btn.addEventListener('click', () => { setViewMode('tasks'); selectTask(t); });
+    box.appendChild(btn);
+  });
 }
 
 // ---------- the list ----------

@@ -1,0 +1,17 @@
+{
+  "id": "/cards.html",
+  "name": "Two Sides",
+  "short_name": "Cards",
+  "description": "Flashcards: question on one side, answer on the other.",
+  "start_url": "./cards.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#14303E",
+  "theme_color": "#14303E",
+  "icons": [
+    { "src": "./cards-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./cards-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./cards-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

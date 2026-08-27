@@ -5,7 +5,7 @@
 // carrying the access key, and stale notes would be worse than none.
 // Bump SHELL_VERSION whenever the shell files change: the browser only re-runs
 // install when this script's bytes differ, and the cache name goes with it.
-const SHELL_VERSION = 32;
+const SHELL_VERSION = 34;
 const CACHE = 'open-brain-shell-v' + SHELL_VERSION;
 const SHELL = [
   './',
@@ -14,6 +14,11 @@ const SHELL = [
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
+  // The flashcards app: its own page, manifest and icons, same shell cache.
+  './cards.html',
+  './cards.webmanifest',
+  './cards-192.png',
+  './cards-512.png',
 ];
 
 self.addEventListener('install', (event) => {
