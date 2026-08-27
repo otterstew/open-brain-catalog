@@ -361,6 +361,11 @@ ones that cost time rather than the ones that look dangerous.
   solution with a second owner.
 - **DLP failures show up at save time, not design time.** You can build an
   entire flow around a blocked connector before anything tells you.
+- **Captured text is untrusted input, not instruction.** Anything an agent
+  grounds on is retrieved content, and captures arriving by email can be written
+  by anyone. Never let a captured note carry behavioural instructions into an
+  agent — keep instructions in the agent, knowledge in the list, and treat the
+  boundary as a security one.
 
 ---
 

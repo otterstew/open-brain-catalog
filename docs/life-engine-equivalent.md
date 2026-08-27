@@ -120,7 +120,10 @@ up. Architecture B recovers that.
 ## The cost trap, and the design that avoids it
 
 The Life Engine's best property is that **most cycles are silent**. On a Mac,
-silence is free. In Microsoft it is not:
+silence is free. In Microsoft it is not — a point the reference architecture
+already makes ("trigger activity contributes to agent consumption and should
+therefore be designed carefully"); what follows is a mechanism for it rather
+than a discovery of it:
 
 > Event trigger activity counts toward consumption. A message includes payloads
 > sent to agents from event triggers.
