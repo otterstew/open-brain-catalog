@@ -91,3 +91,23 @@ role: The mechanism
 summary: What the embedding layer does, why the hybrid with keyword search is the real feature, and how Microsoft's Graph is the other half rather than the same idea.
 use: Answer material rather than pitch material. Also the one to re-read before making any claim about what Copilot can and cannot retrieve, because that is where the earlier mistake was.
 holds: The live configuration, the 24,000-character embedding limit, why keyword search exists, the meaning-versus-entity distinction, and GraphRAG.
+
+## entry
+id: reconciliation
+title: Two Documents, One Stack
+url: https://claude.ai/code/artifact/c1371283-2e30-4c4f-bbac-babf44bb8c2d
+audience: You, and anyone who has read the reference architecture
+role: The join
+summary: How the single-user build guide sits against the governed reference architecture — the three tensions, what to adopt from it, and the two things it predates.
+use: Read before demoing, because it gives you the sentence that turns "you built in the default environment" from a caught-out moment into a deliberate one. Also the record of one credit owed.
+holds: The altitude difference, the default-environment tension, why Planner and Dataverse were avoided, the memory taxonomy and layered context model worth adopting, and one suggestion for v1.1.
+
+## entry
+id: embedding
+title: The Unembedded Quarter
+url: https://claude.ai/code/artifact/84422a48-2236-4a9c-bd85-bf830461051f
+audience: You, on an evening when the archive matters more than the pitch
+role: The defect
+summary: 49 of 127 notes exceed the embedding cut and a quarter of the archive's text has no embedding at all — the measurement, and a scoped chunking fix.
+use: Not part of the Microsoft work at all. It is a live defect in the existing archive, found while writing about how retrieval works. Act on it when there is an evening for it, not before the sponsor email.
+holds: The measured numbers, why the loss falls on reference notes specifically, the chunk table and match function, the parameters, and the order to do it in so it stays reversible.
