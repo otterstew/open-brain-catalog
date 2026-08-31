@@ -1635,6 +1635,34 @@
   .task-row-fields { display: flex; gap: 14px; flex-wrap: wrap; }
   .task-row-fields .task-field { flex: 1; min-width: 150px; }
 
+  /* A date field keeps its typed input — "friday", "1 Sep" — and gains a
+     calendar button beside it. The native date input underneath is the picker
+     only; it is never the thing you read the value from. */
+  .task-input-wrap { display: flex; align-items: stretch; gap: 6px; }
+  .task-input-wrap .task-input { flex: 1; min-width: 0; }
+  .task-cal-btn {
+    flex: none;
+    width: 40px;
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    background: var(--panel);
+    color: var(--ink-dim);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .task-cal-btn:hover { border-color: var(--brass); color: var(--ink); }
+  .task-cal-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+  /* Hidden, but not display:none — showPicker() throws on an unrendered input.
+     color-scheme makes the browser's own popup dark, like everything else. */
+  .task-cal-native {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    color-scheme: dark;
+  }
+
   .task-hint {
     margin-top: 4px;
     font-family: var(--font-mono);
@@ -1912,6 +1940,31 @@ let editingId = null;    // id of the thought currently open in the edit form, o
 let referenceId = null;  // id of the thought shown read-only in the reference panel, or null
 let searchMode = false;
 let lastSearchQuery = '';
+
+// ---------- unsaved work ----------
+// A note being edited lives only in the DOM until something replaces it, so
+// switching to the task list to look something up used to destroy it silently.
+// `editorIsDirty` is installed by whichever editor is open and answers whether
+// it holds changes; every route out of an editor goes through
+// `confirmLeavingEdit` first. Deliberately a confirm and not an autosave: a
+// half-written note saved over the finished one is a worse failure than a
+// prompt, and update_thought's content is a full replacement.
+let editorIsDirty = null;   // () => boolean, or null when no editor is open
+
+function confirmLeavingEdit() {
+  if (!editorIsDirty || !editorIsDirty()) return true;
+  const ok = confirm(
+    'This note has changes you have not saved.\n\n' +
+    'Leave without saving? The text cannot be recovered.');
+  if (ok) editorIsDirty = null;
+  return ok;
+}
+
+// Closing the tab or hitting reload bypasses every in-page route above. The
+// browser shows its own wording here; ours is not used.
+window.addEventListener('beforeunload', ev => {
+  if (editorIsDirty && editorIsDirty()) { ev.preventDefault(); ev.returnValue = ''; }
+});
 
 const listScroll = document.getElementById('listScroll');
 const chipRow = document.getElementById('chipRow');
@@ -3176,9 +3229,29 @@ function startEdit(t, anchorOffset) {
   const back = document.createElement('button');
   back.className = 'back-btn';
   back.textContent = '← Back to drawer';
-  back.addEventListener('click', () => { editingId = null; app.classList.remove('detail-open'); });
+  back.addEventListener('click', () => {
+    if (!confirmLeavingEdit()) return;
+    editingId = null;
+    editorIsDirty = null;
+    app.classList.remove('detail-open');
+  });
   main.prepend(back);
   app.classList.add('detail-open');
+
+  // What the editor looked like when it opened. Compared field by field rather
+  // than watching for keystrokes, so typing a character and deleting it again
+  // does not count as a change.
+  const EDIT_FIELDS = ['editTitle', 'editAuthor', 'editPublished', 'editSource',
+                       'editTags', 'editUrl', 'editContent'];
+  const editSnapshot = () =>
+    EDIT_FIELDS.map(id => (document.getElementById(id) || {}).value || '').join('\u0000');
+  const editOriginal = editSnapshot();
+  editorIsDirty = () => {
+    // The editor may already have been replaced by whatever we were guarding
+    // against; there is nothing left to lose in that case.
+    if (!document.getElementById('editContent')) return false;
+    return editSnapshot() !== editOriginal;
+  };
 
   // Two identical action bars, top and bottom; every handler drives both so
   // they never disagree about whether a save is in flight.
@@ -3285,8 +3358,10 @@ function startEdit(t, anchorOffset) {
   });
 
   cancelBtns.forEach(b => b.addEventListener('click', () => {
+    if (!confirmLeavingEdit()) return;
     const mark = readingMark(bodyEl);
     editingId = null;
+    editorIsDirty = null;
     selectThought(t, mark);
   }));
 
@@ -3342,6 +3417,7 @@ function startEdit(t, anchorOffset) {
     try {
       await callTool('update_thought', args);
       editingId = null;
+      editorIsDirty = null;
       await refreshAndReselect(t.id, mark);
     } catch (err) {
       setBusy(false);
@@ -3450,7 +3526,7 @@ function showComposer(prefill, parentId) {
   });
 }
 
-newBtn.addEventListener('click', () => showComposer());
+newBtn.addEventListener('click', () => { if (confirmLeavingEdit()) showComposer(); });
 
 function showStatus(msg, isError, retryFn) {
   listScroll.innerHTML = '';
@@ -4828,6 +4904,29 @@ function parseWhen(text, today) {
     d.setUTCDate(d.getUTCDate() + delta);
     return iso(d);
   }
+
+  // "1 Sep" and "Sep 1", with no year. The Due field has always offered this in
+  // its placeholder and never accepted it: parseDateInput requires a year,
+  // because a note's published date has nothing to assume in place of one. A
+  // due date does — the next one coming, on the same reasoning as "friday".
+  let dm, day = null, monWord = null;
+  if ((dm = s.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})\.?$/))) {
+    day = +dm[1]; monWord = dm[2];
+  } else if ((dm = s.match(/^([a-z]{3,9})\.? (\d{1,2})(?:st|nd|rd|th)?$/))) {
+    monWord = dm[1]; day = +dm[2];
+  }
+  if (day && monWord && MONTH_NAMES.indexOf(monWord.slice(0, 3)) >= 0) {
+    // The next one coming — today counts, yesterday rolls to next year. Four
+    // years of headroom so "29 feb" finds its leap year instead of being
+    // refused for the three years in between.
+    const from = base.getUTCFullYear();
+    for (let y = from; y <= from + 4; y++) {
+      const hit = parseDateInput(day + ' ' + monWord + ' ' + y);
+      if (hit && hit >= iso(base)) return hit;
+    }
+    return null;
+  }
+
   return parseDateInput(s) || null;
 }
 
@@ -5189,14 +5288,50 @@ function showTaskEmptyState() {
   app.classList.remove('detail-open');
 }
 
-function taskFieldRow(label, id, value, placeholder, hint) {
+// `withPicker` adds a calendar button to a date field. The typed input stays the
+// field of record — parseWhen reads "friday" and "1 Sep", which no date picker
+// offers — and the picker is a second way in for when the date is easier found
+// than said.
+function taskFieldRow(label, id, value, placeholder, hint, withPicker) {
+  const input = `<input class="task-input" id="${id}" type="text" value="${escapeAttr(value || '')}"
+             placeholder="${escapeAttr(placeholder || '')}" />`;
+  const body = withPicker
+    ? `<div class="task-input-wrap">
+         ${input}
+         <button class="task-cal-btn" id="${id}Cal" type="button"
+                 title="Pick a date" aria-label="Pick a date for ${escapeAttr(label)}">🗓</button>
+         <input class="task-cal-native" id="${id}Native" type="date" tabindex="-1" aria-hidden="true" />
+       </div>`
+    : input;
   return `
     <div class="task-field">
       <label class="task-label" for="${id}">${label}</label>
-      <input class="task-input" id="${id}" type="text" value="${escapeAttr(value || '')}"
-             placeholder="${escapeAttr(placeholder || '')}" />
+      ${body}
       ${hint ? `<div class="task-hint" id="${id}Hint">${hint}</div>` : ''}
     </div>`;
+}
+
+// Wire one date field's calendar button to its hidden native input.
+function wireDatePicker(id) {
+  const text = document.getElementById(id);
+  const btn = document.getElementById(id + 'Cal');
+  const native = document.getElementById(id + 'Native');
+  if (!text || !btn || !native) return;
+
+  btn.addEventListener('click', () => {
+    // Open on whatever is already typed, when it can be read at all.
+    const current = text.value.trim() ? parseWhen(text.value.trim(), todayISO()) : '';
+    native.value = current || todayISO();
+    // showPicker is Safari 16+ / Chrome 99+; older browsers fall back to a
+    // click, and failing that the typed field still works on its own.
+    try { native.showPicker(); } catch (err) { native.click(); }
+  });
+
+  native.addEventListener('change', () => {
+    if (!native.value) return;
+    text.value = formatDateInput(native.value);
+    text.dispatchEvent(new Event('input', { bubbles: true }));
+  });
 }
 
 function selectTask(t) {
@@ -5229,8 +5364,8 @@ function selectTask(t) {
       </div>
 
       <div class="task-row-fields">
-        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'friday, 1 Sep, 2026-09-01')}
-        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'nothing to do before then')}
+        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'friday, 1 Sep, 2026-09-01', '', true)}
+        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'nothing to do before then', '', true)}
       </div>
 
       <div class="task-row-fields">
@@ -5272,6 +5407,9 @@ function selectTask(t) {
 }
 
 function wireTaskDetail(t) {
+  wireDatePicker('tdDue');
+  wireDatePicker('tdDefer');
+
   const msg = document.getElementById('tdStatusMsg');
   const say = (text, tone) => {
     msg.textContent = text || '';
@@ -5312,8 +5450,11 @@ function wireTaskDetail(t) {
     try {
       await callTool('update_task', args);
       await loadTasks(true);
-      const fresh = allTasks.find(x => x.id === t.id);
-      if (fresh) selectTask(fresh); else showTaskEmptyState();
+      // Saving is the end of editing a task, so close the panel rather than
+      // re-opening it on the saved copy — the same exit "Mark done" takes. The
+      // toast is what confirms it worked, now the status line has gone with it.
+      showTaskEmptyState();
+      showToastStatus('Saved — ' + title);
     } catch (err) {
       saveBtn.disabled = false;
       say(String(err.message || err), 'bad');
@@ -5443,11 +5584,13 @@ function setViewMode(mode) {
   }
 }
 
+// Switching to the task list mid-edit is the exact way notes were being lost —
+// go and look something up, come back, the writing is gone.
 document.getElementById('modeNotes').addEventListener('click', () => {
-  if (viewMode !== 'notes') setViewMode('notes');
+  if (viewMode !== 'notes' && confirmLeavingEdit()) setViewMode('notes');
 });
 document.getElementById('modeTasks').addEventListener('click', () => {
-  if (viewMode !== 'tasks') setViewMode('tasks');
+  if (viewMode !== 'tasks' && confirmLeavingEdit()) setViewMode('tasks');
 });
 
 document.getElementById('taskAddInput').addEventListener('keydown', ev => {
