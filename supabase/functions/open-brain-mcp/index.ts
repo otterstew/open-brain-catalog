@@ -33,50 +33,58 @@ type ThoughtRecord = {
 const CITATION_BASE_URL =
   Deno.env.get("OPEN_BRAIN_CITATION_BASE_URL") || "https://openbrain.local/thoughts";
 
-// The controlled vocabulary. It lives in topics.txt at the project root, which
-// tidy-archive.py reads to fold aliases — but an edge function has no project
-// root at runtime, so the preferred list is duplicated here.
+// The controlled vocabulary lives in public.topic_vocabulary and nowhere else.
 //
-// THE TWO COPIES WILL DRIFT, and the drift is invisible: tidy keeps folding
-// aliases from topics.txt, so the archive still looks tidy while the prompt
-// that decides what gets coined in the first place is the old one. Run
-// `python3 tidy-archive.py --check-vocab` after any vocabulary change; it
-// compares this list against topics.txt and prints the block to paste back.
-// Then redeploy — editing this file changes nothing until you do.
-//
-// vocabulary:start (generated from topics.txt)
-const PREFERRED_TOPICS = [
-  "AI",
-  "AI Agents",
-  "AI Skills",
-  "AI tools",
-  "AI integration",
-  "Automation",
-  "Knowledge Management",
-  "Knowledge Work",
-  "Memory Systems",
-  "Productivity",
-  "Prompt Engineering",
-  "Technology",
-  "Token Management",
-  "Workflow",
-  "prompts",
-  "communication",
-  "Task management",
-  "Team Collaboration",
-  "Work Management",
-  "AI Solutions Manager",
-  "Career Development",
-  "job market",
-  "Intent Engineering",
-  "ChatGPT",
-  "Codex",
-  "Open Brain",
-  "Science",
-  "plants",
-  "chemical signalling"
-];
-// vocabulary:end
+// It used to live in two places — topics.txt at the archive project's root, and
+// a hardcoded list right here — and the comment that stood in this spot was a
+// warning about it: the copies drift, the drift is invisible, and the remedy
+// was to remember to run a checker after every change and paste a block back.
+// Nobody remembers that. Adding a topic is now one INSERT and takes effect on
+// the next capture. topics.txt, where it still exists, is a cache of the table;
+// the topic_vocabulary tool below is how anything outside the database reads it.
+type Vocabulary = { preferred: string[]; collection: string[] };
+
+// Per isolate, briefly. Edge function isolates are short-lived, so this is at
+// most one small query a minute per live isolate, and an edit shows up in the
+// prompt within the minute rather than at the next deploy.
+const VOCAB_TTL_MS = 60_000;
+let vocabCache: Vocabulary | null = null;
+let vocabFetchedAt = 0;
+
+async function loadVocabulary(): Promise<Vocabulary> {
+  if (vocabCache && Date.now() - vocabFetchedAt < VOCAB_TTL_MS) return vocabCache;
+
+  const { data, error } = await supabase
+    .from("topic_vocabulary")
+    .select("topic, kind")
+    .order("position", { ascending: true })
+    .order("topic", { ascending: true });
+
+  if (error || !data) {
+    // Stale beats empty. An empty vocabulary silently turns the extractor loose
+    // to coin a fresh tag for everything, which is the exact drift this table
+    // exists to stop, and nothing would look broken until the tags were a mess
+    // again. Serving the last known good list keeps captures correct through a
+    // blip; only a cold isolate that has never read the table gets nothing.
+    console.warn("topic_vocabulary unavailable, using cached list:", error?.message);
+    return vocabCache || { preferred: [], collection: [] };
+  }
+
+  const rows = data as { topic: string; kind: string }[];
+  vocabCache = {
+    preferred: rows.filter((r) => r.kind === "preferred").map((r) => r.topic),
+    collection: rows.filter((r) => r.kind === "collection").map((r) => r.topic),
+  };
+  vocabFetchedAt = Date.now();
+  return vocabCache;
+}
+
+// "Reading", "Work" or "Projects" — the prompt reads better than a bare list.
+function quotedList(items: string[]): string {
+  const quoted = items.map((t) => `"${t}"`);
+  if (quoted.length < 2) return quoted.join("");
+  return quoted.slice(0, -1).join(", ") + " or " + quoted[quoted.length - 1];
+}
 
 
 // Prefer the note's real title. The extractor writes metadata.title on capture,
@@ -331,6 +339,20 @@ async function keywordMatches(
 }
 
 async function extractMetadata(text: string): Promise<Record<string, unknown>> {
+  const vocab = await loadVocabulary();
+
+  // Wording unchanged from when the list was hardcoded — only its source moved.
+  // With no list at all (a cold isolate that could not reach the table) the
+  // reuse paragraph would be nonsense, so it is dropped rather than shown empty.
+  const topicsGuidance = [
+    vocab.preferred.length
+      ? `These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:\n${vocab.preferred.join(", ")}\nThe list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag.`
+      : `Tag the note for what it is actually about.`,
+    vocab.collection.length
+      ? `Never use ${quotedList(vocab.collection)}: those are collection tags, applied later from the source.`
+      : "",
+  ].filter(Boolean).join(" ");
+
   const r = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
     method: "POST",
     headers: {
@@ -352,9 +374,7 @@ async function extractMetadata(text: string): Promise<Record<string, unknown>> {
 - "published_date": the ORIGINAL publish date of the external piece being referenced, as YYYY-MM-DD (null if none is stated or this isn't referencing external content). This is different from when the user captured the note — only fill this in if a publish/posted date is explicitly stated or strongly implied in the text.
 - "action_items": array of implied to-dos (empty if none)
 - "dates_mentioned": array of dates YYYY-MM-DD (empty if none)
-- "topics": array of 1-3 short topic tags (always at least one). These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:
-${PREFERRED_TOPICS.join(", ")}
-The list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag. Never use "Reading", "Work" or "Projects": those are collection tags, applied later from the source.
+- "topics": array of 1-3 short topic tags (always at least one). ${topicsGuidance}
 - "type": one of "observation", "task", "idea", "reference", "person_note"
 Only extract what's explicitly there.`,
         },
@@ -1156,6 +1176,54 @@ function buildServer(): McpServer {
         let summary = `Backfilled ${updated}/${candidates.length} thought(s); ${foundSomething} had an author or source to extract.`;
         if (errors.length) summary += `\n${errors.length} error(s):\n` + errors.join("\n");
         return { content: [{ type: "text" as const, text: summary }] };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // The vocabulary, for anything that cannot reach the database directly —
+  // chiefly tidy-archive.py on the Mac, which folded aliases from its own
+  // topics.txt and so kept a second original. It can now read the list from
+  // here and treat the file as a cache.
+  server.registerTool(
+    "topic_vocabulary",
+    {
+      title: "Topic Vocabulary",
+      description:
+        "The controlled vocabulary: the topic tags the capture extractor is told to reuse, and the collection tags it is told never to guess. This table is the single source of truth — the capture prompt reads it at runtime, so a change here takes effect on the next capture with no redeploy. Read-only; add or retire a term with one INSERT or DELETE on public.topic_vocabulary.",
+      annotations: {
+        readOnlyHint: true,
+      },
+      inputSchema: {
+        format: z
+          .enum(["text", "json"])
+          .optional()
+          .default("text")
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...]} — use this when a script is going to write the list to a file."),
+      },
+    },
+    async ({ format }) => {
+      try {
+        const vocab = await loadVocabulary();
+        if (format === "json") {
+          return { content: [{ type: "text" as const, text: JSON.stringify(vocab) }] };
+        }
+        const lines = [
+          `Preferred topics (${vocab.preferred.length}), in the order the extractor is shown them:`,
+          ...vocab.preferred.map((t) => `  ${t}`),
+        ];
+        if (vocab.collection.length) {
+          lines.push(
+            "",
+            `Collection tags (${vocab.collection.length}) — applied later from the source, never guessed at capture:`,
+            ...vocab.collection.map((t) => `  ${t}`)
+          );
+        }
+        return { content: [{ type: "text" as const, text: lines.join("\n") }] };
       } catch (err: unknown) {
         return {
           content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],

@@ -3331,7 +3331,8 @@ function startEdit(t, anchorOffset) {
     }
 
     // Most-used first: the vocabulary's preferred tags rise to the top on their
-    // own, without this file needing its own copy of topics.txt to drift from.
+    // own, so this offers what the archive actually contains rather than a
+    // second rendering of what it is supposed to.
     const counts = Array.from(topicCounts().values())
       .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
 
@@ -4315,10 +4316,12 @@ importTagCommon.addEventListener('click', ev => {
   if (btn) addTag(btn.dataset.tag);
 });
 
-// Suggestions come from the tags already in the archive, most-used first. They
-// are not read from topics.txt: the browser cannot see that file, and a third
-// copy of the vocabulary would drift against the two that already exist. The
-// preferred tags rise to the top here anyway, by being the ones actually used.
+// Suggestions come from the tags already in the archive, most-used first —
+// still the right source now that the controlled vocabulary is one table the
+// topic_vocabulary tool could fetch. What the vocabulary holds is what should
+// be reused; what these suggestions hold is what IS in use, and when the two
+// disagree it is the disagreement worth seeing while tagging. The preferred
+// tags rise to the top here anyway, by being the ones actually used.
 function fillTagSuggestions() {
   const counts = Array.from(topicCounts().values()).sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
   importTagOptions.innerHTML = counts.map(function (c) {
