@@ -1,8 +1,9 @@
 {
+  "id": "/index.html",
   "name": "Open Brain — Catalog",
   "short_name": "Open Brain",
   "description": "Your captured thoughts, searchable by meaning.",
-  "start_url": "./index.html",
+  "start_url": "/index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
