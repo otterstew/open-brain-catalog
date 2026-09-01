@@ -871,10 +871,18 @@ function buildServer(): McpServer {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10);
 
+        // The head request comes back with a null count against the live
+        // database, which printed "Total thoughts: null" and, once the split
+        // was added, a reading list of minus thirty-nine. The rows are already
+        // in hand and every other figure below is tallied from them, so they
+        // are the better source; the exact count stays as the preferred one
+        // for the day the archive outgrows a single PostgREST page.
+        const total = count ?? (data?.length ?? 0);
+
         const lines: string[] = [
-          `Total thoughts: ${count}` +
+          `Total thoughts: ${total}` +
             (shelved
-              ? ` (${(count ?? 0) - shelved} in the reading list, ${shelved} machine bookkeeping)`
+              ? ` (${total - shelved} in the reading list, ${shelved} machine bookkeeping)`
               : ""),
           `Date range: ${
             data?.length
