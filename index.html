@@ -1020,7 +1020,29 @@
   .hubs button:hover { color: var(--brass); }
   .hubs span { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); }
 
-  #graphCanvas { width: 100%; height: 320px; display: block; }
+  #graphCanvas { width: 100%; height: 580px; display: block; }
+  @media (max-width: 700px) { #graphCanvas { height: 380px; } }
+
+  /* The graph is the only view showing structure rather than counts, so it gets
+     the height. Everything that is a number or a word list sits two-up beneath
+     it. */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 14px; align-items: start; }
+  .stats-grid .stats-card { margin-bottom: 0; }
+
+  /* Tasks filed from the note being read — the task detail's "Came from"
+     button, followed backwards. */
+  .note-tasks { padding: 12px 18px 4px; border-top: 1px solid var(--ruled); }
+  .note-tasks[hidden] { display: none; }
+  .note-task { display: flex; align-items: baseline; gap: 10px; width: 100%;
+               background: none; border: none; border-bottom: 1px solid var(--ruled);
+               padding: 7px 0; text-align: left; cursor: pointer; font-family: var(--font-body); }
+  .note-task:last-child { border-bottom: none; }
+  .note-task:hover .note-task-title { color: var(--brass); }
+  .note-task-title { flex: 1; font-size: 13.5px; color: var(--ink); }
+  .note-task.is-closed .note-task-title { color: var(--ink-faint); text-decoration: line-through; }
+  .note-task-meta { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em;
+                    text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
 
   .stats-tip { position: fixed; z-index: 90; pointer-events: none; display: none;
                background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 3px;
@@ -1613,6 +1635,34 @@
   .task-row-fields { display: flex; gap: 14px; flex-wrap: wrap; }
   .task-row-fields .task-field { flex: 1; min-width: 150px; }
 
+  /* A date field keeps its typed input — "friday", "1 Sep" — and gains a
+     calendar button beside it. The native date input underneath is the picker
+     only; it is never the thing you read the value from. */
+  .task-input-wrap { display: flex; align-items: stretch; gap: 6px; }
+  .task-input-wrap .task-input { flex: 1; min-width: 0; }
+  .task-cal-btn {
+    flex: none;
+    width: 40px;
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    background: var(--panel);
+    color: var(--ink-dim);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .task-cal-btn:hover { border-color: var(--brass); color: var(--ink); }
+  .task-cal-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+  /* Hidden, but not display:none — showPicker() throws on an unrendered input.
+     color-scheme makes the browser's own popup dark, like everything else. */
+  .task-cal-native {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    color-scheme: dark;
+  }
+
   .task-hint {
     margin-top: 4px;
     font-family: var(--font-mono);
@@ -1890,6 +1940,31 @@ let editingId = null;    // id of the thought currently open in the edit form, o
 let referenceId = null;  // id of the thought shown read-only in the reference panel, or null
 let searchMode = false;
 let lastSearchQuery = '';
+
+// ---------- unsaved work ----------
+// A note being edited lives only in the DOM until something replaces it, so
+// switching to the task list to look something up used to destroy it silently.
+// `editorIsDirty` is installed by whichever editor is open and answers whether
+// it holds changes; every route out of an editor goes through
+// `confirmLeavingEdit` first. Deliberately a confirm and not an autosave: a
+// half-written note saved over the finished one is a worse failure than a
+// prompt, and update_thought's content is a full replacement.
+let editorIsDirty = null;   // () => boolean, or null when no editor is open
+
+function confirmLeavingEdit() {
+  if (!editorIsDirty || !editorIsDirty()) return true;
+  const ok = confirm(
+    'This note has changes you have not saved.\n\n' +
+    'Leave without saving? The text cannot be recovered.');
+  if (ok) editorIsDirty = null;
+  return ok;
+}
+
+// Closing the tab or hitting reload bypasses every in-page route above. The
+// browser shows its own wording here; ours is not used.
+window.addEventListener('beforeunload', ev => {
+  if (editorIsDirty && editorIsDirty()) { ev.preventDefault(); ev.returnValue = ''; }
+});
 
 const listScroll = document.getElementById('listScroll');
 const chipRow = document.getElementById('chipRow');
@@ -2624,6 +2699,7 @@ function selectThought(t, mark) {
       ${linksHtml}
       ${linkedNotesHtml}
       </div>
+      <div class="note-tasks" id="noteTasks" hidden></div>
       <div class="index-card-confirm" id="cardConfirm"></div>
       <div class="index-card-body">
         <div class="read-body-bar">
@@ -2657,6 +2733,8 @@ function selectThought(t, mark) {
   if (editHereBtn) {
     editHereBtn.addEventListener('click', () => startEdit(t, readingOffset(t)));
   }
+
+  renderNoteTasks(t.realId || t.id);
 
   deleteBtn.addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
@@ -3151,9 +3229,29 @@ function startEdit(t, anchorOffset) {
   const back = document.createElement('button');
   back.className = 'back-btn';
   back.textContent = '← Back to drawer';
-  back.addEventListener('click', () => { editingId = null; app.classList.remove('detail-open'); });
+  back.addEventListener('click', () => {
+    if (!confirmLeavingEdit()) return;
+    editingId = null;
+    editorIsDirty = null;
+    app.classList.remove('detail-open');
+  });
   main.prepend(back);
   app.classList.add('detail-open');
+
+  // What the editor looked like when it opened. Compared field by field rather
+  // than watching for keystrokes, so typing a character and deleting it again
+  // does not count as a change.
+  const EDIT_FIELDS = ['editTitle', 'editAuthor', 'editPublished', 'editSource',
+                       'editTags', 'editUrl', 'editContent'];
+  const editSnapshot = () =>
+    EDIT_FIELDS.map(id => (document.getElementById(id) || {}).value || '').join('\u0000');
+  const editOriginal = editSnapshot();
+  editorIsDirty = () => {
+    // The editor may already have been replaced by whatever we were guarding
+    // against; there is nothing left to lose in that case.
+    if (!document.getElementById('editContent')) return false;
+    return editSnapshot() !== editOriginal;
+  };
 
   // Two identical action bars, top and bottom; every handler drives both so
   // they never disagree about whether a save is in flight.
@@ -3260,8 +3358,10 @@ function startEdit(t, anchorOffset) {
   });
 
   cancelBtns.forEach(b => b.addEventListener('click', () => {
+    if (!confirmLeavingEdit()) return;
     const mark = readingMark(bodyEl);
     editingId = null;
+    editorIsDirty = null;
     selectThought(t, mark);
   }));
 
@@ -3317,6 +3417,7 @@ function startEdit(t, anchorOffset) {
     try {
       await callTool('update_thought', args);
       editingId = null;
+      editorIsDirty = null;
       await refreshAndReselect(t.id, mark);
     } catch (err) {
       setBusy(false);
@@ -3425,7 +3526,7 @@ function showComposer(prefill, parentId) {
   });
 }
 
-newBtn.addEventListener('click', () => showComposer());
+newBtn.addEventListener('click', () => { if (confirmLeavingEdit()) showComposer(); });
 
 function showStatus(msg, isError, retryFn) {
   listScroll.innerHTML = '';
@@ -4565,7 +4666,9 @@ function drawGraph(f) {
   const canvas = document.getElementById('graphCanvas');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth, h = 320;
+  // Height comes from the stylesheet so the media query can shrink it on a
+  // phone without the hit-testing drifting out of step with what is drawn.
+  const w = canvas.clientWidth, h = canvas.clientHeight || 320;
   canvas.width = w * dpr; canvas.height = h * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
@@ -4619,6 +4722,22 @@ function drawGraph(f) {
       n.y = Math.max(10, Math.min(h - 10, n.y));
     });
   }
+
+  // The simulation settles at a size of its own choosing, set by the repulsion
+  // constant rather than by the canvas. Without this the taller card would just
+  // be the same blob with more empty paper around it, so scale the finished
+  // layout to fill the box — uniformly, so the shape is not distorted.
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  });
+  const pad = 18;
+  const spanX = maxX - minX || 1, spanY = maxY - minY || 1;
+  const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY);
+  const offX = (w - spanX * scale) / 2 - minX * scale;
+  const offY = (h - spanY * scale) / 2 - minY * scale;
+  nodes.forEach(n => { n.x = n.x * scale + offX; n.y = n.y * scale + offY; });
 
   const paint = (hover) => {
     ctx.clearRect(0, 0, w, h);
@@ -4678,8 +4797,8 @@ function drawGraph(f) {
 
 function graphCard(f) {
   return '<div class="stats-card wide"><h3>How it hangs together ' +
-    '<span class="hint">' + f.linkCount + ' links · dots sized by connections · click to open</span></h3>' +
-    '<canvas id="graphCanvas" height="320"></canvas>' +
+    '<span class="hint">' + f.linkCount + ' links · dots sized by connections · click a dot to open its note</span></h3>' +
+    '<canvas id="graphCanvas"></canvas>' +
     (f.orphans.length
       ? '<p class="note-line">' + f.orphans.length +
         ' note' + (f.orphans.length === 1 ? '' : 's') +
@@ -4705,8 +4824,10 @@ function coverageCard(f) {
 function openStats() {
   if (!allThoughts.length) return;
   const f = archiveFigures();
-  statsBody.innerHTML = tileRow(f) + completeness(f) + graphCard(f) + weeksChart(f) +
-                        typeChart(f) + topicsChart(f) + hubsList(f) + coverageCard(f);
+  statsBody.innerHTML = tileRow(f) + graphCard(f) +
+                        '<div class="stats-grid">' + completeness(f) + weeksChart(f) +
+                        typeChart(f) + topicsChart(f) + hubsList(f) + coverageCard(f) +
+                        '</div>';
   statsPanel.hidden = false;
   drawGraph(f);
 
@@ -4783,6 +4904,29 @@ function parseWhen(text, today) {
     d.setUTCDate(d.getUTCDate() + delta);
     return iso(d);
   }
+
+  // "1 Sep" and "Sep 1", with no year. The Due field has always offered this in
+  // its placeholder and never accepted it: parseDateInput requires a year,
+  // because a note's published date has nothing to assume in place of one. A
+  // due date does — the next one coming, on the same reasoning as "friday".
+  let dm, day = null, monWord = null;
+  if ((dm = s.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})\.?$/))) {
+    day = +dm[1]; monWord = dm[2];
+  } else if ((dm = s.match(/^([a-z]{3,9})\.? (\d{1,2})(?:st|nd|rd|th)?$/))) {
+    monWord = dm[1]; day = +dm[2];
+  }
+  if (day && monWord && MONTH_NAMES.indexOf(monWord.slice(0, 3)) >= 0) {
+    // The next one coming — today counts, yesterday rolls to next year. Four
+    // years of headroom so "29 feb" finds its leap year instead of being
+    // refused for the three years in between.
+    const from = base.getUTCFullYear();
+    for (let y = from; y <= from + 4; y++) {
+      const hit = parseDateInput(day + ' ' + monWord + ' ' + y);
+      if (hit && hit >= iso(base)) return hit;
+    }
+    return null;
+  }
+
   return parseDateInput(s) || null;
 }
 
@@ -4911,6 +5055,7 @@ function normalizeTask(raw) {
 
 async function loadTasks(keepSelection) {
   showStatus('Looking at what needs doing…', false);
+  noteTaskIndex = null;   // the note view's copy is now stale
   const args = { format: 'json', limit: 200 };
   if (taskFilter === 'done') args.status = ['done'];
   else if (taskFilter !== 'open') args.status = [taskFilter];
@@ -4941,6 +5086,79 @@ function renderTaskCount() {
     t.status !== 'done' && t.status !== 'dropped' &&
     t.due_date && daysBetween(today, t.due_date) <= 0).length;
   el.textContent = pressing ? String(pressing) : '';
+}
+
+// ---------- tasks shown on the note they came from ----------
+
+// A task cites its note; the note holds no pointer back. The task detail has a
+// "Came from → Open the note" button, and this is that link followed the other
+// way, so a note answers "what did this make me do?".
+//
+// allTasks is only populated when the task view opens, and loadTasks() rewrites
+// listScroll — which in note mode holds the note list — so this cannot reuse
+// either. It takes its own copy instead: one call for the whole table, every
+// status, cached for the session. Under a hundred rows, so the breadth is free.
+let noteTaskIndex = null;
+
+async function noteTasksFor(id) {
+  if (!noteTaskIndex) {
+    const text = await callTool('list_tasks', {
+      format: 'json', limit: 200, include_deferred: true,
+      status: ['inbox', 'next', 'waiting', 'done', 'dropped'],
+    });
+    let raw;
+    try { raw = JSON.parse(text); } catch (_) { raw = []; }
+    noteTaskIndex = new Map();
+    (Array.isArray(raw) ? raw : []).map(normalizeTask).forEach(t => {
+      if (!t.thought_id) return;
+      const list = noteTaskIndex.get(t.thought_id) || [];
+      list.push(t);
+      noteTaskIndex.set(t.thought_id, list);
+    });
+  }
+  return noteTaskIndex.get(id) || [];
+}
+
+async function renderNoteTasks(noteId) {
+  const box = document.getElementById('noteTasks');
+  if (!box || !noteId) return;
+
+  let tasks;
+  try {
+    tasks = await noteTasksFor(noteId);
+  } catch (err) {
+    // A silent empty section and a failed lookup look identical, so say which.
+    if (document.getElementById('noteTasks') !== box) return;
+    box.hidden = false;
+    box.innerHTML = '<div class="section-label"><span>Tasks from this note</span></div>' +
+      '<p class="note-line">Could not load tasks — ' + escapeHtml(err.message) + '</p>';
+    return;
+  }
+
+  // The reader may have moved on while that was in flight; the card is rebuilt
+  // wholesale on every selection, so a stale box is no longer in the document.
+  if (document.getElementById('noteTasks') !== box) return;
+  if (!tasks.length) { box.hidden = true; box.innerHTML = ''; return; }
+
+  const today = todayISO();
+  const open = tasks.filter(t => t.status !== 'done' && t.status !== 'dropped').length;
+  box.hidden = false;
+  box.innerHTML = '<div class="section-label"><span>Tasks from this note</span>' +
+    '<span class="note-task-meta">' + open + ' open of ' + tasks.length + '</span></div>';
+
+  tasks.forEach(t => {
+    const closed = t.status === 'done' || t.status === 'dropped';
+    const meta = [];
+    if (t.due_date && !closed) meta.push(dueLabel(t.due_date, today).text);
+    meta.push(TASK_STATUS_LABELS[t.status] || t.status);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'note-task' + (closed ? ' is-closed' : '');
+    btn.innerHTML = '<span class="note-task-title">' + escapeHtml(t.title) + '</span>' +
+                    '<span class="note-task-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
+    btn.addEventListener('click', () => { setViewMode('tasks'); selectTask(t); });
+    box.appendChild(btn);
+  });
 }
 
 // ---------- the list ----------
@@ -5070,14 +5288,50 @@ function showTaskEmptyState() {
   app.classList.remove('detail-open');
 }
 
-function taskFieldRow(label, id, value, placeholder, hint) {
+// `withPicker` adds a calendar button to a date field. The typed input stays the
+// field of record — parseWhen reads "friday" and "1 Sep", which no date picker
+// offers — and the picker is a second way in for when the date is easier found
+// than said.
+function taskFieldRow(label, id, value, placeholder, hint, withPicker) {
+  const input = `<input class="task-input" id="${id}" type="text" value="${escapeAttr(value || '')}"
+             placeholder="${escapeAttr(placeholder || '')}" />`;
+  const body = withPicker
+    ? `<div class="task-input-wrap">
+         ${input}
+         <button class="task-cal-btn" id="${id}Cal" type="button"
+                 title="Pick a date" aria-label="Pick a date for ${escapeAttr(label)}">🗓</button>
+         <input class="task-cal-native" id="${id}Native" type="date" tabindex="-1" aria-hidden="true" />
+       </div>`
+    : input;
   return `
     <div class="task-field">
       <label class="task-label" for="${id}">${label}</label>
-      <input class="task-input" id="${id}" type="text" value="${escapeAttr(value || '')}"
-             placeholder="${escapeAttr(placeholder || '')}" />
+      ${body}
       ${hint ? `<div class="task-hint" id="${id}Hint">${hint}</div>` : ''}
     </div>`;
+}
+
+// Wire one date field's calendar button to its hidden native input.
+function wireDatePicker(id) {
+  const text = document.getElementById(id);
+  const btn = document.getElementById(id + 'Cal');
+  const native = document.getElementById(id + 'Native');
+  if (!text || !btn || !native) return;
+
+  btn.addEventListener('click', () => {
+    // Open on whatever is already typed, when it can be read at all.
+    const current = text.value.trim() ? parseWhen(text.value.trim(), todayISO()) : '';
+    native.value = current || todayISO();
+    // showPicker is Safari 16+ / Chrome 99+; older browsers fall back to a
+    // click, and failing that the typed field still works on its own.
+    try { native.showPicker(); } catch (err) { native.click(); }
+  });
+
+  native.addEventListener('change', () => {
+    if (!native.value) return;
+    text.value = formatDateInput(native.value);
+    text.dispatchEvent(new Event('input', { bubbles: true }));
+  });
 }
 
 function selectTask(t) {
@@ -5110,8 +5364,8 @@ function selectTask(t) {
       </div>
 
       <div class="task-row-fields">
-        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'friday, 1 Sep, 2026-09-01')}
-        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'nothing to do before then')}
+        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'friday, 1 Sep, 2026-09-01', '', true)}
+        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'nothing to do before then', '', true)}
       </div>
 
       <div class="task-row-fields">
@@ -5153,6 +5407,9 @@ function selectTask(t) {
 }
 
 function wireTaskDetail(t) {
+  wireDatePicker('tdDue');
+  wireDatePicker('tdDefer');
+
   const msg = document.getElementById('tdStatusMsg');
   const say = (text, tone) => {
     msg.textContent = text || '';
@@ -5193,8 +5450,11 @@ function wireTaskDetail(t) {
     try {
       await callTool('update_task', args);
       await loadTasks(true);
-      const fresh = allTasks.find(x => x.id === t.id);
-      if (fresh) selectTask(fresh); else showTaskEmptyState();
+      // Saving is the end of editing a task, so close the panel rather than
+      // re-opening it on the saved copy — the same exit "Mark done" takes. The
+      // toast is what confirms it worked, now the status line has gone with it.
+      showTaskEmptyState();
+      showToastStatus('Saved — ' + title);
     } catch (err) {
       saveBtn.disabled = false;
       say(String(err.message || err), 'bad');
@@ -5324,11 +5584,13 @@ function setViewMode(mode) {
   }
 }
 
+// Switching to the task list mid-edit is the exact way notes were being lost —
+// go and look something up, come back, the writing is gone.
 document.getElementById('modeNotes').addEventListener('click', () => {
-  if (viewMode !== 'notes') setViewMode('notes');
+  if (viewMode !== 'notes' && confirmLeavingEdit()) setViewMode('notes');
 });
 document.getElementById('modeTasks').addEventListener('click', () => {
-  if (viewMode !== 'tasks') setViewMode('tasks');
+  if (viewMode !== 'tasks' && confirmLeavingEdit()) setViewMode('tasks');
 });
 
 document.getElementById('taskAddInput').addEventListener('keydown', ev => {

@@ -1,0 +1,583 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Two Sides</title>
+<meta name="description" content="Flashcards: question on one side, answer on the other.">
+<link rel="manifest" href="./cards.webmanifest">
+<meta name="theme-color" content="#DEE3DE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0C1418" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="./cards-192.png">
+<link rel="apple-touch-icon" href="./cards-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* The question side is cool petrol, the answer side warm sand. The flip is a
+     change of temperature, so you can tell which face is up without reading it.
+     Everything else stays quiet so those two do the talking. */
+  :root {
+    --ground:      #DEE3DE;
+    --ground-2:    #EBEEE9;
+    --front:       #14303E;
+    --front-ink:   #EDE6D6;
+    --front-faint: #7C99A5;
+    --back:        #F5EDDD;
+    --back-ink:    #1E2C36;
+    --back-faint:  #9C8E76;
+    --ink:         #16303D;
+    --ink-dim:     #4C646F;
+    --ink-faint:   #7B8E95;
+    --hairline:    #C5CEC7;
+    --accent:      #B0741B;
+    --on-accent:   #FFF7E8;
+    --good:        #2E7A4C;
+    --good-soft:   #D9E9DD;
+    --again:       #AF4E2C;
+    --again-soft:  #F2DED4;
+    --shadow:      0 1px 2px rgba(20,48,62,.08), 0 10px 28px rgba(20,48,62,.12);
+
+    --f-display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+    --f-body:    "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #0C1418;
+      --ground-2:    #152229;
+      --front:       #123444;
+      --front-ink:   #E9E2D2;
+      --front-faint: #7A97A3;
+      --back:        #2C2418;   /* warm, not bright: the answer glows rather than glares */
+      --back-ink:    #F0E5CD;
+      --back-faint:  #A2916F;
+      --ink:         #DCE5E8;
+      --ink-dim:     #93A6AD;
+      --ink-faint:   #6D8189;
+      --hairline:    #23323A;
+      --accent:      #DDA23C;
+      --on-accent:   #1F1503;
+      --good:        #5BBE89;
+      --good-soft:   #14301F;
+      --again:       #E0885B;
+      --again-soft:  #331F17;
+      --shadow:      0 1px 2px rgba(0,0,0,.45), 0 12px 32px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground:      #0C1418;
+    --ground-2:    #152229;
+    --front:       #123444;
+    --front-ink:   #E9E2D2;
+    --front-faint: #7A97A3;
+    --back:        #2C2418;
+    --back-ink:    #F0E5CD;
+    --back-faint:  #A2916F;
+    --ink:         #DCE5E8;
+    --ink-dim:     #93A6AD;
+    --ink-faint:   #6D8189;
+    --hairline:    #23323A;
+    --accent:      #DDA23C;
+    --on-accent:   #1F1503;
+    --good:        #5BBE89;
+    --good-soft:   #14301F;
+    --again:       #E0885B;
+    --again-soft:  #331F17;
+    --shadow:      0 1px 2px rgba(0,0,0,.45), 0 12px 32px rgba(0,0,0,.5);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--ink);
+    font-family: var(--f-body);
+    font-size: 16px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  button { font-family: inherit; cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+
+  .wrap {
+    max-width: 620px;
+    margin: 0 auto;
+    padding: 18px 16px 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 100vh;
+  }
+
+  /* ---------- header ---------- */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .deck-name {
+    font-family: var(--f-display);
+    font-size: 17px; font-weight: 600; margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .deck-sub {
+    display: block;
+    font-family: var(--f-mono); font-size: 10.5px; font-weight: 400;
+    letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-faint); margin-top: 3px;
+  }
+  .top-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .icon-btn {
+    background: var(--ground-2); border: 1px solid var(--hairline); color: var(--ink-dim);
+    border-radius: 8px; padding: 7px 10px; font-size: 12.5px; line-height: 1;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .icon-btn:hover { color: var(--ink); border-color: var(--ink-faint); }
+
+  /* ---------- progress ---------- */
+  .progress { display: flex; align-items: center; gap: 10px; }
+  .track { flex: 1; height: 5px; background: var(--ground-2); border: 1px solid var(--hairline); border-radius: 99px; overflow: hidden; }
+  .fill { display: block; height: 100%; background: var(--accent); border-radius: 99px; transition: width .28s ease; }
+  .count { font-family: var(--f-mono); font-size: 11.5px; color: var(--ink-faint); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---------- the card ---------- */
+  /* The stage hugs the card so the grading buttons stay directly beneath it;
+     the nav takes the slack instead and sits at the foot of the screen. */
+  .stage { perspective: 1600px; display: flex; align-items: stretch; flex: 0 0 auto; }
+  /* A fixed card height keeps both faces the same size whichever is showing,
+     and stops a one-line question stretching to fill a tall phone. */
+  .card {
+    position: relative; width: 100%; height: 56vh; min-height: 300px; max-height: 460px;
+    border: none; padding: 0; background: none;
+    transform-style: preserve-3d; transition: transform .5s cubic-bezier(.2,.7,.3,1);
+    text-align: left; display: block;
+  }
+  .card.flipped { transform: rotateY(180deg); }
+  @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
+
+  .face {
+    position: absolute; inset: 0;
+    backface-visibility: hidden; -webkit-backface-visibility: hidden;
+    background: var(--front); color: var(--front-ink); border: none;
+    border-radius: 14px; box-shadow: var(--shadow);
+    padding: 26px 24px 46px;
+    display: flex; flex-direction: column; justify-content: center;
+    overflow-y: auto;
+  }
+  .face.back { transform: rotateY(180deg); background: var(--back); color: var(--back-ink); }
+
+  .side-label {
+    position: absolute; top: 16px; left: 24px;
+    font-family: var(--f-mono); font-size: 10px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--front-faint);
+  }
+  .face.back .side-label, .face.back .hint { color: var(--back-faint); }
+  .q {
+    font-family: var(--f-display); font-size: clamp(20px, 5.2vw, 27px);
+    font-weight: 600; line-height: 1.28; letter-spacing: -0.015em;
+    margin: 0; text-wrap: balance; color: var(--front-ink);
+  }
+  .a { font-size: clamp(15px, 3.8vw, 17.5px); line-height: 1.55; margin: 0; color: var(--back-ink); }
+  .hint {
+    position: absolute; bottom: 16px; left: 24px; right: 24px;
+    font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--front-faint); text-align: center;
+  }
+
+  /* ---------- grading ---------- */
+  .grade { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grade[hidden] { display: none; }
+  .g-btn {
+    border-radius: 10px; padding: 13px 12px; font-size: 14.5px; font-weight: 600;
+    border: 1px solid transparent;
+  }
+  .g-again { background: var(--again-soft); color: var(--again); border-color: var(--again); }
+  .g-good  { background: var(--good-soft);  color: var(--good);  border-color: var(--good); }
+  .g-btn:hover { filter: brightness(.97); }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: auto; padding-top: 8px; }
+  .nav-btn {
+    background: none; border: 1px solid var(--hairline); color: var(--ink-dim);
+    border-radius: 8px; padding: 9px 14px; font-size: 13px;
+  }
+  .nav-btn:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
+  .nav-btn:disabled { opacity: .4; cursor: default; }
+
+  /* ---------- round summary ---------- */
+  .done { text-align: center; padding: 30px 20px; }
+  .done h2 { font-family: var(--f-display); font-size: 24px; margin: 0 0 8px; letter-spacing: -0.02em; }
+  .done p { color: var(--ink-dim); margin: 0 0 20px; font-size: 15px; }
+  /* Both themes resolve as a set: white on deep teal in light, near-black on
+     bright teal in dark. One token pair, no theme-specific colour rules. */
+  .primary {
+    background: var(--accent); color: var(--on-accent); border: none;
+    border-radius: 10px; padding: 12px 22px; font-size: 14.5px; font-weight: 600;
+  }
+
+  /* ---------- editor sheet ---------- */
+  .sheet {
+    position: fixed; inset: 0; background: var(--ground); z-index: 20;
+    overflow-y: auto; padding: 18px 16px 40px;
+  }
+  .sheet[hidden] { display: none; }
+  .sheet-inner { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+  .sheet h2 { font-family: var(--f-display); font-size: 19px; margin: 0; letter-spacing: -0.01em; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+
+  .row {
+    background: var(--ground-2); border: 1px solid var(--hairline);
+    border-radius: 11px; padding: 12px 13px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .row textarea {
+    width: 100%; background: var(--ground); color: var(--ink);
+    border: 1px solid var(--hairline); border-radius: 7px;
+    padding: 9px 10px; font-family: var(--f-body); font-size: 14px; line-height: 1.45;
+    resize: vertical; min-height: 46px;
+  }
+  .row textarea.q-in { font-family: var(--f-display); font-weight: 600; }
+  .row-head {
+    display: flex; justify-content: space-between; align-items: center;
+    font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+  .del { background: none; border: none; color: var(--ink-faint); font-size: 12px; padding: 2px 4px; }
+  .del:hover { color: var(--again); }
+
+  .save-bar {
+    position: sticky; bottom: 0; background: var(--ground);
+    padding: 12px 0 4px; display: flex; gap: 10px; align-items: center;
+    border-top: 1px solid var(--hairline);
+  }
+  .sync-note { font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: .06em; }
+
+  .empty { color: var(--ink-dim); font-size: 14.5px; text-align: center; padding: 24px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1 class="deck-name" id="deckName">Azure AI Fundamentals
+      <span class="deck-sub" id="deckSub">AI-901 revision</span>
+    </h1>
+    <div class="top-actions">
+      <button class="icon-btn" id="shuffleBtn" type="button" title="Shuffle and start again">Shuffle</button>
+      <button class="icon-btn" id="editBtn" type="button">Cards</button>
+    </div>
+  </div>
+
+  <div class="progress">
+    <span class="track"><span class="fill" id="fill" style="width:0%"></span></span>
+    <span class="count" id="count">0 / 0</span>
+  </div>
+
+  <div class="stage" id="stage">
+    <button class="card" id="card" type="button" aria-live="polite">
+      <div class="face front">
+        <span class="side-label">Question</span>
+        <p class="q" id="qText"></p>
+        <span class="hint">Tap, or press space, to turn over</span>
+      </div>
+      <div class="face back">
+        <span class="side-label">Answer</span>
+        <p class="a" id="aText"></p>
+        <span class="hint">How did you do?</span>
+      </div>
+    </button>
+  </div>
+
+  <div class="grade" id="grade" hidden>
+    <button class="g-btn g-again" id="againBtn" type="button">Again</button>
+    <button class="g-btn g-good" id="goodBtn" type="button">Got it</button>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn" id="prevBtn" type="button">&larr; Back</button>
+    <span class="count" id="roundNote"></span>
+    <button class="nav-btn" id="skipBtn" type="button">Skip &rarr;</button>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-inner">
+    <div class="sheet-head">
+      <h2>Your cards</h2>
+      <button class="icon-btn" id="closeSheet" type="button">Done</button>
+    </div>
+    <div id="rows"></div>
+    <button class="icon-btn" id="addBtn" type="button">+ Add a card</button>
+    <div class="save-bar">
+      <button class="primary" id="saveBtn" type="button">Save</button>
+      <span class="sync-note" id="syncNote"></span>
+    </div>
+  </div>
+</div>
+
+<script type="application/json" id="deck">
+[
+  {"id":"rai-1","q":"What are Microsoft's six responsible AI principles?","a":"Fairness \u00b7 Reliability and safety \u00b7 Privacy and security \u00b7 Inclusiveness \u00b7 Transparency \u00b7 Accountability."},
+  {"id":"rai-2","q":"Which responsible AI principle covers a system performing consistently and coping safely with unexpected input?","a":"Reliability and safety."},
+  {"id":"rai-3","q":"Which principle requires that people can understand how a system reached its output, and question it?","a":"Transparency."},
+  {"id":"rai-4","q":"Which principle says people remain in charge of the system, with clear ownership and governance?","a":"Accountability."},
+  {"id":"ml-1","q":"Regression, classification, clustering \u2014 which one is unsupervised?","a":"Clustering. Regression and classification are supervised: they need labelled data to learn from."},
+  {"id":"ml-2","q":"What kind of value does regression predict?","a":"A continuous number \u2014 a price, a temperature, how many days something will take."},
+  {"id":"ml-3","q":"Binary versus multiclass classification?","a":"Binary picks one of two classes. Multiclass picks one of three or more."},
+  {"id":"ml-4","q":"What does automated machine learning do in Azure Machine Learning?","a":"Tries many algorithm and preprocessing combinations for you, then ranks the resulting models against a metric you choose."},
+  {"id":"ml-5","q":"What is a labelled dataset, and which kind of learning needs one?","a":"Data where the right answer is already recorded against each example. Supervised learning needs it."},
+  {"id":"ml-6","q":"What does a confusion matrix show?","a":"For a classification model: the counts of true positives, true negatives, false positives and false negatives."},
+  {"id":"ml-7","q":"What are training and validation data for?","a":"Training data fits the model. Validation data is held back to test it on examples it has not seen, which is how you catch overfitting."},
+  {"id":"cv-1","q":"Image classification versus object detection?","a":"Classification puts one label on the whole image. Object detection finds each object and returns its label plus a bounding box."},
+  {"id":"cv-2","q":"Which Azure service reads printed and handwritten text out of images?","a":"Azure AI Vision, using its OCR / Read capability."},
+  {"id":"cv-3","q":"What is semantic segmentation?","a":"Classifying individual pixels by which object they belong to, rather than drawing a box around the object."},
+  {"id":"cv-4","q":"What is Azure AI Face for?","a":"Detecting and analysing human faces in images \u2014 position, attributes, and matching one face against another."},
+  {"id":"nlp-1","q":"What does sentiment analysis give you back?","a":"Whether the text reads as positive, negative or neutral, with a confidence score for each."},
+  {"id":"nlp-2","q":"What is key phrase extraction for?","a":"Pulling out the main talking points of a document, so you can tell what it is about without reading it."},
+  {"id":"nlp-3","q":"What does named entity recognition do?","a":"Finds mentions in text and categorises them \u2014 people, places, organisations, dates, quantities."},
+  {"id":"nlp-4","q":"Which service turns speech into text, and text into speech?","a":"Azure AI Speech."},
+  {"id":"gen-1","q":"What is a token, in a language model?","a":"The unit text is broken into before the model processes it \u2014 roughly a word or part of a word. Limits and cost are counted in tokens."},
+  {"id":"gen-2","q":"What is a prompt?","a":"The input you give a generative model: the instruction plus whatever context you supply to shape the answer."},
+  {"id":"gen-3","q":"What is grounding?","a":"Giving the model your own trusted data to answer from, so the response comes from that rather than from its training alone."},
+  {"id":"gen-4","q":"What is a copilot?","a":"An assistant built on a generative model that works alongside a person inside an application \u2014 suggesting, with the person deciding."},
+  {"id":"doc-1","q":"What does Azure AI Document Intelligence do?","a":"Extracts fields, key-value pairs and tables out of forms, invoices and receipts, using prebuilt models or one you train."},
+  {"id":"doc-2","q":"What is knowledge mining, and which service does it?","a":"Indexing large amounts of unstructured content so it can be searched and explored. Azure AI Search."}
+]
+</script>
+
+<script>
+(() => {
+  "use strict";
+
+  const LS_DECK = "twosides.deck.v1";
+  const $ = (id) => document.getElementById(id);
+
+  // ---------- deck: the published copy, plus any unsaved local edits ----------
+  const embedded = JSON.parse($("deck").textContent);
+
+  // Cheap fingerprint of the published deck. If it changes, a save has landed
+  // from somewhere else and the local draft it was based on is stale.
+  const stamp = (cards) => cards.length + ":" +
+    cards.map(c => c.id + c.q.length + c.a.length).join("|").length;
+
+  let deck = embedded;
+  let dirty = false;
+  try {
+    const saved = JSON.parse(localStorage.getItem(LS_DECK) || "null");
+    if (saved && saved.base === stamp(embedded) && Array.isArray(saved.cards)) {
+      deck = saved.cards;
+      dirty = true;
+    } else if (saved) {
+      localStorage.removeItem(LS_DECK);
+    }
+  } catch (_) { /* private mode, or blocked site data -- carry on with the published deck */ }
+
+  const stash = () => {
+    dirty = true;
+    try { localStorage.setItem(LS_DECK, JSON.stringify({ base: stamp(embedded), cards: deck })); }
+    catch (_) { /* nothing to do: the deck still works for this session */ }
+  };
+
+  // ---------- the round ----------
+  let queue = [], current = null, flipped = false, seen = 0, stumbles = 0;
+  let history = [];   // so a mis-tap can be undone
+
+  const shuffled = (a) => {
+    const out = a.slice();
+    for (let i = out.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [out[i], out[j]] = [out[j], out[i]];
+    }
+    return out;
+  };
+
+  function startRound() {
+    queue = shuffled(deck);
+    seen = 0; stumbles = 0;
+    history = [];
+    next();
+  }
+
+  function next() {
+    flipped = false;
+    if (current) history.push(current);
+    current = queue.shift() || null;
+    render();
+  }
+
+  function back() {
+    if (!history.length) return;
+    if (current) queue.unshift(current);
+    current = history.pop();
+    flipped = false;
+    if (seen > 0) seen--;
+    render();
+  }
+
+  function render() {
+    const card = $("card"), grade = $("grade");
+    const total = deck.length;
+
+    if (!total) {
+      $("stage").innerHTML = '<p class="empty">No cards yet. Tap <strong>Cards</strong> to write your first one.</p>';
+      grade.hidden = true;
+      $("count").textContent = "0 / 0";
+      $("fill").style.width = "0%";
+      return;
+    }
+
+    if (!current) return finish();
+
+    card.classList.toggle("flipped", flipped);
+    $("qText").textContent = current.q;
+    $("aText").textContent = current.a;
+    grade.hidden = !flipped;
+
+    const done = total - queue.length - 1;
+    $("count").textContent = done + " / " + total;
+    $("fill").style.width = (total ? (done / total) * 100 : 0) + "%";
+    $("roundNote").textContent = queue.length + " left in this round";
+    $("prevBtn").disabled = history.length === 0;
+  }
+
+  function finish() {
+    $("stage").innerHTML =
+      '<div class="done"><h2>Round finished</h2><p id="doneNote"></p>' +
+      '<button class="primary" id="againRound" type="button">Go again</button></div>';
+    $("doneNote").textContent = stumbles
+      ? seen + " cards, and " + stumbles + " needed a second look."
+      : "All " + seen + " right first time.";
+    $("grade").hidden = true;
+    $("roundNote").textContent = "";
+    $("fill").style.width = "100%";
+    $("againRound").addEventListener("click", () => { rebuildStage(); startRound(); });
+  }
+
+  // finish() replaces the stage markup, so put the card back before a new round
+  function rebuildStage() {
+    $("stage").innerHTML =
+      '<button class="card" id="card" type="button" aria-live="polite">' +
+        '<div class="face front"><span class="side-label">Question</span>' +
+        '<p class="q" id="qText"></p><span class="hint">Tap, or press space, to turn over</span></div>' +
+        '<div class="face back"><span class="side-label">Answer</span>' +
+        '<p class="a" id="aText"></p><span class="hint">How did you do?</span></div>' +
+      '</button>';
+    wireCard();
+  }
+
+  function wireCard() {
+    const card = $("card");
+    if (!card) return;
+    card.addEventListener("click", () => { if (current) { flipped = !flipped; render(); } });
+    let x0 = null;
+    card.addEventListener("touchstart", (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+    card.addEventListener("touchend", (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      x0 = null;
+      if (Math.abs(dx) > 60) { seen++; next(); }
+    }, { passive: true });
+  }
+
+  // ---------- controls ----------
+  $("goodBtn").addEventListener("click", () => { seen++; next(); });
+  $("againBtn").addEventListener("click", () => {
+    seen++; stumbles++;
+    if (current) queue.push(current);   // back of the queue, comes round again
+    next();
+  });
+  $("skipBtn").addEventListener("click", () => { if (current) queue.push(current); next(); });
+  $("prevBtn").addEventListener("click", back);
+  $("shuffleBtn").addEventListener("click", () => { rebuildStage(); startRound(); });
+
+  document.addEventListener("keydown", (e) => {
+    if (!$("sheet").hidden) return;
+    if (e.target.tagName === "TEXTAREA") return;
+    if (e.code === "Space" || e.code === "Enter") {
+      e.preventDefault();
+      if (current) { flipped = !flipped; render(); }
+    } else if (e.code === "ArrowRight") { seen++; next(); }
+    else if (e.code === "ArrowLeft") { back(); }
+    else if (flipped && e.key === "1") { $("againBtn").click(); }
+    else if (flipped && e.key === "2") { $("goodBtn").click(); }
+  });
+
+  // ---------- editing ----------
+  const sheet = $("sheet");
+
+  function drawRows() {
+    const box = $("rows");
+    box.innerHTML = "";
+    if (!deck.length) {
+      box.innerHTML = '<p class="empty">Nothing here yet.</p>';
+      return;
+    }
+    deck.forEach((c, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML =
+        '<div class="row-head"><span>Card ' + (i + 1) + '</span>' +
+        '<button class="del" type="button">Delete</button></div>';
+      const q = document.createElement("textarea");
+      q.className = "q-in"; q.value = c.q; q.rows = 2;
+      q.setAttribute("aria-label", "Question for card " + (i + 1));
+      const a = document.createElement("textarea");
+      a.value = c.a; a.rows = 3;
+      a.setAttribute("aria-label", "Answer for card " + (i + 1));
+      q.addEventListener("input", () => { c.q = q.value; stash(); });
+      a.addEventListener("input", () => { c.a = a.value; stash(); });
+      row.querySelector(".del").addEventListener("click", () => {
+        deck.splice(i, 1); stash(); drawRows();
+      });
+      row.append(q, a);
+      box.appendChild(row);
+    });
+  }
+
+  $("editBtn").addEventListener("click", () => { drawRows(); sheet.hidden = false; });
+  $("closeSheet").addEventListener("click", () => {
+    sheet.hidden = true;
+    deck = deck.filter(c => c.q.trim() || c.a.trim());
+    stash();
+    rebuildStage(); startRound();
+  });
+  $("addBtn").addEventListener("click", () => {
+    deck.push({ id: "c" + Date.now().toString(36), q: "", a: "" });
+    stash(); drawRows();
+    const rows = $("rows").querySelectorAll("textarea");
+    if (rows.length) rows[rows.length - 2].focus();
+  });
+
+  // ---------- saving ----------
+  // Served as a static file from your own domain, so there is nobody to publish
+  // a new version to: the deck lives in this browser. Cards added on the phone
+  // stay on the phone.
+  function save() {
+    deck = deck.filter(c => c.q.trim() || c.a.trim());
+    stash();
+    $("syncNote").textContent = "Saved on this device";
+    sheet.hidden = true;
+    rebuildStage(); startRound();
+  }
+
+  $("saveBtn").addEventListener("click", save);
+
+  // ---------- go ----------
+  wireCard();
+  startRound();
+
+  $("syncNote").textContent = dirty ? "Unsaved changes" : "Kept on this device";
+})();
+</script>
+
+<script>
+// Registers the catalog's worker, which also precaches this page, so the cards
+// open with no connection at all. Same origin, same worker, one shell cache.
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => { /* still works online */ });
+  });
+}
+</script>
+</body>
+</html>
