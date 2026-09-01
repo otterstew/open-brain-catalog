@@ -1077,6 +1077,21 @@
   .facet-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
   .facet-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--brass); }
   .facet-btn.filtering { color: var(--brass); border-color: var(--brass); }
+  /* Not a facet — a view mode — so it gets the whole row rather than becoming
+     an odd fifth button in a grid built for pairs. */
+  .shelf-toggle { flex: 1 1 100%; justify-content: space-between; padding-left: 10px; padding-right: 10px; }
+  .shelf-toggle[aria-pressed="true"] { color: var(--brass); border-color: var(--brass); }
+  .shelf-state { color: var(--ink-faint); font-size: 10px; letter-spacing: 0.06em; }
+  /* Shown only when the shelf is open, so a bookkeeping note is never mistaken
+     for something Stewart wrote. */
+  .card-row.shelved .card-row-preview { color: var(--ink-dim); }
+  .card-row-shelf {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
   .facet-n { color: var(--ink-faint); font-size: 10px; }
   .facet-btn[aria-expanded="true"] .facet-caret { transform: rotate(180deg); }
   .facet-caret { transition: transform 140ms ease; }
@@ -1867,6 +1882,9 @@
           <span>Sources</span><span class="facet-n" id="facetNSources"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
+        <button class="facet-btn shelf-toggle" id="shelfToggle" type="button" aria-pressed="false">
+          <span>Bookkeeping</span><span class="shelf-state" id="shelfState">hidden</span>
+        </button>
       </div>
 
       <div class="facet-panel" id="facetPanel" hidden>
@@ -1929,6 +1947,14 @@ function typeStyle(t) {
 }
 
 let allThoughts = [];   // full list, from last successful list fetch
+// Changelog entries and work orders are notes the machine writes about its own
+// housekeeping — a fifth of the archive. The server leaves them out of every
+// list unless asked, so this is a fetch parameter rather than a client-side
+// filter: spending the 100-note budget on notes worth reading is the point.
+// Remembered per browser; a private window simply starts hidden.
+let showShelved = false;
+try { showShelved = localStorage.getItem('ob.showShelved') === '1'; } catch (e) { /* storage blocked */ }
+
 let displayed = [];     // currently shown (after search/filter)
 let activeTypes = new Set();
 let activeTopics = new Set(); // normalized (lowercased) topic strings
@@ -2194,6 +2220,7 @@ function normalizeThought(raw) {
     title: m.title || null,
     published_date: m.published_date || null,
     updated_date: m.updated_date || null,
+    shelved: !!raw.shelved,
     extracted_links: Array.isArray(m.extracted_links) ? m.extracted_links : [],
     linked_thought_ids: Array.isArray(m.linked_thought_ids) ? m.linked_thought_ids : [],
   };
@@ -2475,13 +2502,15 @@ function renderList(items, isSearch) {
     const row = document.createElement('button');
     row.className = 'card-row'
       + (selectedIndex === t.id ? ' selected' : '')
-      + (referenceId === t.id ? ' referencing' : '');
+      + (referenceId === t.id ? ' referencing' : '')
+      + (t.shelved ? ' shelved' : '');
     row.innerHTML = `
       <div class="card-row-tab" style="background:${style.color}"></div>
       <div class="card-row-body">
         <div class="card-row-meta">
           <span class="card-row-type" style="color:${style.color}">${style.label}</span>
           <span class="card-row-date">${formatDate(t.created_at)}</span>
+          ${t.shelved ? '<span class="card-row-shelf">bookkeeping</span>' : ''}
         </div>
         <div class="card-row-preview">${escapeHtml(t.title || t.content)}</div>
         ${(t.people || []).length
@@ -3552,7 +3581,8 @@ async function loadAll() {
   searchClear.style.display = 'none';
   showStatus('Opening the drawer…', false);
   try {
-    const text = await callTool('list_thoughts', { limit: 100, format: 'json' });
+    const text = await callTool('list_thoughts',
+      { limit: 100, format: 'json', include_shelved: showShelved });
     allThoughts = parseJsonThoughts(text);
     activeTypes = new Set();
     activeTopics = new Set();
@@ -3625,7 +3655,8 @@ async function runSearch(query) {
     showStatus('Searching the archive for "' + query + '"…', false);
   }
   try {
-    const text = await callTool('search_thoughts', { query, limit: 50, format: 'json' });
+    const text = await callTool('search_thoughts',
+      { query, limit: 50, format: 'json', include_shelved: showShelved });
     const semantic = parseJsonThoughts(text);
     // Literal matches first — they are what the typist meant — then anything
     // the archive found by meaning that the words alone would have missed.
@@ -3642,6 +3673,26 @@ async function runSearch(query) {
     showStatus('Search failed — ' + err.message, true, () => runSearch(query));
   }
 }
+
+// The shelf is a server-side fetch parameter, so flipping it re-asks rather
+// than re-filters what is already in hand — otherwise turning it on would only
+// reveal the bookkeeping notes that happened to be inside the last 100 rows.
+function renderShelfToggle() {
+  const btn = document.getElementById('shelfToggle');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', showShelved ? 'true' : 'false');
+  document.getElementById('shelfState').textContent = showShelved ? 'shown' : 'hidden';
+}
+
+document.getElementById('shelfToggle').addEventListener('click', () => {
+  showShelved = !showShelved;
+  try { localStorage.setItem('ob.showShelved', showShelved ? '1' : '0'); } catch (e) { /* storage blocked */ }
+  renderShelfToggle();
+  if (searchMode && lastSearchQuery) runSearch(lastSearchQuery);
+  else loadAll();
+});
+
+renderShelfToggle();
 
 document.getElementById('lockBtn').addEventListener('click', lockArchive);
 

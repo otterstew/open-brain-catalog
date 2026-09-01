@@ -253,11 +253,40 @@ function extractLinksFromContent(content: string): ExtractedLink[] {
   return links;
 }
 
+// Some notes are written by the machine to keep track of itself — changelog
+// entries and work orders, 39 of the archive's 176 when the shelf was added.
+// They are real notes and they stay searchable, but they are not what anyone
+// opens the archive to read, and at a fifth of everything they crowd out what
+// is. `thoughts.shelved` is maintained by a trigger from the tags in
+// shelved_topics (see the tidy_tags_and_shelf migration), so the rule lives in
+// the database and no client re-implements it. Every tool that returns a LIST
+// hides them unless asked; fetch by id never does, because asking for a note by
+// its id is asking for that note.
+const SHELF_HINT =
+  "Machine bookkeeping (changelog entries, work orders) is hidden; pass include_shelved to see it.";
+
+// Which of these ids are shelved. Used where the rows come back from an RPC
+// that cannot filter on the column — the alternative, re-deriving the rule from
+// metadata in TypeScript, is a second copy of it that would drift.
+async function shelvedIds(ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const { data } = await supabase
+    .from("thoughts")
+    .select("id")
+    .in("id", ids)
+    .eq("shelved", true);
+  return new Set(((data || []) as { id: string }[]).map((r) => r.id));
+}
+
 // Vector search answers "what is this about"; it does not answer "which notes
 // contain this word". A generic term like "building" is about nothing in
 // particular, so it scores below any sensible threshold even when it appears in
 // eleven titles. This fills that gap by matching the literal text as well.
-async function keywordMatches(query: string, limit: number): Promise<ThoughtMatch[]> {
+async function keywordMatches(
+  query: string,
+  limit: number,
+  includeShelved = false
+): Promise<ThoughtMatch[]> {
   const cleaned = query.trim().replace(/[%_,()]/g, " ").trim();
   if (cleaned.length < 2) return [];
 
@@ -274,11 +303,13 @@ async function keywordMatches(query: string, limit: number): Promise<ThoughtMatc
   const columns = ["metadata->>title", "content", "metadata->>topics",
                    "metadata->>people", "metadata->>author", "metadata->>source_name"];
   for (const column of columns) {
-    const { data } = await supabase
+    let kq = supabase
       .from("thoughts")
       .select("id, content, metadata, created_at")
       .ilike(column, `%${lead}%`)
       .limit(50);
+    if (!includeShelved) kq = kq.eq("shelved", false);
+    const { data } = await kq;
     for (const row of (data || []) as ThoughtRecord[]) {
       if (seen.has(row.id)) continue;
       const meta = (row.metadata || {}) as Record<string, unknown>;
@@ -381,19 +412,22 @@ function buildServer(): McpServer {
         const qEmb = await getEmbedding(query);
         const { data: vector, error } = await supabase.rpc("match_thoughts", {
           query_embedding: qEmb,
+          // Over-fetch: the shelved ones are dropped below, and asking for
+          // exactly ten would return six.
           match_threshold: 0.35,
-          match_count: 10,
+          match_count: 20,
           filter: {},
         });
 
-        const found = [...((vector || []) as ThoughtMatch[])];
+        const hidden = await shelvedIds(((vector || []) as ThoughtMatch[]).map((t) => t.id));
+        const found = ((vector || []) as ThoughtMatch[]).filter((t) => !hidden.has(t.id));
         if (found.length < 10) {
           const have = new Set(found.map((t) => t.id));
           for (const hit of await keywordMatches(query, 10 - found.length)) {
             if (!have.has(hit.id)) found.push(hit);
           }
         }
-        const data = found;
+        const data = found.slice(0, 10);
 
         if (error) {
           return {
@@ -497,6 +531,13 @@ function buildServer(): McpServer {
         query: z.string().describe("What to search for"),
         limit: z.number().optional().default(10),
         threshold: z.number().optional().default(0.35),
+        include_shelved: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Include the machine's own bookkeeping — changelog entries and work orders. Left out by default: they are a fifth of the archive and are not what anyone searches it to find. Pass true when the question is about the system's own history."
+          ),
         format: z
           .enum(["text", "full", "json"])
           .optional()
@@ -504,25 +545,35 @@ function buildServer(): McpServer {
           .describe("\"text\" (default) for a compact one-entry-per-match summary — title, type, topics, snippet and id. \"full\" for the complete text of every match (large; prefer fetch on a single id instead). \"json\" for a machine-parseable array of full thought objects (used by the Open Brain Catalog GUI)."),
       },
     },
-    async ({ query, limit, threshold, format }) => {
+    async ({ query, limit, threshold, format, include_shelved }) => {
       try {
         const qEmb = await getEmbedding(query);
         const { data: vector, error } = await supabase.rpc("match_thoughts", {
           query_embedding: qEmb,
           match_threshold: threshold,
-          match_count: limit,
+          // The RPC cannot filter on the shelved column, so ask for headroom
+          // and drop them here. Without it a search for a well-covered subject
+          // returns a short list padded with changelog entries.
+          match_count: include_shelved ? limit : limit * 2,
           filter: {},
         });
 
+        // Computed even when nothing is being hidden: format "json" labels each
+        // result, so the catalog can offer its own toggle without a second copy
+        // of the rule.
+        const hidden = await shelvedIds(((vector || []) as ThoughtMatch[]).map((t) => t.id));
+        const found = include_shelved
+          ? [...((vector || []) as ThoughtMatch[])]
+          : ((vector || []) as ThoughtMatch[]).filter((t) => !hidden.has(t.id));
+
         // Top up with literal matches so a plain keyword still finds its notes.
-        const found = [...((vector || []) as ThoughtMatch[])];
         if (found.length < limit) {
           const have = new Set(found.map((t) => t.id));
-          for (const hit of await keywordMatches(query, limit - found.length)) {
+          for (const hit of await keywordMatches(query, limit - found.length, include_shelved)) {
             if (!have.has(hit.id)) found.push(hit);
           }
         }
-        const data = found;
+        const data = found.slice(0, limit);
 
         if (error) {
           return {
@@ -546,6 +597,7 @@ function buildServer(): McpServer {
             content: t.content,
             created_at: t.created_at,
             similarity: t.similarity,
+            shelved: hidden.has(t.id),
             metadata: t.metadata || {},
           }));
           return { content: [{ type: "text" as const, text: JSON.stringify(items) }] };
@@ -559,7 +611,8 @@ function buildServer(): McpServer {
                 type: "text" as const,
                 text:
                   `Found ${data.length} thought(s):\n\n${lines.join("\n\n")}\n\n` +
-                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.`,
+                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.` +
+                  (!include_shelved && hidden.size ? `\n${SHELF_HINT}` : ""),
               },
             ],
           };
@@ -623,6 +676,13 @@ function buildServer(): McpServer {
         topic: z.string().optional().describe("Filter by topic tag"),
         person: z.string().optional().describe("Filter by person mentioned"),
         days: z.number().optional().describe("Only thoughts from the last N days"),
+        include_shelved: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Include the machine's own bookkeeping — changelog entries and work orders. Left out by default: they are a fifth of the archive and would fill a list of recent notes with the assistant talking about itself. Pass true to review what the system has been doing."
+          ),
         format: z
           .enum(["text", "full", "json"])
           .optional()
@@ -630,13 +690,18 @@ function buildServer(): McpServer {
           .describe("\"text\" (default) for a compact one-entry-per-note summary — title, type, topics, snippet and id. \"full\" for the complete text of every note (large; prefer fetch on a single id instead). \"json\" for a machine-parseable array of full thought objects (used by the Open Brain Catalog GUI)."),
       },
     },
-    async ({ limit, type, topic, person, days, format }) => {
+    async ({ limit, type, topic, person, days, format, include_shelved }) => {
       try {
         let q = supabase
           .from("thoughts")
-          .select("id, content, metadata, created_at")
+          .select("id, content, metadata, created_at, shelved")
           .order("created_at", { ascending: false })
           .limit(limit);
+
+        // In the query, not after it: filtering the page afterwards would let
+        // shelved rows eat the limit and return three notes where ten were
+        // asked for. thoughts_unshelved_recent_idx exists for exactly this.
+        if (!include_shelved) q = q.eq("shelved", false);
 
         if (type) q = q.contains("metadata", { type });
         if (topic) q = q.contains("metadata", { topics: [topic] });
@@ -665,10 +730,17 @@ function buildServer(): McpServer {
 
         if (format === "json") {
           const items = data.map(
-            (t: { id: string; content: string; metadata: Record<string, unknown>; created_at: string }) => ({
+            (t: {
+              id: string;
+              content: string;
+              metadata: Record<string, unknown>;
+              created_at: string;
+              shelved?: boolean;
+            }) => ({
               id: t.id,
               content: t.content,
               created_at: t.created_at,
+              shelved: !!t.shelved,
               metadata: t.metadata || {},
             })
           );
@@ -690,7 +762,8 @@ function buildServer(): McpServer {
                 type: "text" as const,
                 text:
                   `${data.length} recent thought(s):\n\n${lines.join("\n\n")}\n\n` +
-                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.`,
+                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.` +
+                  (include_shelved ? "" : `\n${SHELF_HINT}`),
               },
             ],
           };
@@ -747,15 +820,17 @@ function buildServer(): McpServer {
 
         const { data } = await supabase
           .from("thoughts")
-          .select("metadata, created_at")
+          .select("metadata, created_at, shelved")
           .order("created_at", { ascending: false });
 
+        let shelved = 0;
         const types: Record<string, number> = {};
         const topics: Record<string, number> = {};
         const people: Record<string, number> = {};
 
         for (const r of data || []) {
           const m = (r.metadata || {}) as Record<string, unknown>;
+          if ((r as { shelved?: boolean }).shelved) shelved++;
           if (m.type) types[m.type as string] = (types[m.type as string] || 0) + 1;
           if (Array.isArray(m.topics))
             for (const t of m.topics) topics[t as string] = (topics[t as string] || 0) + 1;
@@ -769,7 +844,10 @@ function buildServer(): McpServer {
             .slice(0, 10);
 
         const lines: string[] = [
-          `Total thoughts: ${count}`,
+          `Total thoughts: ${count}` +
+            (shelved
+              ? ` (${(count ?? 0) - shelved} in the reading list, ${shelved} machine bookkeeping)`
+              : ""),
           `Date range: ${
             data?.length
               ? new Date(data[data.length - 1].created_at).toLocaleDateString() +
