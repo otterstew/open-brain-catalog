@@ -14,6 +14,19 @@ Every other design note describes one piece. This one describes the shape they
 make together. Keep it that way: **if a paragraph here could live in a piece's
 own note instead, it belongs there.**
 
+Two boundaries worth holding:
+
+- **Against the changelog.** The changelog says what moved; the portfolio says
+  what exists and why it is worth having. A bug fix is a changelog entry and
+  nothing more. It reaches the portfolio only when it changes what a piece *is*,
+  or when it is a measured defect worth admitting to a reader.
+- **Against the published page.** The note at
+  https://claude.ai/code/artifact/3d0a0c83-a91d-45ec-a569-152495d1a9c2 is
+  derived from this note and does not update itself. It deliberately omits the
+  note ids, the personal hostname and the paragraph framing the system as
+  evidence for a role application. Never republish it as a side effect of
+  revising the note — say the page is behind, and let Stewart decide.
+
 ## First, read it
 
 ```
@@ -74,8 +87,10 @@ diagnose from.
 
 - **Does each maturity claim still hold?** "In daily use" ages badly. If a piece
   has not been used in a month, say so rather than leaving the old word.
-- **Is *the gap to close next* still the real gap?** As of 22 Aug 2026 it is the
-  task manager, which has no design note of its own.
+- **Is *the gap to close next* still the real gap?** As of 1 Sep 2026 it is the
+  measured retrieval defect: capture embeds only the first 24,000 characters of
+  a note and 39% of notes are longer, so about a quarter of the archive's text
+  cannot be found by meaning at all.
 - **Are the honest caveats intact?** The single shared key, no audit trail,
   external AI processing on capture, no retention schedule, no ethical walls,
   data residency. They are what makes the business section usable in front of
@@ -111,8 +126,16 @@ nobody is touching them.
 Its expected outcome most months is **no change**. That is a successful run, not
 a wasted one.
 
-**Its known weakness:** it was created from a remote session, which could not
-attach MCP connectors, so its sessions may wake without the `mcp__Open_Brain__*`
-tools and be unable to read the note at all. The routine is written to stop and
-say so rather than fail quietly. If a monthly run reports that, the fix is to
-add the Open Brain connector to the routine in the claude.ai Routines UI.
+**A warning that turned out to be false.** The routine was created from a remote
+session, where `create_trigger` refuses the `connectors` parameter, and it
+carried a caveat that its sessions might therefore wake without the
+`mcp__Open_Brain__*` tools. They do not: a scheduled diagnostic on 31 Aug 2026
+recorded `calendar OK, gmail OK, openbrain OK, supabase OK` into
+`life_engine_briefings`. Scheduled sessions inherit the account's connectors
+even though the trigger stores none. What they do *not* get is a computer:
+`remote-devices` was absent, so nothing scheduled can reach the Mac.
+
+**Its real weakness** is this skill's own reach. It is not on `main` and not on
+the Mac, so the routine has to be told which branch to find it on, and it never
+fires for work done in the archive itself. Merging the branch fixes half of
+that; the copy onto the Mac fixes the rest.
