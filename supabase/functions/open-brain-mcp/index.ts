@@ -33,50 +33,66 @@ type ThoughtRecord = {
 const CITATION_BASE_URL =
   Deno.env.get("OPEN_BRAIN_CITATION_BASE_URL") || "https://openbrain.local/thoughts";
 
-// The controlled vocabulary. It lives in topics.txt at the project root, which
-// tidy-archive.py reads to fold aliases — but an edge function has no project
-// root at runtime, so the preferred list is duplicated here.
+// The controlled vocabulary lives in public.topic_vocabulary and nowhere else.
 //
-// THE TWO COPIES WILL DRIFT, and the drift is invisible: tidy keeps folding
-// aliases from topics.txt, so the archive still looks tidy while the prompt
-// that decides what gets coined in the first place is the old one. Run
-// `python3 tidy-archive.py --check-vocab` after any vocabulary change; it
-// compares this list against topics.txt and prints the block to paste back.
-// Then redeploy — editing this file changes nothing until you do.
+// It used to live in two places — topics.txt at the archive project's root, and
+// a hardcoded list right here — and the comment that stood in this spot was a
+// warning about it: the copies drift, the drift is invisible, and the remedy
+// was to remember to run a checker after every change and paste a block back.
+// Nobody remembers that. Adding a topic is now one INSERT and takes effect on
+// the next capture.
 //
-// vocabulary:start (generated from topics.txt)
-const PREFERRED_TOPICS = [
-  "AI",
-  "AI Agents",
-  "AI Skills",
-  "AI tools",
-  "AI integration",
-  "Automation",
-  "Knowledge Management",
-  "Knowledge Work",
-  "Memory Systems",
-  "Productivity",
-  "Prompt Engineering",
-  "Technology",
-  "Token Management",
-  "Workflow",
-  "prompts",
-  "communication",
-  "Task management",
-  "Team Collaboration",
-  "Work Management",
-  "AI Solutions Manager",
-  "Career Development",
-  "job market",
-  "Intent Engineering",
-  "ChatGPT",
-  "Codex",
-  "Open Brain",
-  "Science",
-  "plants",
-  "chemical signalling"
-];
-// vocabulary:end
+// topics.txt is gone, and with it tidy-archive.py, which read it to fold tags
+// on the Mac. The nightly tidy_thought_tags job does that work in the database
+// now — over every note rather than whatever was on that disk, whether the Mac
+// is awake or not, and writing what it changed to topic_tidy_log so it can be
+// undone. Two things folding tags to two different lists is the drift this
+// whole arrangement exists to end, so there is exactly one now, and it is not
+// on anybody's laptop. The topic_vocabulary tool below is for reading the list
+// from outside the database; nothing out there writes tags any more.
+type Vocabulary = { preferred: string[]; collection: string[] };
+
+// Per isolate, briefly. Edge function isolates are short-lived, so this is at
+// most one small query a minute per live isolate, and an edit shows up in the
+// prompt within the minute rather than at the next deploy.
+const VOCAB_TTL_MS = 60_000;
+let vocabCache: Vocabulary | null = null;
+let vocabFetchedAt = 0;
+
+async function loadVocabulary(): Promise<Vocabulary> {
+  if (vocabCache && Date.now() - vocabFetchedAt < VOCAB_TTL_MS) return vocabCache;
+
+  const { data, error } = await supabase
+    .from("topic_vocabulary")
+    .select("topic, kind")
+    .order("position", { ascending: true })
+    .order("topic", { ascending: true });
+
+  if (error || !data) {
+    // Stale beats empty. An empty vocabulary silently turns the extractor loose
+    // to coin a fresh tag for everything, which is the exact drift this table
+    // exists to stop, and nothing would look broken until the tags were a mess
+    // again. Serving the last known good list keeps captures correct through a
+    // blip; only a cold isolate that has never read the table gets nothing.
+    console.warn("topic_vocabulary unavailable, using cached list:", error?.message);
+    return vocabCache || { preferred: [], collection: [] };
+  }
+
+  const rows = data as { topic: string; kind: string }[];
+  vocabCache = {
+    preferred: rows.filter((r) => r.kind === "preferred").map((r) => r.topic),
+    collection: rows.filter((r) => r.kind === "collection").map((r) => r.topic),
+  };
+  vocabFetchedAt = Date.now();
+  return vocabCache;
+}
+
+// "Reading", "Work" or "Projects" — the prompt reads better than a bare list.
+function quotedList(items: string[]): string {
+  const quoted = items.map((t) => `"${t}"`);
+  if (quoted.length < 2) return quoted.join("");
+  return quoted.slice(0, -1).join(", ") + " or " + quoted[quoted.length - 1];
+}
 
 
 // Prefer the note's real title. The extractor writes metadata.title on capture,
@@ -253,11 +269,40 @@ function extractLinksFromContent(content: string): ExtractedLink[] {
   return links;
 }
 
+// Some notes are written by the machine to keep track of itself — changelog
+// entries and work orders, 39 of the archive's 176 when the shelf was added.
+// They are real notes and they stay searchable, but they are not what anyone
+// opens the archive to read, and at a fifth of everything they crowd out what
+// is. `thoughts.shelved` is maintained by a trigger from the tags in
+// shelved_topics (see the tidy_tags_and_shelf migration), so the rule lives in
+// the database and no client re-implements it. Every tool that returns a LIST
+// hides them unless asked; fetch by id never does, because asking for a note by
+// its id is asking for that note.
+const SHELF_HINT =
+  "Machine bookkeeping (changelog entries, work orders) is hidden; pass include_shelved to see it.";
+
+// Which of these ids are shelved. Used where the rows come back from an RPC
+// that cannot filter on the column — the alternative, re-deriving the rule from
+// metadata in TypeScript, is a second copy of it that would drift.
+async function shelvedIds(ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const { data } = await supabase
+    .from("thoughts")
+    .select("id")
+    .in("id", ids)
+    .eq("shelved", true);
+  return new Set(((data || []) as { id: string }[]).map((r) => r.id));
+}
+
 // Vector search answers "what is this about"; it does not answer "which notes
 // contain this word". A generic term like "building" is about nothing in
 // particular, so it scores below any sensible threshold even when it appears in
 // eleven titles. This fills that gap by matching the literal text as well.
-async function keywordMatches(query: string, limit: number): Promise<ThoughtMatch[]> {
+async function keywordMatches(
+  query: string,
+  limit: number,
+  includeShelved = false
+): Promise<ThoughtMatch[]> {
   const cleaned = query.trim().replace(/[%_,()]/g, " ").trim();
   if (cleaned.length < 2) return [];
 
@@ -274,11 +319,13 @@ async function keywordMatches(query: string, limit: number): Promise<ThoughtMatc
   const columns = ["metadata->>title", "content", "metadata->>topics",
                    "metadata->>people", "metadata->>author", "metadata->>source_name"];
   for (const column of columns) {
-    const { data } = await supabase
+    let kq = supabase
       .from("thoughts")
       .select("id, content, metadata, created_at")
       .ilike(column, `%${lead}%`)
       .limit(50);
+    if (!includeShelved) kq = kq.eq("shelved", false);
+    const { data } = await kq;
     for (const row of (data || []) as ThoughtRecord[]) {
       if (seen.has(row.id)) continue;
       const meta = (row.metadata || {}) as Record<string, unknown>;
@@ -300,6 +347,20 @@ async function keywordMatches(query: string, limit: number): Promise<ThoughtMatc
 }
 
 async function extractMetadata(text: string): Promise<Record<string, unknown>> {
+  const vocab = await loadVocabulary();
+
+  // Wording unchanged from when the list was hardcoded — only its source moved.
+  // With no list at all (a cold isolate that could not reach the table) the
+  // reuse paragraph would be nonsense, so it is dropped rather than shown empty.
+  const topicsGuidance = [
+    vocab.preferred.length
+      ? `These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:\n${vocab.preferred.join(", ")}\nThe list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag.`
+      : `Tag the note for what it is actually about.`,
+    vocab.collection.length
+      ? `Never use ${quotedList(vocab.collection)}: those are collection tags, applied later from the source.`
+      : "",
+  ].filter(Boolean).join(" ");
+
   const r = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
     method: "POST",
     headers: {
@@ -321,9 +382,7 @@ async function extractMetadata(text: string): Promise<Record<string, unknown>> {
 - "published_date": the ORIGINAL publish date of the external piece being referenced, as YYYY-MM-DD (null if none is stated or this isn't referencing external content). This is different from when the user captured the note — only fill this in if a publish/posted date is explicitly stated or strongly implied in the text.
 - "action_items": array of implied to-dos (empty if none)
 - "dates_mentioned": array of dates YYYY-MM-DD (empty if none)
-- "topics": array of 1-3 short topic tags (always at least one). These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:
-${PREFERRED_TOPICS.join(", ")}
-The list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag. Never use "Reading", "Work" or "Projects": those are collection tags, applied later from the source.
+- "topics": array of 1-3 short topic tags (always at least one). ${topicsGuidance}
 - "type": one of "observation", "task", "idea", "reference", "person_note"
 Only extract what's explicitly there.`,
         },
@@ -381,19 +440,22 @@ function buildServer(): McpServer {
         const qEmb = await getEmbedding(query);
         const { data: vector, error } = await supabase.rpc("match_thoughts", {
           query_embedding: qEmb,
+          // Over-fetch: the shelved ones are dropped below, and asking for
+          // exactly ten would return six.
           match_threshold: 0.35,
-          match_count: 10,
+          match_count: 20,
           filter: {},
         });
 
-        const found = [...((vector || []) as ThoughtMatch[])];
+        const hidden = await shelvedIds(((vector || []) as ThoughtMatch[]).map((t) => t.id));
+        const found = ((vector || []) as ThoughtMatch[]).filter((t) => !hidden.has(t.id));
         if (found.length < 10) {
           const have = new Set(found.map((t) => t.id));
           for (const hit of await keywordMatches(query, 10 - found.length)) {
             if (!have.has(hit.id)) found.push(hit);
           }
         }
-        const data = found;
+        const data = found.slice(0, 10);
 
         if (error) {
           return {
@@ -497,6 +559,13 @@ function buildServer(): McpServer {
         query: z.string().describe("What to search for"),
         limit: z.number().optional().default(10),
         threshold: z.number().optional().default(0.35),
+        include_shelved: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Include the machine's own bookkeeping — changelog entries and work orders. Left out by default: they are a fifth of the archive and are not what anyone searches it to find. Pass true when the question is about the system's own history."
+          ),
         format: z
           .enum(["text", "full", "json"])
           .optional()
@@ -504,25 +573,35 @@ function buildServer(): McpServer {
           .describe("\"text\" (default) for a compact one-entry-per-match summary — title, type, topics, snippet and id. \"full\" for the complete text of every match (large; prefer fetch on a single id instead). \"json\" for a machine-parseable array of full thought objects (used by the Open Brain Catalog GUI)."),
       },
     },
-    async ({ query, limit, threshold, format }) => {
+    async ({ query, limit, threshold, format, include_shelved }) => {
       try {
         const qEmb = await getEmbedding(query);
         const { data: vector, error } = await supabase.rpc("match_thoughts", {
           query_embedding: qEmb,
           match_threshold: threshold,
-          match_count: limit,
+          // The RPC cannot filter on the shelved column, so ask for headroom
+          // and drop them here. Without it a search for a well-covered subject
+          // returns a short list padded with changelog entries.
+          match_count: include_shelved ? limit : limit * 2,
           filter: {},
         });
 
+        // Computed even when nothing is being hidden: format "json" labels each
+        // result, so the catalog can offer its own toggle without a second copy
+        // of the rule.
+        const hidden = await shelvedIds(((vector || []) as ThoughtMatch[]).map((t) => t.id));
+        const found = include_shelved
+          ? [...((vector || []) as ThoughtMatch[])]
+          : ((vector || []) as ThoughtMatch[]).filter((t) => !hidden.has(t.id));
+
         // Top up with literal matches so a plain keyword still finds its notes.
-        const found = [...((vector || []) as ThoughtMatch[])];
         if (found.length < limit) {
           const have = new Set(found.map((t) => t.id));
-          for (const hit of await keywordMatches(query, limit - found.length)) {
+          for (const hit of await keywordMatches(query, limit - found.length, include_shelved)) {
             if (!have.has(hit.id)) found.push(hit);
           }
         }
-        const data = found;
+        const data = found.slice(0, limit);
 
         if (error) {
           return {
@@ -546,6 +625,7 @@ function buildServer(): McpServer {
             content: t.content,
             created_at: t.created_at,
             similarity: t.similarity,
+            shelved: hidden.has(t.id),
             metadata: t.metadata || {},
           }));
           return { content: [{ type: "text" as const, text: JSON.stringify(items) }] };
@@ -559,7 +639,8 @@ function buildServer(): McpServer {
                 type: "text" as const,
                 text:
                   `Found ${data.length} thought(s):\n\n${lines.join("\n\n")}\n\n` +
-                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.`,
+                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.` +
+                  (!include_shelved && hidden.size ? `\n${SHELF_HINT}` : ""),
               },
             ],
           };
@@ -623,6 +704,13 @@ function buildServer(): McpServer {
         topic: z.string().optional().describe("Filter by topic tag"),
         person: z.string().optional().describe("Filter by person mentioned"),
         days: z.number().optional().describe("Only thoughts from the last N days"),
+        include_shelved: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Include the machine's own bookkeeping — changelog entries and work orders. Left out by default: they are a fifth of the archive and would fill a list of recent notes with the assistant talking about itself. Pass true to review what the system has been doing."
+          ),
         format: z
           .enum(["text", "full", "json"])
           .optional()
@@ -630,13 +718,18 @@ function buildServer(): McpServer {
           .describe("\"text\" (default) for a compact one-entry-per-note summary — title, type, topics, snippet and id. \"full\" for the complete text of every note (large; prefer fetch on a single id instead). \"json\" for a machine-parseable array of full thought objects (used by the Open Brain Catalog GUI)."),
       },
     },
-    async ({ limit, type, topic, person, days, format }) => {
+    async ({ limit, type, topic, person, days, format, include_shelved }) => {
       try {
         let q = supabase
           .from("thoughts")
-          .select("id, content, metadata, created_at")
+          .select("id, content, metadata, created_at, shelved")
           .order("created_at", { ascending: false })
           .limit(limit);
+
+        // In the query, not after it: filtering the page afterwards would let
+        // shelved rows eat the limit and return three notes where ten were
+        // asked for. thoughts_unshelved_recent_idx exists for exactly this.
+        if (!include_shelved) q = q.eq("shelved", false);
 
         if (type) q = q.contains("metadata", { type });
         if (topic) q = q.contains("metadata", { topics: [topic] });
@@ -665,10 +758,17 @@ function buildServer(): McpServer {
 
         if (format === "json") {
           const items = data.map(
-            (t: { id: string; content: string; metadata: Record<string, unknown>; created_at: string }) => ({
+            (t: {
+              id: string;
+              content: string;
+              metadata: Record<string, unknown>;
+              created_at: string;
+              shelved?: boolean;
+            }) => ({
               id: t.id,
               content: t.content,
               created_at: t.created_at,
+              shelved: !!t.shelved,
               metadata: t.metadata || {},
             })
           );
@@ -690,7 +790,8 @@ function buildServer(): McpServer {
                 type: "text" as const,
                 text:
                   `${data.length} recent thought(s):\n\n${lines.join("\n\n")}\n\n` +
-                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.`,
+                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.` +
+                  (include_shelved ? "" : `\n${SHELF_HINT}`),
               },
             ],
           };
@@ -747,15 +848,17 @@ function buildServer(): McpServer {
 
         const { data } = await supabase
           .from("thoughts")
-          .select("metadata, created_at")
+          .select("metadata, created_at, shelved")
           .order("created_at", { ascending: false });
 
+        let shelved = 0;
         const types: Record<string, number> = {};
         const topics: Record<string, number> = {};
         const people: Record<string, number> = {};
 
         for (const r of data || []) {
           const m = (r.metadata || {}) as Record<string, unknown>;
+          if ((r as { shelved?: boolean }).shelved) shelved++;
           if (m.type) types[m.type as string] = (types[m.type as string] || 0) + 1;
           if (Array.isArray(m.topics))
             for (const t of m.topics) topics[t as string] = (topics[t as string] || 0) + 1;
@@ -769,7 +872,10 @@ function buildServer(): McpServer {
             .slice(0, 10);
 
         const lines: string[] = [
-          `Total thoughts: ${count}`,
+          `Total thoughts: ${count}` +
+            (shelved
+              ? ` (${(count ?? 0) - shelved} in the reading list, ${shelved} machine bookkeeping)`
+              : ""),
           `Date range: ${
             data?.length
               ? new Date(data[data.length - 1].created_at).toLocaleDateString() +
@@ -1078,6 +1184,55 @@ function buildServer(): McpServer {
         let summary = `Backfilled ${updated}/${candidates.length} thought(s); ${foundSomething} had an author or source to extract.`;
         if (errors.length) summary += `\n${errors.length} error(s):\n` + errors.join("\n");
         return { content: [{ type: "text" as const, text: summary }] };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // The vocabulary, for anything that needs to read it without reaching the
+  // database directly. Nothing does today — tidy-archive.py, which used to,
+  // was retired once the nightly job took over folding — but a list this
+  // central should be readable by a script that has the access key and no
+  // database credentials, rather than only by copying it out again.
+  server.registerTool(
+    "topic_vocabulary",
+    {
+      title: "Topic Vocabulary",
+      description:
+        "The controlled vocabulary: the topic tags the capture extractor is told to reuse, and the collection tags it is told never to guess. This table is the single source of truth — the capture prompt reads it at runtime, so a change here takes effect on the next capture with no redeploy. Read-only; add or retire a term with one INSERT or DELETE on public.topic_vocabulary.",
+      annotations: {
+        readOnlyHint: true,
+      },
+      inputSchema: {
+        format: z
+          .enum(["text", "json"])
+          .optional()
+          .default("text")
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...]} — use this when a script is going to write the list to a file."),
+      },
+    },
+    async ({ format }) => {
+      try {
+        const vocab = await loadVocabulary();
+        if (format === "json") {
+          return { content: [{ type: "text" as const, text: JSON.stringify(vocab) }] };
+        }
+        const lines = [
+          `Preferred topics (${vocab.preferred.length}), in the order the extractor is shown them:`,
+          ...vocab.preferred.map((t) => `  ${t}`),
+        ];
+        if (vocab.collection.length) {
+          lines.push(
+            "",
+            `Collection tags (${vocab.collection.length}) — applied later from the source, never guessed at capture:`,
+            ...vocab.collection.map((t) => `  ${t}`)
+          );
+        }
+        return { content: [{ type: "text" as const, text: lines.join("\n") }] };
       } catch (err: unknown) {
         return {
           content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
