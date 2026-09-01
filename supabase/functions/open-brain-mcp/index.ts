@@ -729,7 +729,27 @@ function buildServer(): McpServer {
         // In the query, not after it: filtering the page afterwards would let
         // shelved rows eat the limit and return three notes where ten were
         // asked for. thoughts_unshelved_recent_idx exists for exactly this.
-        if (!include_shelved) q = q.eq("shelved", false);
+        let hideShelved = !include_shelved;
+
+        // Naming a shelved topic is asking for those notes, the same way
+        // fetching by id is asking for that note. Without this,
+        // list_thoughts(topic: "Changelog") answers "No thoughts found." about
+        // thirty-five notes that plainly exist — the shelf is there to stop
+        // bookkeeping crowding a general list, not to deny it exists when
+        // somebody asks for it by name.
+        //
+        // The whole table is read and compared here rather than matched in the
+        // query: it holds two rows, and an ilike on caller-supplied text would
+        // need % and _ escaped to avoid a topic quietly matching the wrong row.
+        if (hideShelved && topic) {
+          const { data: shelf } = await supabase.from("shelved_topics").select("topic");
+          const asked = topic.trim().toLowerCase();
+          if (((shelf || []) as { topic: string }[]).some((r) => r.topic.toLowerCase() === asked)) {
+            hideShelved = false;
+          }
+        }
+
+        if (hideShelved) q = q.eq("shelved", false);
 
         if (type) q = q.contains("metadata", { type });
         if (topic) q = q.contains("metadata", { topics: [topic] });
@@ -791,7 +811,7 @@ function buildServer(): McpServer {
                 text:
                   `${data.length} recent thought(s):\n\n${lines.join("\n\n")}\n\n` +
                   `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.` +
-                  (include_shelved ? "" : `\n${SHELF_HINT}`),
+                  (hideShelved ? `\n${SHELF_HINT}` : ""),
               },
             ],
           };
