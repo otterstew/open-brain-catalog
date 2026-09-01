@@ -40,8 +40,16 @@ const CITATION_BASE_URL =
 // warning about it: the copies drift, the drift is invisible, and the remedy
 // was to remember to run a checker after every change and paste a block back.
 // Nobody remembers that. Adding a topic is now one INSERT and takes effect on
-// the next capture. topics.txt, where it still exists, is a cache of the table;
-// the topic_vocabulary tool below is how anything outside the database reads it.
+// the next capture.
+//
+// topics.txt is gone, and with it tidy-archive.py, which read it to fold tags
+// on the Mac. The nightly tidy_thought_tags job does that work in the database
+// now — over every note rather than whatever was on that disk, whether the Mac
+// is awake or not, and writing what it changed to topic_tidy_log so it can be
+// undone. Two things folding tags to two different lists is the drift this
+// whole arrangement exists to end, so there is exactly one now, and it is not
+// on anybody's laptop. The topic_vocabulary tool below is for reading the list
+// from outside the database; nothing out there writes tags any more.
 type Vocabulary = { preferred: string[]; collection: string[] };
 
 // Per isolate, briefly. Edge function isolates are short-lived, so this is at
@@ -1185,10 +1193,11 @@ function buildServer(): McpServer {
     }
   );
 
-  // The vocabulary, for anything that cannot reach the database directly —
-  // chiefly tidy-archive.py on the Mac, which folded aliases from its own
-  // topics.txt and so kept a second original. It can now read the list from
-  // here and treat the file as a cache.
+  // The vocabulary, for anything that needs to read it without reaching the
+  // database directly. Nothing does today — tidy-archive.py, which used to,
+  // was retired once the nightly job took over folding — but a list this
+  // central should be readable by a script that has the access key and no
+  // database credentials, rather than only by copying it out again.
   server.registerTool(
     "topic_vocabulary",
     {
