@@ -2089,6 +2089,93 @@ function buildServer(): McpServer {
     }
   );
 
+  // Tool 19: Sweep Unfiled Tasks
+  //
+  // The sweep itself is a Postgres function on a nightly pg_cron schedule, not
+  // anything this server drives — see the 20260823 migration for why. This tool
+  // exists so the sweep can be looked at rather than only trusted: run it dry to
+  // see what tonight would file, or run it now instead of waiting for 05:30.
+  server.registerTool(
+    "sweep_unfiled_tasks",
+    {
+      title: "Sweep Unfiled Tasks",
+      description:
+        "File any captured note the extractor typed as a task but which never became a task. This normally runs itself overnight; call it to see what is waiting (dry_run) or to file it now rather than waiting. Each note is considered once and then ledgered, so deleting a task it filed is a decision that sticks — the sweep will not put it back.",
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+      },
+      inputSchema: {
+        dry_run: z
+          .boolean()
+          .optional()
+          .describe("Report what would be filed without filing it or writing anything down. Nothing is ledgered, so a dry run can be repeated and the real sweep still does the same work afterwards."),
+        limit: z.number().optional().describe("Maximum notes to consider in one pass (default 25)"),
+      },
+    },
+    async ({ dry_run, limit }) => {
+      try {
+        const { data, error } = await supabase.rpc("sweep_unfiled_tasks", {
+          p_dry_run: dry_run ?? false,
+          p_limit: limit ?? 25,
+        });
+
+        if (error) {
+          return {
+            content: [{ type: "text" as const, text: `Could not run the sweep: ${error.message}` }],
+            isError: true,
+          };
+        }
+
+        type SweepRow = {
+          thought_id: string;
+          outcome: string;
+          task_id: string | null;
+          title: string | null;
+          defer_until: string | null;
+        };
+        const rows = (data ?? []) as SweepRow[];
+        const filed = rows.filter((r) => r.outcome === "filed");
+        const seen = rows.filter((r) => r.outcome === "already_filed");
+
+        // Nothing to file is the expected answer on most nights, so it gets a
+        // sentence of its own rather than an empty list that reads like a fault.
+        if (!rows.length) {
+          return {
+            content: [{ type: "text" as const, text: "Nothing to file — every captured task has already been through the sweep." }],
+          };
+        }
+
+        const verb = dry_run ? "Would file" : "Filed";
+        const lines = filed.map((r) => {
+          const when = r.defer_until ? `, hidden until ${r.defer_until}` : "";
+          const id = r.task_id ? ` [id: ${r.task_id}]` : "";
+          return `- ${r.title}${when}${id}\n  from note ${r.thought_id}`;
+        });
+
+        const parts: string[] = [];
+        parts.push(filed.length ? `${verb} ${filed.length} task(s):\n${lines.join("\n")}` : `${verb} nothing.`);
+        if (seen.length) {
+          parts.push(`${seen.length} note(s) already had a task and were left alone.`);
+        }
+        if (dry_run) {
+          parts.push("Dry run — nothing was written.");
+        }
+
+        return {
+          content: [{ type: "text" as const, text: parts.join("\n\n") }],
+        };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
   return server;
 }
 
