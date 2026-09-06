@@ -5029,6 +5029,12 @@ const TASK_STATUS_LABELS = {
 const RECUR_HINT = "daily · weekly · fortnightly · monthly · quarterly · yearly · " +
                    "weekdays · every 3 days · every 2 weeks · every tuesday";
 
+// The date fields' formats belong in the hint, not the placeholder: grey example
+// text sitting inside an empty box reads as a value the app has filled in, and
+// "friday, 1 Sep, 2026-09-01" read as one date — a Friday the 1st of September.
+// The placeholders now say what empty means, the way "Hide until" always did.
+const DATE_HINT = "friday · tomorrow · 1 Sep · 2026-09-01";
+
 function daysBetween(fromISO, toISO) {
   const a = Date.parse(fromISO + 'T00:00:00Z');
   const b = Date.parse(toISO + 'T00:00:00Z');
@@ -5418,8 +5424,8 @@ function selectTask(t) {
       </div>
 
       <div class="task-row-fields">
-        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'friday, 1 Sep, 2026-09-01', '', true)}
-        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'nothing to do before then', '', true)}
+        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'no due date', DATE_HINT, true)}
+        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'not hidden', DATE_HINT, true)}
       </div>
 
       <div class="task-row-fields">
