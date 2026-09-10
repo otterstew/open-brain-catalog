@@ -1,0 +1,164 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Life Engine</title>
+<style>
+  :root{
+    --paper: #16140F;
+    --panel: #1E1A12;
+    --ink: #E9DFC7;
+    --ink-dim: #A79A7D;
+    --ink-faint: #766B54;
+    --brass: #C9A227;
+    --hairline: rgba(232,223,200,0.13);
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-body: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
+  }
+  *{ box-sizing: border-box; }
+  body{
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 17px;
+    line-height: 1.65;
+  }
+  main{
+    max-width: 44rem;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 5rem;
+  }
+  h1{
+    font-family: var(--font-display);
+    font-size: 2rem;
+    line-height: 1.2;
+    margin: 0 0 .35rem;
+  }
+  h2{
+    font-family: var(--font-display);
+    font-size: 1.2rem;
+    margin: 2.5rem 0 .6rem;
+    padding-top: 1.2rem;
+    border-top: 1px solid var(--hairline);
+  }
+  .updated{ color: var(--ink-faint); font-size: .9rem; margin-bottom: 2rem; }
+  p, li{ color: var(--ink-dim); }
+  strong{ color: var(--ink); font-weight: 600; }
+  a{ color: var(--brass); }
+  ul{ padding-left: 1.2rem; }
+  li{ margin-bottom: .4rem; }
+  .callout{
+    background: var(--panel);
+    border-left: 3px solid var(--brass);
+    padding: 1rem 1.2rem;
+    margin: 1.5rem 0;
+    border-radius: 0 4px 4px 0;
+  }
+  footer{
+    margin-top: 3rem; padding-top: 1.2rem;
+    border-top: 1px solid var(--hairline);
+    color: var(--ink-faint); font-size: .9rem;
+  }
+</style>
+</head>
+<body>
+<main>
+
+<h1>Privacy Policy — Life Engine</h1>
+<p class="updated">Last updated: 10 September 2026</p>
+
+<p><strong>Life Engine</strong> is a personal automation run by one individual,
+Stewart Morpurgo, for his own use only. It is not a product, it is not offered
+to other people, and it has no users other than its operator. It reads his own
+Google account to assemble a short daily briefing and sends it to him on
+Telegram.</p>
+
+<div class="callout">
+  <p style="margin:0"><strong>In one sentence:</strong> this application reads
+  the operator's own calendar and a narrow slice of his own mailbox, uses them
+  to write him a daily message, and shares that data with no one.</p>
+</div>
+
+<h2>What Google data it accesses</h2>
+<p>Life Engine requests two Google scopes, both <strong>read-only</strong>. It
+never creates, edits or deletes anything in the Google account.</p>
+<ul>
+  <li><strong><code>calendar.readonly</code></strong> — reads events on the
+  operator's work, personal and holiday-rental calendars for the current day,
+  to list what is happening and to detect when a rental guest is due to arrive
+  or leave.</li>
+  <li><strong><code>gmail.readonly</code></strong> — searches only for booking
+  correspondence from the holiday-letting agency (messages from
+  <code>homeaway.com</code> senders), to recover a guest's name and, where
+  present, a contact number, so a reminder can say who is arriving and where.
+  No other mail is read, and no mail is read for any other purpose.</li>
+</ul>
+
+<h2>How the data is used</h2>
+<p>Event titles, times, and the guest details described above are assembled
+into a short briefing and sent to the operator's own Telegram account. That is
+the only use. The data is not analysed for any other purpose, not used to build
+a profile, and not used for advertising.</p>
+
+<h2>Where it is stored</h2>
+<p>Calendar and mail contents are read at the moment a briefing is assembled
+and are not retained wholesale. What is stored is limited to:</p>
+<ul>
+  <li>the text of briefings that were sent, so the same thing is not sent twice;</li>
+  <li>rental booking records — guest name, property, arrival and departure
+  dates, and a contact number when one was found — so reminders are not
+  repeated or missed.</li>
+</ul>
+<p>This is held in a private Supabase (PostgreSQL) database hosted in the
+United Kingdom, accessible only to the operator.</p>
+
+<h2>Who else sees it</h2>
+<p>Nothing is sold, and nothing is shared with any third party for their own
+purposes. Data passes through exactly three service providers, each acting only
+to deliver this application's function:</p>
+<ul>
+  <li><strong>Supabase</strong> — hosts the database and the code that runs.</li>
+  <li><strong>Anthropic</strong> — the briefing text is drafted by the Claude
+  API from the assembled summary. Under Anthropic's commercial terms this
+  content is not used to train models.</li>
+  <li><strong>Telegram</strong> — delivers the finished message to the
+  operator.</li>
+</ul>
+
+<h2>Limited Use disclosure</h2>
+<p>Life Engine's use and transfer of information received from Google APIs
+adheres to the
+<a href="https://developers.google.com/terms/api-services-user-data-policy">Google
+API Services User Data Policy</a>, including the Limited Use requirements.
+Specifically: Google user data is used only to provide the briefing described
+above, is not transferred to others except as needed to provide that function,
+is not used for advertising, and is not read by humans other than the operator
+whose account it is.</p>
+
+<h2>Retention and deletion</h2>
+<p>Briefing and booking records are kept only while they remain useful and can
+be deleted by the operator at any time. Access can be withdrawn at any moment
+from
+<a href="https://myaccount.google.com/permissions">Google Account permissions</a>,
+which immediately and permanently ends this application's ability to read
+anything; any stored records can be deleted at the same time on request.</p>
+
+<h2>Security</h2>
+<p>Credentials are held as encrypted secrets in the hosting platform and are
+never stored in the source code or in the public repository. All connections to
+Google, Supabase, Anthropic and Telegram use HTTPS.</p>
+
+<h2>Contact</h2>
+<p>Questions about this policy or the data it describes:
+<a href="mailto:stewart.morpurgo@gmail.com">stewart.morpurgo@gmail.com</a>.</p>
+
+<footer>
+  Life Engine is a personal project. It has no company behind it, no revenue,
+  and no users but its author.
+</footer>
+
+</main>
+</body>
+</html>
