@@ -1472,7 +1472,30 @@
      the mode switch toggles, so grant them the specificity to actually go. */
   .refresh-btn[hidden],
   .facet-bar[hidden],
+  .chip-row[hidden],
+  .journal-row[hidden],
   .search-row[hidden] { display: none; }
+
+  /* ---------- journal ----------
+     A journal entry is a note tagged Journal. The view is that tag read as a
+     diary: newest first, by month, with today's entry one tap away. */
+
+  .journal-row {
+    display: flex;
+    gap: 8px;
+  }
+  .journal-row .task-btn { padding: 9px 12px; }
+  .journal-row #journalToday { flex: 1; }
+
+  .journal-row-sub {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    margin-top: 3px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 
   /* ---------- tasks ----------
      The drawer shows one of two things: the archive, or the list of what needs
@@ -1848,6 +1871,7 @@
 
       <div class="mode-row" id="modeRow">
         <button class="mode-btn" id="modeNotes" type="button" aria-pressed="true">Notes</button>
+        <button class="mode-btn" id="modeJournal" type="button" aria-pressed="false">Journal</button>
         <button class="mode-btn" id="modeTasks" type="button" aria-pressed="false">
           Tasks<span class="mode-n" id="modeTasksN"></span>
         </button>
@@ -1861,6 +1885,12 @@
       <div class="search-row" id="taskAddRow" hidden>
         <input class="search-input" id="taskAddInput" type="text"
                placeholder="Add a task…  #project  due:friday" />
+      </div>
+
+      <div class="journal-row" id="journalRow" hidden>
+        <button class="task-btn" id="journalToday" type="button">Today’s entry</button>
+        <button class="task-btn ghost" id="journalTemplateBtn" type="button"
+                title="The headings every new entry starts with">Template</button>
       </div>
 
       <div class="chip-row" id="chipRow"></div>
@@ -1956,6 +1986,10 @@ let showShelved = false;
 try { showShelved = localStorage.getItem('ob.showShelved') === '1'; } catch (e) { /* storage blocked */ }
 
 let displayed = [];     // currently shown (after search/filter)
+// The journal is fetched by its tag rather than taken from allThoughts, which
+// holds only the latest hundred notes — a year of entries would fall off it.
+let allJournal = [];         // entries, newest day first
+let journalTemplate = null;  // the note titled "Journal template", once written
 let activeTypes = new Set();
 let activeTopics = new Set(); // normalized (lowercased) topic strings
 let activeAuthors = new Set(); // normalized (lowercased) author strings
@@ -2234,7 +2268,9 @@ function parseJsonThoughts(text) {
 }
 
 function findThought(id) {
-  return allThoughts.find(t => t.id === id) || null;
+  return allThoughts.find(t => t.id === id)
+    || allJournal.find(t => t.id === id)
+    || (journalTemplate && journalTemplate.id === id ? journalTemplate : null);
 }
 
 function renderChips() {
@@ -2483,6 +2519,10 @@ function applyFilters() {
 }
 
 function renderList(items, isSearch) {
+  // Everything that refreshes the drawer comes through here, so in journal mode
+  // this is where it turns back into the journal — and leaves the note list's
+  // own state alone for when you switch back.
+  if (viewMode === 'journal') { renderJournalList(); return; }
   displayed = items;
   displayed.baseResults = isSearch ? displayed.baseResults : items;
   listScroll.innerHTML = '';
@@ -2532,6 +2572,7 @@ function renderList(items, isSearch) {
 // Shared by both the author and source field-value clicks in the detail
 // view — exits any active search and narrows the drawer to just that value.
 function filterToSingleValue(setRef, value) {
+  if (viewMode !== 'notes') setViewMode('notes');
   searchMode = false;
   lastSearchQuery = '';
   searchInput.value = '';
@@ -2800,6 +2841,7 @@ function selectThought(t, mark) {
 
   main.querySelectorAll('[data-person]').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (viewMode !== 'notes') setViewMode('notes');
       searchMode = false;
       lastSearchQuery = '';
       searchInput.value = '';
@@ -2814,6 +2856,7 @@ function selectThought(t, mark) {
 
   main.querySelectorAll('[data-topic]').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (viewMode !== 'notes') setViewMode('notes');
       searchMode = false;
       lastSearchQuery = '';
       searchInput.value = '';
@@ -3466,13 +3509,19 @@ function showEmptyState() {
   main.innerHTML = `
     <div class="empty-state">
       <div class="glyph">§</div>
-      <p>Select a card from the drawer to read it.</p>
+      <p>${viewMode === 'journal'
+        ? 'Pick a day from the drawer, or start today’s entry.'
+        : 'Select a card from the drawer to read it.'}</p>
     </div>
   `;
   app.classList.remove('detail-open');
 }
 
-function showComposer(prefill, parentId) {
+// opts (all optional): label, title and tags to start with, focusBody to put the
+// caret in the text, openAfter to open the note once saved, intro for a line of
+// guidance in the status slot. The journal uses these; a plain new note uses none.
+function showComposer(prefill, parentId, opts) {
+  opts = opts || {};
   selectedIndex = null;
   editingId = null;
   closeReference();
@@ -3484,14 +3533,14 @@ function showComposer(prefill, parentId) {
     <div class="index-card">
       <div class="index-card-ribbon" style="background:var(--brass)"></div>
       <div class="index-card-head">
-        <span class="index-card-type" style="color:var(--brass)">New thought${parentId ? ' · linked' : ''}</span>
+        <span class="index-card-type" style="color:var(--brass)">${escapeHtml(opts.label || 'New thought')}${parentId ? ' · linked' : ''}</span>
       </div>
       <div class="edit-field-list">
-        <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="composeTitle" type="text" placeholder="blank — worked out from the text" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="composeTitle" type="text" placeholder="blank — worked out from the text" value="${escapeAttr(opts.title || '')}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="composeAuthor" type="text" value="${escapeAttr(SELF_AUTHOR)}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="composePublished" type="text" placeholder="dd/mm/yyyy" value="${escapeAttr(formatDateInput(todayISO()))}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="composeSource" type="text" placeholder="blank — worked out from the text" /></div>
-        <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="composeTags" type="text" placeholder="comma, separated — blank to suggest them after saving" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="composeTags" type="text" placeholder="comma, separated — blank to suggest them after saving" value="${escapeAttr((opts.tags || []).join(', '))}" /></div>
         <div class="edit-field-row edit-tag-suggest">
           <span class="edit-field-label"></span>
           <div class="edit-tag-suggest-body">
@@ -3562,7 +3611,16 @@ function showComposer(prefill, parentId) {
     if (statusEl.textContent === DATE_HINT) setStatus('', '');
   });
 
-  field('composeTitle').focus();
+  if (opts.focusBody) {
+    // Straight to the first prompt, ready to answer it.
+    const firstPrompt = /:[ \t]*$/m.exec(textEl.value);
+    const at = firstPrompt ? firstPrompt.index + firstPrompt[0].length : textEl.value.length;
+    textEl.focus();
+    textEl.setSelectionRange(at, at);
+  } else {
+    field('composeTitle').focus();
+  }
+  if (opts.intro) setStatus(opts.intro, 'var(--ink-faint)');
 
   cancelBtn.addEventListener('click', () => { if (leave()) showEmptyState(); });
 
@@ -3638,7 +3696,7 @@ function showComposer(prefill, parentId) {
     setTimeout(async () => {
       showEmptyState();
       await loadAll();
-      const open = findThought(extraFailed ? savedId : parentId);
+      const open = findThought(extraFailed || opts.openAfter ? savedId : parentId);
       if (open) selectThought(open);
       // Tags typed in were a decision already made. The confirmation step is
       // only for the extractor's guesses — which read the text with no idea
@@ -3688,6 +3746,9 @@ async function loadAll() {
     activeSources = new Set();
     activePeople = new Set();
     applyFilters();
+    // Saving, editing and deleting all end in loadAll; in the journal the entry
+    // just changed has to be re-read too, or it reopens with the old text.
+    if (viewMode === 'journal') await (journalReady = loadJournal());
   } catch (err) {
     showStatus('Could not reach the archive — ' + err.message, true, loadAll);
   }
@@ -3798,6 +3859,7 @@ refreshBtn.addEventListener('click', () => {
   refreshBtn.classList.add('spinning');
   setTimeout(() => refreshBtn.classList.remove('spinning'), 700);
   if (viewMode === 'tasks') loadTasks(true);
+  else if (viewMode === 'journal') journalReady = loadJournal();
   else if (searchMode) runSearch(lastSearchQuery);
   else loadAll();
 });
@@ -5114,7 +5176,7 @@ function parseQuickAdd(raw, today) {
    share the shell and the access key and nothing else: a note is found by
    meaning, a task by when it is due. */
 
-let viewMode = 'notes';        // 'notes' | 'tasks'
+let viewMode = 'notes';        // 'notes' | 'journal' | 'tasks'
 let allTasks = [];
 let selectedTaskId = null;
 let taskFilter = 'open';       // 'open' | 'inbox' | 'next' | 'waiting' | 'done'
@@ -5689,7 +5751,179 @@ function wireTaskDetail(t) {
   });
 }
 
-// ---------- switching between the two ----------
+/* ---------- journal ----------
+   An entry is an ordinary note tagged Journal, so search, links and editing all
+   work on it unchanged; this is only a way of reading that tag as a diary. One
+   entry a day: "Today's entry" opens the one that exists rather than filing a
+   second, so you can come back and add to it. Which day an entry belongs to is
+   its Published date, not its title, because the title can be edited. */
+
+const JOURNAL_TOPIC = 'Journal';
+const JOURNAL_TEMPLATE_TITLE = 'Journal template';
+
+// Used until a "Journal template" note exists. The template lives in the
+// archive rather than this browser so a heading added on the phone is there on
+// the laptop too. The body is plain text — the catalog does not render markdown.
+const DEFAULT_JOURNAL_TEMPLATE = [
+  'Exercise',
+  'What I did: ',
+  'How long: ',
+  'How it felt: ',
+  '',
+  'Meditation',
+  'How long: ',
+  'Notes: ',
+  '',
+  'Emotions',
+  'What came up: ',
+  'The situation: ',
+  'How I handled it: ',
+  'What I’d do differently: ',
+].join('\n');
+
+let journalLoaded = false;
+let journalReady = Promise.resolve();
+
+function journalDate(t) {
+  return t.published_date || (t.created_at || '').slice(0, 10);
+}
+
+function isJournalTemplate(t) {
+  return (t.title || '').trim().toLowerCase() === JOURNAL_TEMPLATE_TITLE.toLowerCase();
+}
+
+async function loadJournal() {
+  if (!journalLoaded) showStatus('Opening the journal…', false);
+  try {
+    const text = await callTool('list_thoughts', { topic: JOURNAL_TOPIC, limit: 1000, format: 'json' });
+    const notes = parseJsonThoughts(text);
+    journalTemplate = notes.find(isJournalTemplate) || null;
+    allJournal = notes.filter(t => !isJournalTemplate(t)).sort((a, b) =>
+      journalDate(b).localeCompare(journalDate(a)) ||
+      String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    journalLoaded = true;
+    if (viewMode === 'journal') renderJournalList();
+  } catch (err) {
+    if (viewMode === 'journal') {
+      showStatus('Could not reach the archive — ' + err.message, true,
+        () => { journalReady = loadJournal(); });
+    }
+  }
+}
+
+function renderJournalList() {
+  listScroll.innerHTML = '';
+  if (!journalLoaded) return;
+
+  if (!allJournal.length) {
+    const status = document.createElement('div');
+    status.className = 'list-status';
+    status.textContent = 'No entries yet. Start with today’s.';
+    listScroll.appendChild(status);
+    return;
+  }
+
+  const today = todayISO();
+  const months = [];
+  allJournal.forEach(t => {
+    const d = new Date(journalDate(t) + 'T00:00:00Z');
+    const label = isNaN(d.getTime()) ? 'Undated'
+      : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    if (!months.length || months[months.length - 1].label !== label) months.push({ label, entries: [] });
+    months[months.length - 1].entries.push(t);
+  });
+
+  months.forEach(month => {
+    const head = document.createElement('div');
+    head.className = 'task-group';
+    head.innerHTML = `<span>${escapeHtml(month.label)}</span><span>${month.entries.length}</span>`;
+    listScroll.appendChild(head);
+
+    month.entries.forEach(t => {
+      const style = typeStyle(t.type);
+      const iso = journalDate(t);
+      const d = new Date(iso + 'T00:00:00Z');
+      const day = isNaN(d.getTime()) ? 'Undated'
+        : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+      // The body often repeats the title as its first line; the preview is for
+      // what the day was, not the date again.
+      let snippet = t.content.replace(/\s+/g, ' ').trim();
+      const title = (t.title || '').replace(/\s+/g, ' ').trim();
+      if (title && snippet.toLowerCase().startsWith(title.toLowerCase())) snippet = snippet.slice(title.length).trim();
+
+      const row = document.createElement('button');
+      row.className = 'card-row'
+        + (selectedIndex === t.id ? ' selected' : '')
+        + (referenceId === t.id ? ' referencing' : '');
+      row.innerHTML = `
+        <div class="card-row-tab" style="background:${style.color}"></div>
+        <div class="card-row-body">
+          <div class="card-row-meta">
+            <span class="card-row-type" style="color:${style.color}">${escapeHtml(day)}</span>
+            ${iso === today ? '<span class="card-row-date">today</span>' : ''}
+          </div>
+          <div class="card-row-preview">${escapeHtml(title || 'Journal ' + formatDateInput(iso))}</div>
+          ${snippet ? `<div class="journal-row-sub">${escapeHtml(snippet.slice(0, 160))}</div>` : ''}
+        </div>
+      `;
+      row.addEventListener('click', () => {
+        if (editingId && t.id !== editingId) openReference(t);
+        else if (!editingId) selectThought(t);
+      });
+      listScroll.appendChild(row);
+    });
+  });
+}
+
+// Waits for the list rather than guessing: deciding "no entry today" from a
+// journal that has not loaded yet is exactly how a second one gets filed.
+async function journalWhenReady() {
+  await journalReady;
+  if (!journalLoaded) {
+    showStatus('The journal has not loaded, so today’s entry cannot be checked for yet.', true,
+      () => { journalReady = loadJournal(); });
+    return false;
+  }
+  return true;
+}
+
+async function openTodaysJournal() {
+  if (!confirmLeavingEdit()) return;
+  if (!(await journalWhenReady())) return;
+  const today = todayISO();
+  const existing = allJournal.find(t => journalDate(t) === today);
+  if (existing) {
+    selectThought(existing);
+    startEdit(existing, existing.content.length);
+    return;
+  }
+  showComposer(journalTemplate ? journalTemplate.content : DEFAULT_JOURNAL_TEMPLATE, null, {
+    label: 'Journal entry',
+    title: 'Journal ' + formatDateInput(today),
+    tags: [JOURNAL_TOPIC],
+    focusBody: true,
+    openAfter: true,
+  });
+}
+
+async function openJournalTemplate() {
+  if (!confirmLeavingEdit()) return;
+  if (!(await journalWhenReady())) return;
+  if (journalTemplate) { selectThought(journalTemplate); return; }
+  showComposer(DEFAULT_JOURNAL_TEMPLATE, null, {
+    label: 'Journal template',
+    title: JOURNAL_TEMPLATE_TITLE,
+    tags: [JOURNAL_TOPIC],
+    focusBody: true,
+    openAfter: true,
+    intro: 'Every new entry starts with this text. Add or change headings, then save.',
+  });
+}
+
+document.getElementById('journalToday').addEventListener('click', openTodaysJournal);
+document.getElementById('journalTemplateBtn').addEventListener('click', openJournalTemplate);
+
+// ---------- switching between the three ----------
 
 function renderTaskFilters() {
   chipRow.innerHTML = '';
@@ -5711,19 +5945,24 @@ function renderTaskFilters() {
 
 function setViewMode(mode) {
   viewMode = mode;
+  const notes = mode === 'notes';
+  const journal = mode === 'journal';
   const tasks = mode === 'tasks';
 
-  document.getElementById('modeNotes').setAttribute('aria-pressed', String(!tasks));
+  document.getElementById('modeNotes').setAttribute('aria-pressed', String(notes));
+  document.getElementById('modeJournal').setAttribute('aria-pressed', String(journal));
   document.getElementById('modeTasks').setAttribute('aria-pressed', String(tasks));
-  document.getElementById('searchRow').hidden = tasks;
+  document.getElementById('searchRow').hidden = !notes;
   document.getElementById('taskAddRow').hidden = !tasks;
-  document.querySelector('.facet-bar').hidden = tasks;
-  if (tasks) document.getElementById('facetPanel').hidden = true;
+  document.getElementById('journalRow').hidden = !journal;
+  chipRow.hidden = journal;
+  document.querySelector('.facet-bar').hidden = !notes;
+  if (!notes) document.getElementById('facetPanel').hidden = true;
 
-  // The note-only header buttons have nothing to act on in task mode.
+  // The note-only header buttons have nothing to act on in the other two.
   ['newBtn', 'statsBtn', 'importBtn'].forEach(id => {
     const b = document.getElementById(id);
-    if (b) b.hidden = tasks;
+    if (b) b.hidden = !notes;
   });
 
   app.classList.remove('detail-open');
@@ -5733,6 +5972,10 @@ function setViewMode(mode) {
     renderTaskFilters();
     showTaskEmptyState();
     loadTasks(false);
+  } else if (journal) {
+    chipRow.innerHTML = '';
+    showEmptyState();
+    journalReady = loadJournal();
   } else {
     chipRow.innerHTML = '';
     renderChips();
@@ -5745,6 +5988,9 @@ function setViewMode(mode) {
 // go and look something up, come back, the writing is gone.
 document.getElementById('modeNotes').addEventListener('click', () => {
   if (viewMode !== 'notes' && confirmLeavingEdit()) setViewMode('notes');
+});
+document.getElementById('modeJournal').addEventListener('click', () => {
+  if (viewMode !== 'journal' && confirmLeavingEdit()) setViewMode('journal');
 });
 document.getElementById('modeTasks').addEventListener('click', () => {
   if (viewMode !== 'tasks' && confirmLeavingEdit()) setViewMode('tasks');
