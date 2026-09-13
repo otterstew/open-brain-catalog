@@ -107,13 +107,15 @@ because you cannot see it here.
 |---|---|
 | Catalog (PWA) | this repo — `index.html`, `sw.js`, `manifest.webmanifest` |
 | MCP server, tasks | this repo — `supabase/functions/open-brain-mcp/`, `supabase/migrations/` |
-| The four Open Brain skills | `~/Documents/open-brain/.claude/skills/` on the Mac |
+| The Open Brain skills, this one included | `~/Documents/open-brain/.claude/skills/` on the Mac |
 | Maintenance scripts | `~/Documents/open-brain/` on the Mac |
 | Life Engine | `~/.claude/skills/life-engine/` on the Mac, plus a launchd plist |
 | Every design note, and this portfolio | Open Brain itself |
 
-A copy of this skill belongs in `~/Documents/open-brain/.claude/skills/` too, so
-it fires during work done there and not only during work done in this repo.
+A copy of this skill lives in `~/Documents/open-brain/.claude/skills/` too, so it
+fires during work done there and not only during work done in this repo. That
+copy is a copy: **this one is the source of truth**, and if the two diverge, this
+is the one that is right.
 
 ## The monthly routine
 
@@ -135,7 +137,11 @@ recorded `calendar OK, gmail OK, openbrain OK, supabase OK` into
 even though the trigger stores none. What they do *not* get is a computer:
 `remote-devices` was absent, so nothing scheduled can reach the Mac.
 
-**Its real weakness** is this skill's own reach. It is not on `main` and not on
-the Mac, so the routine has to be told which branch to find it on, and it never
-fires for work done in the archive itself. Merging the branch fixes half of
-that; the copy onto the Mac fixes the rest.
+**Its real weakness used to be this skill's own reach**, and that is now fixed.
+Until 1 Sep 2026 the skill was neither on `main` nor on the Mac, so the routine
+had to be told which branch to find it on, and it never fired for work done in
+the archive itself — where most of the work happens. PR #5 merged it to `main`,
+and it was copied to `~/Documents/open-brain/.claude/skills/` the same day and
+confirmed firing there. The record of what that gap cost stands: the first real
+review, on 1 Sep 2026, found the portfolio note five weeks and sixty-five notes
+out of date, with six pieces never recorded at all.
