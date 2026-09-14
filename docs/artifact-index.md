@@ -118,3 +118,14 @@ title: Open Brain Deploy
 url: https://claude.ai/code/artifact/59adf5db-9481-4021-a6f7-ad3c2030ce4f
 review: yes
 summary: The runbook for pushing a catalog update live to GitHub Pages — the six files to upload, the checks to run after, and why the push itself needs a human hand.
+
+## entry
+id: two-sides
+title: Two Sides
+url: https://claude.ai/code/artifact/4b87b5b8-357f-4859-a638-d496277d1bc1
+audience: You, revising for the Azure AI Fundamentals exam
+role: The revision deck
+summary: A flashcard app for AI-901 revision — 25 cards across responsible AI, machine learning, vision, language, generative AI and document intelligence, graded Again or Got it.
+review: no
+use: Not pitch material. It is the groundwork that keeps the Microsoft vocabulary in the other documents accurate; run a round before a conversation with anyone technical on the Azure side.
+holds: The deck, grouped by exam area; a round that brings missed cards back; in-page editing. A card is only kept on every device once it is saved into the published page. Also served next to the catalog on the Open Brain site, which is public, so nothing private goes in it.
