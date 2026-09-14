@@ -111,3 +111,10 @@ role: The defect
 summary: 49 of 127 notes exceed the embedding cut and a quarter of the archive's text has no embedding at all — the measurement, and a scoped chunking fix.
 use: Not part of the Microsoft work at all. It is a live defect in the existing archive, found while writing about how retrieval works. Act on it when there is an evening for it, not before the sponsor email.
 holds: The measured numbers, why the loss falls on reference notes specifically, the chunk table and match function, the parameters, and the order to do it in so it stays reversible.
+
+## entry
+id: deploy-runbook
+title: Open Brain Deploy
+url: https://claude.ai/code/artifact/59adf5db-9481-4021-a6f7-ad3c2030ce4f
+review: yes
+summary: The runbook for pushing a catalog update live to GitHub Pages — the six files to upload, the checks to run after, and why the push itself needs a human hand.
