@@ -193,6 +193,11 @@
   .chip.active { color: var(--paper); border-color: transparent; }
   .chip:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
   .chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  /* Matches .facet-n, so a count reads the same wherever it appears. On an
+     active chip the background is the type colour, so the faint ink would
+     disappear into it. */
+  .chip .chip-n { color: var(--ink-faint); }
+  .chip.active .chip-n { color: var(--paper); opacity: 0.75; }
 
   .chip-group-label {
     font-family: var(--font-mono);
@@ -202,6 +207,10 @@
     color: var(--ink-faint);
     margin-top: 12px;
   }
+  .chip-group-label[hidden] { display: none; }
+  /* The label carries the gap above the row, so the row itself gives up its
+     own top margin rather than doubling it. */
+  .chip-group-label + .chip-row { margin-top: 6px; }
 
   .topic-chip-row {
     max-height: 96px;
@@ -1893,6 +1902,7 @@
                 title="The headings every new entry starts with">Template</button>
       </div>
 
+      <div class="chip-group-label" id="chipRowLabel" hidden>Kind of note</div>
       <div class="chip-row" id="chipRow"></div>
 
       <div class="facet-bar">
@@ -1900,11 +1910,13 @@
           <span>Topics</span><span class="facet-n" id="facetNTopics"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
-        <button class="facet-btn" id="facetBtnAuthors" type="button" aria-expanded="false">
-          <span>Authors</span><span class="facet-n" id="facetNAuthors"></span>
+        <button class="facet-btn" id="facetBtnAuthors" type="button" aria-expanded="false"
+                title="Who wrote the note. For notes ABOUT a person — an author note, say — use People.">
+          <span>Written by</span><span class="facet-n" id="facetNAuthors"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
-        <button class="facet-btn" id="facetBtnPeople" type="button" aria-expanded="false">
+        <button class="facet-btn" id="facetBtnPeople" type="button" aria-expanded="false"
+                title="Who the note is about or mentions. An author's own note lives here, not under Written by.">
           <span>People</span><span class="facet-n" id="facetNPeople"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
@@ -2273,17 +2285,36 @@ function findThought(id) {
     || (journalTemplate && journalTemplate.id === id ? journalTemplate : null);
 }
 
+// The kind-of-note filter. It predates the facet bar below it and had neither
+// a label nor a stable order, which made it read as decoration rather than as
+// a control — "show me every author note" was reachable only by knowing that
+// the Author topic tag happens to mirror the person_note type.
 function renderChips() {
-  const typesPresent = new Set(allThoughts.map(t => t.type || '__unfiled__'));
+  const counts = new Map();
+  allThoughts.forEach(t => {
+    const k = t.type || '__unfiled__';
+    counts.set(k, (counts.get(k) || 0) + 1);
+  });
   chipRow.innerHTML = '';
-  if (typesPresent.size <= 1) return;
-  typesPresent.forEach(t => {
+  const label = document.getElementById('chipRowLabel');
+  if (counts.size <= 1) { if (label) label.hidden = true; return; }
+  if (label) label.hidden = false;
+
+  // Fixed order. Deriving it from the notes meant a chip moved position
+  // whenever the newest note happened to be of a different kind, so the one
+  // you wanted was never in the same place twice.
+  const known = Object.keys(TYPE_STYLES).concat('__unfiled__');
+  const ordered = known.filter(k => counts.has(k))
+    .concat(Array.from(counts.keys()).filter(k => known.indexOf(k) === -1));
+
+  ordered.forEach(t => {
     const key = t === '__unfiled__' ? null : t;
     const style = typeStyle(key);
     const chip = document.createElement('button');
     chip.className = 'chip' + (activeTypes.has(t) ? ' active' : '');
     if (activeTypes.has(t)) chip.style.background = style.color;
-    chip.innerHTML = '<span class="dot" style="background:' + style.color + '"></span>' + style.label;
+    chip.innerHTML = '<span class="dot" style="background:' + style.color + '"></span>'
+      + style.label + '<span class="chip-n">' + counts.get(t) + '</span>';
     chip.addEventListener('click', () => {
       if (activeTypes.has(t)) activeTypes.delete(t); else activeTypes.add(t);
       applyFilters();
