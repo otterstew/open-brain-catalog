@@ -1139,7 +1139,7 @@ function buildServer(): McpServer {
     {
       title: "Backfill Author/Source Metadata",
       description:
-        "Maintenance tool: re-extracts \"author\" and \"source_name\"/\"source_url\" metadata for existing thoughts captured before those fields existed, without touching their existing type/topics/people/action_items. Safe to re-run — it only processes thoughts that don't already have author/source_name set (even to null), so it's a one-time catch-up rather than something that needs regular use.",
+        "Maintenance tool: re-extracts \"author\" and \"source_name\"/\"source_url\" metadata for existing thoughts that are missing them, without touching their existing type/topics/people/action_items. \"Missing\" means the field is absent OR explicitly null, so imports that write {\"author\": null} are picked up. It fills only the empty fields and never overwrites a value that is already set. Safe to re-run: each processed thought is stamped with \"author_backfilled_at\", and stamped thoughts are skipped, so a row the extractor genuinely found nothing in is not retried on every run.",
       annotations: {
         readOnlyHint: false,
         openWorldHint: false,
@@ -1160,7 +1160,21 @@ function buildServer(): McpServer {
 
         const candidates = (data || []).filter((t) => {
           const m = (t.metadata || {}) as Record<string, unknown>;
-          return m.author === undefined && m.source_name === undefined;
+          // A thought is a candidate when it has NEITHER author nor
+          // source_name — same rule as before. What changed is the test for
+          // "hasn't got one": missing means absent OR explicitly null. An
+          // import that writes {"author": null} leaves the key present, and
+          // the old check (=== undefined) skipped those rows permanently.
+          // Deliberately not "either field missing": a note with an author
+          // and no source is usually a note that never had one (a thought of
+          // your own, a policy document), and widening this would re-extract
+          // scores of them on every run for nothing.
+          const needsAuthor = m.author == null;
+          const needsSource = m.source_name == null;
+          if (!needsAuthor || !needsSource) return false;
+          // Idempotence: once a run has tried a row, don't try it again just
+          // because the extractor legitimately found nothing in it.
+          return m.author_backfilled_at === undefined;
         });
 
         if (!candidates.length) {
@@ -1168,7 +1182,7 @@ function buildServer(): McpServer {
             content: [
               {
                 type: "text" as const,
-                text: "Nothing to backfill — every thought already has author/source metadata (even if null).",
+                text: "Nothing to backfill — every thought either has author/source metadata or has already been through a backfill run.",
               },
             ],
           };
@@ -1188,10 +1202,20 @@ function buildServer(): McpServer {
             batch.map(async (t) => {
               try {
                 const extracted = (await extractMetadata(t.content)) as Record<string, unknown>;
-                const author = extracted.author ?? null;
-                const source_name = extracted.source_name ?? null;
-                const source_url = extracted.source_url ?? null;
-                const newMetadata = { ...(t.metadata || {}), author, source_name, source_url };
+                const m = (t.metadata || {}) as Record<string, unknown>;
+                // Fill only what is missing. Candidates have neither field
+                // today, so this is belt-and-braces — but it means widening
+                // the filter later cannot silently clobber a real value.
+                const author = m.author ?? extracted.author ?? null;
+                const source_name = m.source_name ?? extracted.source_name ?? null;
+                const source_url = m.source_url ?? extracted.source_url ?? null;
+                const newMetadata = {
+                  ...m,
+                  author,
+                  source_name,
+                  source_url,
+                  author_backfilled_at: new Date().toISOString(),
+                };
                 const { error: updErr } = await supabase
                   .from("thoughts")
                   .update({ metadata: newMetadata })
