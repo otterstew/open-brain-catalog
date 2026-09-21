@@ -15,7 +15,6 @@ the GUI go through exactly the same tool contract.
 | `supabase/functions/open-brain-mcp/tasks.ts` | Pure task/date logic, no network, no DB |
 | `supabase/migrations/` | Schema, applied in filename order |
 | `tests/` | Playwright tests driving the real page |
-| `docs/` | Design proposals — read before building the thing they describe |
 
 ## Two independent deploy targets
 
@@ -107,7 +106,7 @@ supabase db reset       # replays supabase/migrations/ from scratch
 ```
 
 Prefer that over applying a migration straight to the live project, which holds
-real notes and will soon hold real bookings. `db reset` replaying cleanly is
+real notes. `db reset` replaying cleanly is
 also the only proof that the migrations work on an empty database rather than
 only on the one they happened to be written against.
 
@@ -121,13 +120,3 @@ Imperative, specific, no prefixes or tags: *"Pin the tasks_touch search_path"*,
 controls in task mode"*. Say what changed and, when the reason is not obvious,
 why. Never put a model name or identifier in a commit message, PR, or code
 comment.
-
-## Work in progress
-
-`docs/vrbo-integration.md` and `docs/wishing-stream-plan.md` are **proposals, not
-descriptions** — none of it is built. They cover syncing Vrbo bookings in,
-generating the work each booking implies, a direct-booking site, and a CRM built
-from confirmed stays. Read the relevant one before implementing any of it; both
-contain constraints discovered the hard way (Vrbo's iCal feed carries no guest
-details, its off-platform booking policy, and the double-booking risk that comes
-with selling direct) that are not obvious from the code.
