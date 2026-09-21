@@ -28,6 +28,9 @@ which Vrbo already sends automatically. Separately you are building
 5. **Feed thewishingstream.com.** Turn one-off Vrbo guests into people who know
    your site exists. This one has a compliance ceiling — see below — and the
    design is built to respect it rather than route around it.
+6. **Sell direct.** thewishingstream.com will take bookings, which turns this
+   from an import into a two-way channel problem and makes preventing
+   double-bookings the highest-stakes requirement in the project.
 
 ## The constraint that shapes everything
 
@@ -57,6 +60,7 @@ So the goals divide:
 | Bookings → thoughts | **Partly.** You get a record with no one in it. |
 | Guest message drafting | **No.** Needs a name and a phone number. |
 | Feed thewishingstream.com | **No.** Needs a durable guest identity. |
+| Sell direct | **No.** Needs the reverse direction — a feed Vrbo imports. |
 
 The feed is therefore the **skeleton** — every booking's existence and dates —
 and there is one clear seam where **flesh** (guest identity, contact details,
@@ -336,6 +340,133 @@ Every run returns, and records, a short human-readable summary: per feed, how
 many events were seen, created, updated, cancelled, and skipped as ambiguous.
 Silence is not evidence a sync worked.
 
+## Direct bookings, and the only failure that costs you money
+
+Once thewishingstream.com takes bookings, this stops being an import and becomes
+a two-way channel problem. Two systems can now sell the same week, and nothing
+in the design so far prevents it.
+
+Double-booking a guest is not an inconvenience. On Vrbo it is a host-initiated
+cancellation, which carries penalties and damages the listing's standing; on
+your own site it is a refund and somebody's holiday. It is the one failure in
+this project that is worse than the project not existing, so the architecture is
+built around it first and everything else fits around that.
+
+### Availability has exactly one source of truth
+
+The `bookings` table. Every booking is a row whatever sold it, separated by
+`channel`:
+
+- `channel = 'vrbo'` — arrives by iCal import, as already designed.
+- `channel = 'direct'` — created by thewishingstream.com.
+
+Nothing else is allowed to hold an opinion about whether a week is free.
+
+### Pushing direct bookings back to Vrbo
+
+Vrbo must be told about direct bookings or it will keep selling them. The only
+mechanism available to an owner is the reverse of the import: **you publish an
+iCal feed and Vrbo subscribes to it.**
+
+```
+Vrbo listing  ──export ical──►  bookings  ──publish ical──►  Vrbo import
+                                (source of truth)
+```
+
+**The feed must contain only `channel = 'direct'` bookings.** This is not
+tidiness. Vrbo's own documentation warns that importing back the same calendar
+you export from can cause payment problems on those dates — and echoing Vrbo's
+bookings back at Vrbo is precisely that. The export is direct bookings and owner
+holds, never anything that came from Vrbo in the first place.
+
+Implementation notes that matter:
+
+- One feed per property, since Vrbo imports per listing.
+- The URL is a bearer credential exactly as the import URL is: it reveals booked
+  dates to anyone holding it. A random `export_token` per property, compared in
+  constant time, never logged.
+- **This needs a new route with different auth**, and that deserves care. The
+  edge function currently gates every path on `x-brain-key`; Vrbo's importer
+  cannot send a custom header. So `GET /ical/:token.ics` must be registered
+  *before* the `app.all("*")` catch-all — Hono matches in registration order —
+  and must be narrowly scoped: it serves one property's direct bookings as
+  `text/calendar` and can do nothing else. It is the only unauthenticated
+  surface in the system and should stay that way.
+- Emit `VEVENT`s with `VALUE=DATE` and an **exclusive `DTEND`**, matching the
+  convention being parsed on the way in. Getting this wrong on the export blocks
+  the wrong night on Vrbo.
+
+### The sync window is real, and it is about an hour
+
+Vrbo refreshes imported calendars roughly every 30 minutes and says imported
+events can take up to 20 more to appear. So a direct booking can remain invisible
+to Vrbo for the better part of an hour, and during that window Vrbo can sell the
+same dates. No iCal-based setup can close this gap; channel managers with real
+API access exist precisely because of it.
+
+Three honest options:
+
+1. **Request-to-book on the direct site.** The guest requests, you confirm.
+   Risk effectively disappears because nothing is sold until you look.
+   Costs conversion, and conversion is the whole point of the site.
+2. **Instant book, accept the window.** Best conversion. At four properties and
+   modest direct volume the collision probability is genuinely low — but it is
+   not zero, and the cost when it lands is a cancellation penalty.
+3. **Instant book with a confirmation delay.** The site takes the booking and
+   holds it as `pending` until the next successful Vrbo sync confirms no
+   conflict, then confirms by email — typically within the hour. Conversion of
+   instant book, most of the safety of request-to-book, at the cost of a guest
+   who is briefly unsure.
+
+**Recommendation: start at 1, move to 3 once the sync has been proven over real
+bookings.** Not 2, and not 3 on day one — option 3's safety depends entirely on
+the sync being reliable, and you do not know yet whether it is. Prove the
+machinery with request-to-book, where a sync bug costs you an awkward email
+rather than a cancelled holiday.
+
+### Two different guarantees for two different directions
+
+The asymmetry here is the point, and it is easy to get wrong by treating both
+channels the same.
+
+**A direct booking can be refused. A Vrbo booking has already happened.**
+
+So:
+
+- **Outbound (direct site):** availability is checked inside the insert
+  transaction, with a Postgres exclusion constraint as the backstop —
+  `EXCLUDE USING gist (property_id WITH =, daterange(checkin, checkout, '[)')
+  WITH &&) WHERE (status in ('confirmed','tentative','pending'))`, scoped to
+  direct bookings. This needs `btree_gist`, which is available on the project
+  but not installed. The database then makes a direct double-booking
+  *impossible*, rather than merely unlikely, and it does so even if the
+  application logic is wrong.
+- **Inbound (Vrbo):** never rejected. Vrbo has already taken the guest's money
+  and a constraint violation here would only break the sync and hide the
+  problem. An overlap instead creates an **urgent task** naming both bookings,
+  because a human has to decide which guest gets moved and that is not a
+  decision code should make.
+
+This is why the constraint is partial rather than global: a hard constraint
+across all channels would turn a real-world conflict into a failed sync, which
+is the same information arriving in the least useful possible form.
+
+### What direct bookings drag in behind them
+
+Naming these so they are decisions rather than surprises. None are designed here.
+
+- **Taking money.** Stripe, deposit versus balance, refunds, and a cancellation
+  policy that has to be written before it can be coded.
+- **Being the merchant.** On Vrbo, Vrbo handles payment disputes and some
+  liability. Direct, that is you: terms and conditions, a damage deposit
+  position, and in the UK possibly the Package Travel Regulations if you ever
+  bundle anything beyond the stay. Worth twenty minutes of proper advice before
+  the first direct booking, not after.
+- **Guest data.** Direct bookings collect contact details first-hand, which is
+  the cleanest possible consent basis for the outreach in the previous section —
+  and it is lawful precisely because they gave it to you, so the consent capture
+  belongs in the booking form from day one, not retrofitted.
+
 ## Bookings → tasks
 
 A join table rather than new columns on `tasks`:
@@ -557,17 +688,27 @@ Each slice is independently useful and independently abandonable.
    `draft_guest_message`, `message_templates` seeded with your actual wording,
    vocabulary additions, and a property/booking view in the catalog.
 7. **The site funnel.** UTM tagging, consent capture, `repeat_guest`.
+8. **Outbound availability.** `btree_gist` and the partial exclusion
+   constraint, `export_token` per property, the `GET /ical/:token.ics` route,
+   and the overlap detector that raises an urgent task. **This must be proven
+   working before thewishingstream.com accepts a single booking** — the feed
+   Vrbo imports is what stops the two systems selling the same week.
+9. **Direct bookings.** The site writes into `bookings` with
+   `channel = 'direct'`, request-to-book first.
 
 Slices 1–5 are the part that pays for itself in saved coordination. 6–7 are
-worth doing once you have run 1–5 over a few real bookings and know what you
-reach for.
+worth doing once you have run 1–5 over a few real bookings. **8 is not optional
+and not last in priority** — it is merely last in sequence, because it cannot be
+built before the bookings table it depends on. Nothing on the direct site can
+go live ahead of it.
 
 ## Open questions
 
-1. **Does thewishingstream.com take bookings yet, or is it a brochure site?**
-   Changes the call to action in the templates, and whether "book direct" is
-   even truthful yet. Does not change the schema, which is why it is not
-   blocking slice 1.
+1. **What is thewishingstream.com built on, and how finished is it?**
+   Now the blocking question for everything in slices 8–9. The domain is not
+   reachable from the build environment (egress policy) and there is no site
+   repository in the GitHub account, so its platform and state are currently
+   unknown here.
 2. **JB's coverage.** "JB does the clean and looks after the place in summer"
    reads either as *JB cleans all year and additionally caretakes in summer*, or
    *JB does both, only in summer*. Which is it, and who covers the other months?
