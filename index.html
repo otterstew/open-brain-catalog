@@ -1123,6 +1123,22 @@
   .alpha-btn:hover { color: var(--ink); border-color: var(--hairline); }
   .alpha-btn.on { color: var(--paper); background: var(--brass); border-color: var(--brass); }
   .facet-chips { max-height: 210px; overflow-y: auto; }
+  /* Grouped by heading: a column of shelves, each a label you can tap to
+     filter by the whole heading, over the chips for its tags. */
+  .facet-chips.grouped { display: block; max-height: 340px; }
+  .heading-group + .heading-group { margin-top: 10px; }
+  .heading-group .chip-row { margin-top: 5px; }
+  .heading-btn {
+    display: flex; align-items: baseline; gap: 8px;
+    background: none; border: 0; padding: 2px 0; cursor: pointer;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .heading-btn:hover .heading-name { color: var(--brass); }
+  .heading-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .heading-btn.on .heading-name { color: var(--brass); }
+  .heading-btn .heading-n { color: var(--ink-faint); }
+  .heading-btn .heading-note { color: var(--ink-faint); text-transform: none; letter-spacing: 0; font-style: italic; }
 
   /* ---------- import (drag a file in) ---------- */
   .drop-veil {
@@ -2365,6 +2381,79 @@ const facetButtons = {
 let openFacet = null;      // 'topics' | 'authors' | 'sources' | null
 let topicLetter = null;    // null means the "common" view
 
+// Headings group tags for browsing; a note sits under every heading its tags
+// do. They come from public.topic_headings through the topic_vocabulary tool,
+// and are decided on the Tag Review page. Until any exist, or if the call
+// fails, the Topics panel falls back to its old Common view — headings are a
+// convenience, never a reason for the filter not to open.
+let topicHeadings = null;   // normalised tag -> { heading, suggested }
+
+async function loadTopicHeadings() {
+  try {
+    const v = JSON.parse(await callTool('topic_vocabulary', { format: 'json' }));
+    const map = new Map();
+    Object.entries(v.headings || {}).forEach(([tag, h]) => {
+      if (h && h.heading) map.set(tag.trim().toLowerCase(), h);
+    });
+    topicHeadings = map.size ? map : null;
+  } catch (_) {
+    topicHeadings = null;
+  }
+  if (openFacet === 'topics') renderFacetPanel();
+}
+
+// [{ heading, notes, suggested, tags: [[norm, {label, n}], ...] }], largest
+// heading first, with tags nobody has placed yet gathered last.
+function headingGroups(counts) {
+  const groups = new Map();
+  counts.forEach((v, norm) => {
+    const h = topicHeadings.get(norm);
+    const name = h ? h.heading : 'No heading yet';
+    if (!groups.has(name)) groups.set(name, { heading: name, placed: !!h, suggested: false, tags: [] });
+    const g = groups.get(name);
+    if (h && h.suggested) g.suggested = true;
+    g.tags.push([norm, v]);
+  });
+  const list = [...groups.values()];
+  list.forEach(g => {
+    const norms = new Set(g.tags.map(([n]) => n));
+    g.notes = allThoughts.filter(t =>
+      (t.topics || []).some(top => norms.has(top.trim().toLowerCase()))).length;
+    g.tags.sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label));
+  });
+  return list.sort((a, b) => (b.placed - a.placed) || b.notes - a.notes || a.heading.localeCompare(b.heading));
+}
+
+function renderHeadingGroups(counts) {
+  facetChips.classList.add('grouped');
+  headingGroups(counts).forEach(g => {
+    const wrap = document.createElement('div');
+    wrap.className = 'heading-group';
+    const norms = g.tags.map(([n]) => n);
+    const allOn = norms.every(n => activeTopics.has(n));
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'heading-btn' + (allOn ? ' on' : '');
+    btn.setAttribute('aria-pressed', allOn ? 'true' : 'false');
+    btn.title = allOn ? 'Stop filtering by ' + g.heading : 'Show every note under ' + g.heading;
+    btn.innerHTML = '<span class="heading-name">' + escapeHtml(g.heading) + '</span>'
+      + '<span class="heading-n">' + g.notes + ' note' + (g.notes === 1 ? '' : 's') + '</span>'
+      + (g.suggested ? '<span class="heading-note">suggested</span>' : '');
+    btn.addEventListener('click', () => {
+      if (allOn) norms.forEach(n => activeTopics.delete(n));
+      else norms.forEach(n => activeTopics.add(n));
+      applyFilters();
+    });
+    const row = document.createElement('div');
+    row.className = 'chip-row';
+    g.tags.forEach(([norm, v]) =>
+      row.appendChild(facetChip(norm, '# ' + v.label, v.n, activeTopics, 'var(--brass)')));
+    wrap.appendChild(btn);
+    wrap.appendChild(row);
+    facetChips.appendChild(wrap);
+  });
+}
+
 function topicCounts() {
   const counts = new Map();   // normalised -> { label, n }
   allThoughts.forEach(t => {
@@ -2428,8 +2517,8 @@ function renderAlphaStrip(counts) {
   const common = document.createElement('button');
   common.className = 'alpha-btn' + (topicLetter === null ? ' on' : '');
   common.type = 'button';
-  common.textContent = 'Common';
-  common.title = 'Topics used more than once';
+  common.textContent = topicHeadings ? 'Headings' : 'Common';
+  common.title = topicHeadings ? 'Topics grouped under their headings' : 'Topics used more than once';
   common.addEventListener('click', () => { topicLetter = null; renderFacetPanel(); });
   alphaStrip.appendChild(common);
 
@@ -2450,11 +2539,13 @@ function renderFacetPanel() {
   facetPanel.hidden = !openFacet;
   alphaStrip.hidden = openFacet !== 'topics';
   facetChips.innerHTML = '';
+  facetChips.classList.remove('grouped');
   if (!openFacet) return;
 
   if (openFacet === 'topics') {
     const counts = topicCounts();
     renderAlphaStrip(counts);
+    if (!topicLetter && topicHeadings) { renderHeadingGroups(counts); return; }
     let entries = [...counts.entries()];
     if (topicLetter) {
       entries = entries.filter(([, v]) => (v.label[0] || '').toUpperCase() === topicLetter)
@@ -3768,9 +3859,14 @@ async function loadAll() {
   searchClear.style.display = 'none';
   showStatus('Opening the drawer…', false);
   try {
+    // Every note, not the newest hundred. The 100 dated from a 77-note archive
+    // and went on quietly hiding two thirds of it once it passed 300: a filter
+    // showed one Meditation note where fifteen existed. All 313 notes are about
+    // 2 MB and a second to fetch (24 Sep 2026); revisit if that stops being true.
     const text = await callTool('list_thoughts',
-      { limit: 100, format: 'json', include_shelved: showShelved });
+      { limit: 1000, format: 'json', include_shelved: showShelved });
     allThoughts = parseJsonThoughts(text);
+    loadTopicHeadings();
     activeTypes = new Set();
     activeTopics = new Set();
     activeAuthors = new Set();

@@ -1270,7 +1270,7 @@ function buildServer(): McpServer {
     {
       title: "Topic Vocabulary",
       description:
-        "The controlled vocabulary: the topic tags the capture extractor is told to reuse, the collection tags it is told never to guess, and the scope rule (`usage`) for any tag narrower than its name. This table is the single source of truth — the capture prompt reads it at runtime, so a change here takes effect on the next capture with no redeploy. Read-only; add or retire a term with one INSERT or DELETE on public.topic_vocabulary.",
+        "The controlled vocabulary: the topic tags the capture extractor is told to reuse, the collection tags it is told never to guess, the scope rule (`usage`) for any tag narrower than its name, and (json only) the heading each tag is grouped under in the catalog. This table is the single source of truth — the capture prompt reads it at runtime, so a change here takes effect on the next capture with no redeploy. Read-only; add or retire a term with one INSERT or DELETE on public.topic_vocabulary.",
       annotations: {
         readOnlyHint: true,
       },
@@ -1279,14 +1279,24 @@ function buildServer(): McpServer {
           .enum(["text", "json"])
           .optional()
           .default("text")
-          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}} — use this when a script is going to write the list to a file."),
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}} — use this when a script is going to write the list to a file."),
       },
     },
     async ({ format }) => {
       try {
         const vocab = await loadVocabulary();
         if (format === "json") {
-          return { content: [{ type: "text" as const, text: JSON.stringify(vocab) }] };
+          // Headings are read fresh, not cached with the vocabulary: only the
+          // catalog asks for them, once per load, and a heading Stewart has just
+          // set should show on the next reload rather than a minute later.
+          const { data: rows } = await supabase
+            .from("topic_headings")
+            .select("topic, heading, source");
+          const headings = Object.fromEntries(
+            ((rows || []) as { topic: string; heading: string; source: string }[])
+              .map((r) => [r.topic, { heading: r.heading, suggested: r.source === "suggested" }])
+          );
+          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings }) }] };
         }
         const lines = [
           `Preferred topics (${vocab.preferred.length}), in the order the extractor is shown them:`,
