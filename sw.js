@@ -24,7 +24,11 @@ const SHELL = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE)
-      .then((c) => c.addAll(SHELL))
+      // cache: 'reload' skips the browser's HTTP cache. GitHub Pages serves
+      // everything max-age=600, so a plain addAll could store the page it had
+      // cached ten minutes earlier under the new version's name — a fresh
+      // service worker holding the old catalog. Found 24 Sep 2026 (v45).
+      .then((c) => c.addAll(SHELL.map((u) => new Request(u, { cache: 'reload' }))))
       .then(() => self.skipWaiting())
       .catch(() => self.skipWaiting())
   );
@@ -43,10 +47,30 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;                       // archive calls are POSTs
   if (new URL(req.url).origin !== self.location.origin) return;  // fonts, API, anything remote
 
-  // Shell assets: serve from cache, refresh in the background.
+  // The page itself: network first, so a reload shows what was last published;
+  // the cached copy is only for when there is no connection. Serving it cache-
+  // first meant every release needed two reloads, and sometimes more.
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      // By URL: a navigate-mode Request cannot be re-issued with new options
+      // (fetch(req, init) throws), and the throw would silently serve the cache.
+      fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
+        .then((res) => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
+          return res;
+        })
+        .catch(() => caches.match(req).then((hit) => hit || caches.match('./index.html')))
+    );
+    return;
+  }
+
+  // Other shell assets: serve from cache, refresh in the background.
   event.respondWith(
     caches.match(req).then((hit) => {
-      const live = fetch(req)
+      const live = fetch(req, { cache: 'no-cache' })
         .then((res) => {
           if (res && res.ok) {
             const copy = res.clone();
