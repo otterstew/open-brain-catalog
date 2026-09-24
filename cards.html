@@ -254,6 +254,10 @@
   .sync-note { font-family: var(--f-mono); font-size: 10.5px; color: var(--ink-faint); letter-spacing: .06em; }
 
   .empty { color: var(--ink-dim); font-size: 14.5px; text-align: center; padding: 24px 0; }
+
+  /* ---------- full screen: a bigger card for the desktop ---------- */
+  body.fs .wrap, body.fs .sheet-inner { max-width: 900px; }
+  body.fs .card { height: 72vh; max-height: none; }
 </style>
 </head>
 <body>
@@ -264,6 +268,7 @@
     </h1>
     <div class="top-actions">
       <button class="icon-btn" id="shuffleBtn" type="button" title="Shuffle and start again">Shuffle</button>
+      <button class="icon-btn" id="fsBtn" type="button" title="Full screen (F)" hidden>Full screen</button>
       <button class="icon-btn" id="editBtn" type="button">Cards</button>
       <a class="icon-btn" href="./prep.html" style="text-decoration:none">Prep</a>
     </div>
@@ -582,6 +587,33 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("./sw.js").catch(() => { /* still works online */ });
   });
 }
+</script>
+
+<script>
+// Full screen for desktop browsers. The button stays hidden where the browser
+// can't do it (iPhone Safari, or a frame that doesn't allow it).
+(() => {
+  const btn = document.getElementById("fsBtn");
+  const root = document.documentElement;
+  const enter = root.requestFullscreen || root.webkitRequestFullscreen;
+  const exit = document.exitFullscreen || document.webkitExitFullscreen;
+  const active = () => document.fullscreenElement || document.webkitFullscreenElement;
+  if (!btn || !enter || !(document.fullscreenEnabled || document.webkitFullscreenEnabled)) return;
+  btn.hidden = false;
+  const toggle = () => { Promise.resolve(active() ? exit.call(document) : enter.call(root)).catch(() => {}); };
+  const sync = () => {
+    document.body.classList.toggle("fs", !!active());
+    btn.textContent = active() ? "Exit full screen" : "Full screen";
+  };
+  btn.addEventListener("click", toggle);
+  document.addEventListener("fullscreenchange", sync);
+  document.addEventListener("webkitfullscreenchange", sync);
+  document.addEventListener("keydown", (e) => {
+    const t = e.target.tagName;
+    if (t === "TEXTAREA" || t === "INPUT" || t === "SELECT") return;
+    if ((e.key === "f" || e.key === "F") && !e.metaKey && !e.ctrlKey && !e.altKey) toggle();
+  });
+})();
 </script>
 </body>
 </html>
