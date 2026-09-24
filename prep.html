@@ -288,6 +288,14 @@
   /* ---------- full screen: a bigger card for the desktop ---------- */
   body.fs .wrap, body.fs .sheet-inner { max-width: 900px; }
   body.fs .card { height: 72vh; max-height: none; }
+
+  /* ---------- the slide and timing line: readable at a glance ---------- */
+  :root { --label: #F4C542; --label-back: #8A5B00; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --label-back: #F0BE45; } }
+  :root[data-theme="dark"] { --label-back: #F0BE45; }
+  .face { padding-top: 66px; }
+  .side-label { font-size: 13.5px; font-weight: 600; letter-spacing: .07em; line-height: 1.4; color: var(--label); }
+  .face.back .side-label { color: var(--label-back); }
 </style>
 </head>
 <body>
