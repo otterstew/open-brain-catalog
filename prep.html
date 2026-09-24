@@ -306,6 +306,13 @@
     font-family: var(--f-display); font-size: clamp(16px, 3.6vw, 19px); font-weight: 600;
     line-height: 1.3; margin: 0 0 14px; color: var(--back-faint);
   }
+
+  /* walkthrough: big enough to read at a glance mid-presentation */
+  .wrap:has(.card.walk) { max-width: 880px; }
+  .card.walk { height: 78vh; max-height: none; }
+  .card.walk .side-label { font-size: 15px; }
+  .card.walk .walk-q { font-size: clamp(18px, 2.2vw, 22px); }
+  .card.walk .a, .card.walk .a.long { font-size: clamp(19px, 2.6vw, 25px); line-height: 1.5; }
 </style>
 </head>
 <body>
