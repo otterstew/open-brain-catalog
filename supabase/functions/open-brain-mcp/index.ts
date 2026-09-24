@@ -1279,7 +1279,7 @@ function buildServer(): McpServer {
           .enum(["text", "json"])
           .optional()
           .default("text")
-          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}} — use this when a script is going to write the list to a file."),
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}, sides: {heading: personal|work}} — use this when a script is going to write the list to a file."),
       },
     },
     async ({ format }) => {
@@ -1296,7 +1296,13 @@ function buildServer(): McpServer {
             ((rows || []) as { topic: string; heading: string; source: string }[])
               .map((r) => [r.topic, { heading: r.heading, suggested: r.source === "suggested" }])
           );
-          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings }) }] };
+          const { data: sideRows } = await supabase
+            .from("heading_sides")
+            .select("heading, side");
+          const sides = Object.fromEntries(
+            ((sideRows || []) as { heading: string; side: string }[]).map((r) => [r.heading, r.side])
+          );
+          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings, sides }) }] };
         }
         const lines = [
           `Preferred topics (${vocab.preferred.length}), in the order the extractor is shown them:`,

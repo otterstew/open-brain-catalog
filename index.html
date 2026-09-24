@@ -1091,6 +1091,19 @@
   .shelf-toggle { flex: 1 1 100%; justify-content: space-between; padding-left: 10px; padding-right: 10px; }
   .shelf-toggle[aria-pressed="true"] { color: var(--brass); border-color: var(--brass); }
   .shelf-state { color: var(--ink-faint); font-size: 10px; letter-spacing: 0.06em; }
+  /* Everything / Personal / Work & AI. A view of the whole drawer, so it sits
+     above the filters rather than among them. */
+  .side-switch { display: flex; margin: 10px 0 2px; border: 1px solid var(--hairline); border-radius: 3px; overflow: hidden; }
+  .side-switch[hidden] { display: none; }
+  .side-switch button {
+    flex: 1 1 0; min-width: 0; padding: 7px 4px; background: var(--panel); border: 0;
+    border-left: 1px solid var(--hairline); color: var(--ink-dim); cursor: pointer;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+  }
+  .side-switch button:first-child { border-left: 0; }
+  .side-switch button:hover { color: var(--ink); }
+  .side-switch button[aria-pressed="true"] { background: var(--brass); color: var(--paper); }
+  .side-switch button:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
   /* Shown only when the shelf is open, so a bookkeeping note is never mistaken
      for something Stewart wrote. */
   .card-row.shelved .card-row-preview { color: var(--ink-dim); }
@@ -1918,6 +1931,12 @@
                 title="The headings every new entry starts with">Template</button>
       </div>
 
+      <div class="side-switch" id="sideSwitch" role="group" aria-label="Which side of the archive" hidden>
+        <button type="button" data-side="all" aria-pressed="true">Everything</button>
+        <button type="button" data-side="personal" aria-pressed="false">Personal</button>
+        <button type="button" data-side="work" aria-pressed="false">Work &amp; AI</button>
+      </div>
+
       <div class="chip-group-label" id="chipRowLabel" hidden>Kind of note</div>
       <div class="chip-row" id="chipRow"></div>
 
@@ -1940,8 +1959,9 @@
           <span>Sources</span><span class="facet-n" id="facetNSources"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
-        <button class="facet-btn shelf-toggle" id="shelfToggle" type="button" aria-pressed="false">
-          <span>Bookkeeping</span><span class="shelf-state" id="shelfState">hidden</span>
+        <button class="facet-btn shelf-toggle" id="shelfToggle" type="button" aria-pressed="false"
+                title="Changelog entries and work orders the machine wrote about itself. Your own notes are never hidden by this.">
+          <span>System notes</span><span class="shelf-state" id="shelfState">hidden</span>
         </button>
       </div>
 
@@ -2387,6 +2407,45 @@ let topicLetter = null;    // null means the "common" view
 // fails, the Topics panel falls back to its old Common view — headings are a
 // convenience, never a reason for the filter not to open.
 let topicHeadings = null;   // normalised tag -> { heading, suggested }
+let headingSides = new Map(); // heading -> 'personal' | 'work'
+let activeSide = 'all';
+try { activeSide = localStorage.getItem('ob.side') || 'all'; } catch (_) { activeSide = 'all'; }
+
+// Which sides a note sits on, from its tags' headings. A note none of whose
+// tags has a sided heading — untagged, or tagged since the last review — is on
+// both, so choosing a side never makes a note vanish for want of a heading.
+function noteSides(t) {
+  const sides = new Set();
+  (t.topics || []).forEach(top => {
+    const h = topicHeadings && topicHeadings.get(top.trim().toLowerCase());
+    const side = h && headingSides.get(h.heading);
+    if (side) sides.add(side);
+  });
+  return sides;
+}
+
+function onActiveSide(t) {
+  if (activeSide === 'all' || !headingSides.size) return true;
+  const sides = noteSides(t);
+  return sides.size === 0 || sides.has(activeSide);
+}
+
+function renderSideSwitch() {
+  const box = document.getElementById('sideSwitch');
+  if (!box) return;
+  box.hidden = !headingSides.size || viewMode !== 'notes';
+  box.querySelectorAll('button[data-side]').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.side === activeSide ? 'true' : 'false'));
+}
+
+document.getElementById('sideSwitch').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-side]');
+  if (!b) return;
+  activeSide = b.dataset.side;
+  try { localStorage.setItem('ob.side', activeSide); } catch (_) { /* storage blocked */ }
+  renderSideSwitch();
+  applyFilters();
+});
 
 async function loadTopicHeadings() {
   try {
@@ -2396,10 +2455,13 @@ async function loadTopicHeadings() {
       if (h && h.heading) map.set(tag.trim().toLowerCase(), h);
     });
     topicHeadings = map.size ? map : null;
+    headingSides = new Map(Object.entries(v.sides || {}));
   } catch (_) {
     topicHeadings = null;
+    headingSides = new Map();
   }
-  if (openFacet === 'topics') renderFacetPanel();
+  renderSideSwitch();
+  applyFilters();
 }
 
 // [{ heading, notes, suggested, tags: [[norm, {label, n}], ...] }], largest
@@ -2414,7 +2476,8 @@ function headingGroups(counts) {
     if (h && h.suggested) g.suggested = true;
     g.tags.push([norm, v]);
   });
-  const list = [...groups.values()];
+  const list = [...groups.values()].filter(g =>
+    activeSide === 'all' || !headingSides.has(g.heading) || headingSides.get(g.heading) === activeSide);
   list.forEach(g => {
     const norms = new Set(g.tags.map(([n]) => n));
     g.notes = allThoughts.filter(t =>
@@ -2615,7 +2678,7 @@ function renderFacets() {
 
 function applyFilters() {
   const base = searchMode ? displayed.baseResults : allThoughts;
-  let filtered = base;
+  let filtered = base.filter(onActiveSide);
   if (activeTypes.size > 0) {
     filtered = filtered.filter(t => activeTypes.has(t.type || '__unfiled__'));
   }
@@ -6085,6 +6148,7 @@ function setViewMode(mode) {
   chipRow.hidden = journal;
   document.querySelector('.facet-bar').hidden = !notes;
   if (!notes) document.getElementById('facetPanel').hidden = true;
+  renderSideSwitch();
 
   // The note-only header buttons have nothing to act on in the other two.
   ['newBtn', 'statsBtn', 'importBtn'].forEach(id => {
