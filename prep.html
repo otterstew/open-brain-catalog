@@ -424,7 +424,21 @@ function runDeck(embedded) {
 
   const groupOf = (c) => c.g || "qa";
   const walking = () => group === "walk";
-  const setOf = (key) => key === "all" ? deck : deck.filter(c => groupOf(c) === (key === "walk" ? "speech" : key));
+  // The walkthrough folds some speech cards into the one before, so each step
+  // is one click. The flashcard sets keep them separate.
+  const WALK_FOLD = { s02: "s01" };
+  const walkCards = () => {
+    const out = [];
+    deck.filter(c => groupOf(c) === "speech").forEach(c => {
+      const into = WALK_FOLD[c.id] && out.find(o => o.id === WALK_FOLD[c.id]);
+      if (into) into.a += "\n\n" + c.a;
+      else out.push(Object.assign({}, c));
+    });
+    return out;
+  };
+  const setOf = (key) => key === "all" ? deck
+    : key === "walk" ? walkCards()
+    : deck.filter(c => groupOf(c) === key);
   const activeCards = () => setOf(group);
 
   // ---------- the round ----------
