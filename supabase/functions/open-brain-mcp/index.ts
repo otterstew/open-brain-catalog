@@ -50,7 +50,14 @@ const CITATION_BASE_URL =
 // whole arrangement exists to end, so there is exactly one now, and it is not
 // on anybody's laptop. The topic_vocabulary tool below is for reading the list
 // from outside the database; nothing out there writes tags any more.
-type Vocabulary = { preferred: string[]; collection: string[] };
+// `usage` narrows a tag whose name reads wider than it is used here — Meditation
+// means guided meditations only. The extractor sees nothing but the list, so
+// without it a tag gets applied to everything its name could cover.
+type Vocabulary = {
+  preferred: string[];
+  collection: string[];
+  usage: Record<string, string>;
+};
 
 // Per isolate, briefly. Edge function isolates are short-lived, so this is at
 // most one small query a minute per live isolate, and an edit shows up in the
@@ -64,7 +71,7 @@ async function loadVocabulary(): Promise<Vocabulary> {
 
   const { data, error } = await supabase
     .from("topic_vocabulary")
-    .select("topic, kind")
+    .select("topic, kind, usage")
     .order("position", { ascending: true })
     .order("topic", { ascending: true });
 
@@ -75,13 +82,16 @@ async function loadVocabulary(): Promise<Vocabulary> {
     // again. Serving the last known good list keeps captures correct through a
     // blip; only a cold isolate that has never read the table gets nothing.
     console.warn("topic_vocabulary unavailable, using cached list:", error?.message);
-    return vocabCache || { preferred: [], collection: [] };
+    return vocabCache || { preferred: [], collection: [], usage: {} };
   }
 
-  const rows = data as { topic: string; kind: string }[];
+  const rows = data as { topic: string; kind: string; usage: string | null }[];
   vocabCache = {
     preferred: rows.filter((r) => r.kind === "preferred").map((r) => r.topic),
     collection: rows.filter((r) => r.kind === "collection").map((r) => r.topic),
+    usage: Object.fromEntries(
+      rows.filter((r) => r.usage?.trim()).map((r) => [r.topic, r.usage!.trim()])
+    ),
   };
   vocabFetchedAt = Date.now();
   return vocabCache;
@@ -356,6 +366,11 @@ async function extractMetadata(text: string): Promise<Record<string, unknown>> {
     vocab.preferred.length
       ? `These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:\n${vocab.preferred.join(", ")}\nThe list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag.`
       : `Tag the note for what it is actually about.`,
+    Object.keys(vocab.usage).length
+      ? `Some tags here are narrower than their names. Use these only as described:\n${
+          Object.entries(vocab.usage).map(([t, u]) => `- "${t}": ${u}`).join("\n")
+        }`
+      : "",
     vocab.collection.length
       ? `Never use ${quotedList(vocab.collection)}: those are collection tags, applied later from the source.`
       : "",
@@ -1255,7 +1270,7 @@ function buildServer(): McpServer {
     {
       title: "Topic Vocabulary",
       description:
-        "The controlled vocabulary: the topic tags the capture extractor is told to reuse, and the collection tags it is told never to guess. This table is the single source of truth — the capture prompt reads it at runtime, so a change here takes effect on the next capture with no redeploy. Read-only; add or retire a term with one INSERT or DELETE on public.topic_vocabulary.",
+        "The controlled vocabulary: the topic tags the capture extractor is told to reuse, the collection tags it is told never to guess, and the scope rule (`usage`) for any tag narrower than its name. This table is the single source of truth — the capture prompt reads it at runtime, so a change here takes effect on the next capture with no redeploy. Read-only; add or retire a term with one INSERT or DELETE on public.topic_vocabulary.",
       annotations: {
         readOnlyHint: true,
       },
@@ -1264,7 +1279,7 @@ function buildServer(): McpServer {
           .enum(["text", "json"])
           .optional()
           .default("text")
-          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...]} — use this when a script is going to write the list to a file."),
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}} — use this when a script is going to write the list to a file."),
       },
     },
     async ({ format }) => {
