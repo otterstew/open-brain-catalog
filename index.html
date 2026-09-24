@@ -503,6 +503,37 @@
   .tag.author::before { content: "by "; color: var(--ink-faint); }
   .tag.source::before { content: "via "; color: var(--ink-faint); }
 
+  /* ---------- results in the main pane ----------
+     On a wide screen the notes a filter finds are listed here, where there is
+     room to read them, rather than only in the drawer under the filters —
+     with the Topics panel open, that drawer list was squeezed to nothing. */
+  .results { width: 100%; max-width: 860px; }
+  .results-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 14px; }
+  .results-count { font-family: var(--font-display); font-size: 22px; color: var(--ink); }
+  .results-filters { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; color: var(--ink-faint); text-transform: uppercase; }
+  .result-row {
+    display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 16px; width: 100%;
+    padding: 11px 12px; background: none; border: 0; border-top: 1px solid var(--hairline);
+    text-align: left; color: inherit; cursor: pointer; font: inherit;
+  }
+  .result-row:hover { background: var(--panel); }
+  .result-row:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+  .result-meta { display: flex; flex-direction: column; gap: 3px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; padding-top: 3px; }
+  .result-meta .result-date { color: var(--ink-faint); text-transform: none; letter-spacing: 0; }
+  .result-title { font-family: var(--font-body); font-size: 15.5px; line-height: 1.4; color: var(--ink); }
+  .result-tags { grid-column: 2; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-faint); }
+  .results-more { padding: 14px 12px; color: var(--ink-faint); font-style: italic; border-top: 1px solid var(--hairline); }
+  .list-return {
+    display: block; background: none; border: 0; padding: 4px 0; margin: 0 0 14px; cursor: pointer;
+    color: var(--ink-dim); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em;
+  }
+  .list-return:hover { color: var(--brass); }
+  .list-return:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  /* Keyed on the link itself, not a class on .main: every other view that
+     fills .main (editor, journal, tasks) would otherwise inherit the column. */
+  .main:has(> .list-return) { flex-direction: column; align-items: center; }
+  .main > .list-return { width: 100%; max-width: 1040px; }
+
   .back-btn {
     display: none;
     background: none;
@@ -1138,7 +1169,7 @@
   .facet-chips { max-height: 210px; overflow-y: auto; }
   /* Grouped by heading: a column of shelves, each a label you can tap to
      filter by the whole heading, over the chips for its tags. */
-  .facet-chips.grouped { display: block; max-height: 340px; }
+  .facet-chips.grouped { display: block; max-height: 220px; }
   .heading-group + .heading-group { margin-top: 10px; }
   .heading-group .chip-row { margin-top: 5px; }
   .heading-btn {
@@ -1461,6 +1492,7 @@
     .ref-panel { display: none !important; }
     .drawer { display: flex; }
     .main { display: none; padding: 0; --main-pad-top: 0px; }
+    .list-return { display: none !important; }
     .app.detail-open .drawer { display: none; }
 
     /* On a phone the card and the back button must stack. Left as a flex row,
@@ -2703,6 +2735,75 @@ function applyFilters() {
   renderList(filtered, searchMode);
 }
 
+const RESULTS_SHOWN = 1000;
+
+// What the filters currently narrow to, in words, for the head of the list.
+function describeFilters() {
+  const parts = [];
+  if (activeSide !== 'all' && headingSides.size) parts.push(activeSide === 'personal' ? 'Personal' : 'Work & AI');
+  if (searchMode && lastSearchQuery) parts.push('“' + lastSearchQuery + '”');
+  const tags = [...activeTopics];
+  if (tags.length) {
+    // A heading whose every tag is on reads as the heading; anything else as tags.
+    const counts = topicCounts();
+    let rest = new Set(tags);
+    if (topicHeadings) {
+      const byHeading = new Map();
+      counts.forEach((v, norm) => {
+        const h = topicHeadings.get(norm);
+        if (h) { if (!byHeading.has(h.heading)) byHeading.set(h.heading, []); byHeading.get(h.heading).push(norm); }
+      });
+      byHeading.forEach((norms, heading) => {
+        if (norms.every(n => rest.has(n))) { parts.push(heading); norms.forEach(n => rest.delete(n)); }
+      });
+    }
+    rest = [...rest];
+    if (rest.length) parts.push(rest.length > 4 ? rest.length + ' tags'
+      : rest.map(t => '#' + ((counts.get(t) || {}).label || t)).join(' '));
+  }
+  [...activeTypes].forEach(t => parts.push(typeStyle(t === '__unfiled__' ? null : t).label));
+  [...activeAuthors, ...activePeople, ...activeSources].forEach(v => parts.push(v));
+  return parts.join(' · ');
+}
+
+function renderMainList(items) {
+  const shown = items.slice(0, RESULTS_SHOWN);
+  const filters = describeFilters();
+  main.innerHTML = `
+    <div class="results">
+      <div class="results-head">
+        <span class="results-count">${items.length} note${items.length === 1 ? '' : 's'}</span>
+        <span class="results-filters">${escapeHtml(filters || 'Everything in the drawer')}</span>
+      </div>
+      <div class="results-rows"></div>
+    </div>`;
+  const rows = main.querySelector('.results-rows');
+  shown.forEach(t => {
+    const style = typeStyle(t.type);
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'result-row';
+    row.innerHTML = `
+      <span class="result-meta"><span style="color:${style.color}">${style.label}</span>
+        <span class="result-date">${formatDate(t.created_at)}</span></span>
+      <span class="result-title">${escapeHtml(t.title || (t.content || '').replace(/\s+/g, ' ').slice(0, 140))}</span>
+      ${(t.topics || []).length ? `<span class="result-tags">${escapeHtml(t.topics.slice(0, 6).map(x => '#' + x).join('  '))}</span>` : ''}`;
+    row.addEventListener('click', () => selectThought(t));
+    rows.appendChild(row);
+  });
+  if (!items.length) rows.innerHTML = '<div class="results-more">No notes match these filters.</div>';
+  else if (items.length > shown.length) {
+    rows.insertAdjacentHTML('beforeend', `<div class="results-more">Showing the first ${shown.length}. Narrow the filters to see the rest.</div>`);
+  }
+}
+
+// The main pane follows the filters while it is showing the list (or the
+// untouched start screen) — never while a note, an editor or a form is open.
+function mainShowsList() {
+  return viewMode === 'notes' && !selectedIndex && !editingId
+    && !!main.querySelector(':scope > .results, :scope > .empty-state');
+}
+
 function renderList(items, isSearch) {
   // Everything that refreshes the drawer comes through here, so in journal mode
   // this is where it turns back into the journal — and leaves the note list's
@@ -2711,6 +2812,7 @@ function renderList(items, isSearch) {
   displayed = items;
   displayed.baseResults = isSearch ? displayed.baseResults : items;
   listScroll.innerHTML = '';
+  if (mainShowsList()) renderMainList(items);
 
   if (items.length === 0) {
     const status = document.createElement('div');
@@ -3097,6 +3199,13 @@ function selectThought(t, mark) {
   back.textContent = '← Back to drawer';
   back.addEventListener('click', () => app.classList.remove('detail-open'));
   main.prepend(back);
+
+  const toList = document.createElement('button');
+  toList.type = 'button';
+  toList.className = 'list-return';
+  toList.textContent = '← Back to the list (' + displayed.length + ')';
+  toList.addEventListener('click', showEmptyState);
+  main.prepend(toList);
 
   app.classList.add('detail-open');
 }
@@ -3690,7 +3799,6 @@ function showEmptyState() {
   selectedIndex = null;
   editingId = null;
   closeReference();
-  renderList(displayed, searchMode);
   main.innerHTML = `
     <div class="empty-state">
       <div class="glyph">§</div>
@@ -3699,6 +3807,7 @@ function showEmptyState() {
         : 'Select a card from the drawer to read it.'}</p>
     </div>
   `;
+  renderList(displayed, searchMode);
   app.classList.remove('detail-open');
 }
 
