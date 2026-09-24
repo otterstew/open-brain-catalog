@@ -382,6 +382,7 @@
   // ---------- the round ----------
   let queue = [], current = null, flipped = false, seen = 0, stumbles = 0;
   let history = [];   // so a mis-tap can be undone
+  const missed = new Set();   // cards marked Again this round
 
   const shuffled = (a) => {
     const out = a.slice();
@@ -394,7 +395,7 @@
 
   function startRound() {
     queue = shuffled(deck);
-    seen = 0; stumbles = 0;
+    seen = 0; stumbles = 0; missed.clear();
     history = [];
     next();
   }
@@ -483,9 +484,11 @@
   // ---------- controls ----------
   $("goodBtn").addEventListener("click", () => { seen++; next(); });
   $("againBtn").addEventListener("click", () => {
-    seen++; stumbles++;
-    if (current) queue.push(current);   // back of the queue, comes round again
-    next();
+    // Stay on this card: turn it back to the question for another go.
+    if (!current) return;
+    if (!missed.has(current.id)) { missed.add(current.id); stumbles++; }
+    flipped = false;
+    render();
   });
   $("skipBtn").addEventListener("click", () => { if (current) queue.push(current); next(); });
   $("prevBtn").addEventListener("click", back);

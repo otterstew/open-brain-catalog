@@ -404,6 +404,7 @@ function runDeck(embedded) {
   // ---------- the round ----------
   let queue = [], current = null, flipped = false, seen = 0, stumbles = 0, roundTotal = 0;
   let history = [];
+  const missed = new Set();   // cards marked Again this round
 
   const shuffled = (a) => {
     const out = a.slice();
@@ -433,7 +434,7 @@ function runDeck(embedded) {
     const set = activeCards();
     roundTotal = set.length;
     queue = inOrder ? set.slice() : shuffled(set);
-    seen = 0; stumbles = 0; history = []; current = null;
+    seen = 0; stumbles = 0; missed.clear(); history = []; current = null;
     drawChips();
     rebuildStage();
     next(true);
@@ -523,9 +524,11 @@ function runDeck(embedded) {
   // ---------- controls ----------
   $("goodBtn").addEventListener("click", () => { seen++; next(); });
   $("againBtn").addEventListener("click", () => {
-    seen++; stumbles++;
-    if (current) queue.push(current);
-    next();
+    // Stay on this card: turn it back to the question for another go.
+    if (!current) return;
+    if (!missed.has(current.id)) { missed.add(current.id); stumbles++; }
+    flipped = false;
+    render();
   });
   $("skipBtn").addEventListener("click", () => { if (current) queue.push(current); next(); });
   $("prevBtn").addEventListener("click", back);
