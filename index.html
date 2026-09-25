@@ -1734,6 +1734,8 @@
     line-height: 1.5;
   }
   .task-textarea { min-height: 90px; resize: vertical; }
+  .task-note-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  .task-note-links:empty { display: none; }
   .task-select { font-family: var(--font-mono); font-size: 12px; }
   .task-input:focus, .task-textarea:focus, .task-select:focus {
     outline: none;
@@ -3427,6 +3429,18 @@ function noteLabel(t) {
   return t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 70);
 }
 
+// The picker's markup, shared by the editor, the composer and a task's notes.
+// Only one of the three is ever on screen, so the fixed ids never collide.
+function bodyLinkPickerHtml() {
+  return `
+    <div class="link-picker inline-link-picker" id="editLinkPicker" hidden>
+      <input class="link-picker-input" id="editLinkInput" type="text" placeholder="Search notes to link into the text…" />
+      <div class="link-picker-results" id="editLinkResults"></div>
+      <span class="link-picker-hint">Selected text becomes the link; with nothing selected it lands at the cursor, or on its own line at the top of the screen.</span>
+    </div>`;
+}
+
+// current may be null: a note not yet saved has no id to leave out of the results.
 function setupBodyLinkPicker(current, bodyEl, autoGrow) {
   const toggle = document.getElementById('editLinkToggle');
   const picker = document.getElementById('editLinkPicker');
@@ -3468,7 +3482,7 @@ function setupBodyLinkPicker(current, bodyEl, autoGrow) {
   function render(query) {
     const q = query.trim();
     const matches = (q ? localSearch(q) : allThoughts)
-      .filter(o => o.id !== current.id)
+      .filter(o => !current || o.id !== current.id)
       .slice(0, 8);
     results.innerHTML = matches.length
       ? matches.map(o => '<button class="link-picker-item" data-id="' + escapeAttr(o.id) +
@@ -3631,11 +3645,7 @@ function startEdit(t, anchorOffset) {
               <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
             </div>
           </div>
-          <div class="link-picker inline-link-picker" id="editLinkPicker" hidden>
-            <input class="link-picker-input" id="editLinkInput" type="text" placeholder="Search notes to link into the text…" />
-            <div class="link-picker-results" id="editLinkResults"></div>
-            <span class="link-picker-hint">Selected text becomes the link; with nothing selected it lands at the cursor, or on its own line at the top of the screen.</span>
-          </div>
+          ${bodyLinkPickerHtml()}
         </div>
         <textarea class="edit-body-textarea" id="editContent" spellcheck="true">${escapeHtml(t.content)}</textarea>
       </div>
@@ -3848,7 +3858,11 @@ function showComposer(prefill, parentId, opts) {
         <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="composeUrl" type="text" /></div>
       </div>
       <div class="index-card-body">
-        <label class="edit-body-label" for="composeText">Body</label>
+        <div class="edit-body-head">
+          <label class="edit-body-label" for="composeText">Body</label>
+          <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+        </div>
+        ${bodyLinkPickerHtml()}
         <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought…">${escapeHtml(prefill || '')}</textarea>
       </div>
       <div class="index-card-foot compose-actions">
@@ -3865,6 +3879,7 @@ function showComposer(prefill, parentId, opts) {
   const statusEl = field('composeStatus');
   const saveBtn = field('composeSave');
   const cancelBtn = field('composeCancel');
+  setupBodyLinkPicker(null, textEl, () => {});
 
   // With six fields as well as the body there is now real work to lose, so the
   // composer takes part in the same unsaved-changes guard as the editor.
@@ -5868,9 +5883,14 @@ function selectTask(t) {
       </div>
 
       <div class="task-field">
-        <label class="task-label" for="tdNotes">Notes</label>
+        <div class="edit-body-head">
+          <label class="task-label" for="tdNotes">Notes</label>
+          <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+        </div>
+        ${bodyLinkPickerHtml()}
         <textarea class="task-textarea" id="tdNotes"
           placeholder="Context, a phone number, what done looks like…">${escapeHtml(t.notes)}</textarea>
+        <div class="task-note-links" id="tdNoteLinks"></div>
       </div>
 
       <div class="task-row-fields">
@@ -6026,6 +6046,27 @@ function wireTaskDetail(t) {
       say(String(err.message || err), 'bad');
     }
   });
+
+  // A task's notes stay an editable box, so the links in them are listed
+  // underneath as buttons rather than rendered in place.
+  const notesEl = document.getElementById('tdNotes');
+  const noteLinksEl = document.getElementById('tdNoteLinks');
+  function renderNoteLinks() {
+    const seen = new Set();
+    const items = [...notesEl.value.matchAll(THOUGHT_LINK_RE)]
+      .filter(m => !seen.has(m[2]) && seen.add(m[2]))
+      .map(([, text, id]) => findThought(id)
+        ? '<button class="task-btn ghost" data-id="' + escapeAttr(id) + '" type="button">' + escapeHtml(text) + '</button>'
+        : '<span class="thought-link missing" title="This note is no longer in the archive">' + escapeHtml(text) + '</span>');
+    noteLinksEl.innerHTML = items.length ? '<span class="task-label">Linked</span>' + items.join('') : '';
+    noteLinksEl.querySelectorAll('button[data-id]').forEach(btn => btn.addEventListener('click', () => {
+      const found = findThought(btn.getAttribute('data-id'));
+      if (found) { setViewMode('notes'); selectThought(found); }
+    }));
+  }
+  notesEl.addEventListener('input', renderNoteLinks);
+  setupBodyLinkPicker(null, notesEl, renderNoteLinks);
+  renderNoteLinks();
 
   const noteBtn = document.getElementById('tdOpenNote');
   if (noteBtn) noteBtn.addEventListener('click', async () => {
