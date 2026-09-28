@@ -129,3 +129,10 @@ summary: A flashcard app for AI-901 revision — 25 cards across responsible AI,
 review: no
 use: Not pitch material. It is the groundwork that keeps the Microsoft vocabulary in the other documents accurate; run a round before a conversation with anyone technical on the Azure side.
 holds: The deck, grouped by exam area; a round that brings missed cards back; in-page editing. A card is only kept on every device once it is saved into the published page. Also served next to the catalog on the Open Brain site, which is public, so nothing private goes in it.
+
+## entry
+id: tag-review
+title: Open Brain Tag Review
+url: https://claude.ai/code/artifact/7b7e014e-5f86-4b08-a1c8-ae2f389d6f1f
+review: yes
+summary: A live tool for tidying the Open Brain archive's tags — see every tag in use, then decide per tag whether to keep it, give it a heading, fold it into another, or take it off the notes.
