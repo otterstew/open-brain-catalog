@@ -5493,7 +5493,13 @@ function parseQuickAdd(raw, today) {
 let viewMode = 'notes';        // 'notes' | 'journal' | 'tasks'
 let allTasks = [];
 let selectedTaskId = null;
-let taskFilter = 'open';       // 'open' | 'inbox' | 'next' | 'waiting' | 'done'
+let taskFilter = 'open';       // 'open' | 'inbox' | 'claude' | 'done'
+
+// Four chips, not six. Next and Waiting were chips of their own, but they are
+// parts of To do rather than lists you visit, so they show as a tag on the row
+// instead. Claude's jobs get a chip because they are not Stewart's to do at all:
+// To do and Inbox show only his, and a task for Claude never crowds them.
+const TASK_FILTERS = [['open', 'To do'], ['inbox', 'Inbox'], ['claude', 'Claude'], ['done', 'Done']];
 
 const TASK_STATUS_LABELS = {
   inbox: 'Inbox', next: 'Next', waiting: 'Waiting', done: 'Done', dropped: 'Dropped',
@@ -5581,6 +5587,7 @@ function normalizeTask(raw) {
     recur: raw.recur || '',
     recur_from: raw.recur_from || 'completion',
     thought_id: raw.thought_id || null,
+    owner: raw.owner || 'me',
     created_at: raw.created_at || null,
     completed_at: raw.completed_at || null,
   };
@@ -5590,11 +5597,15 @@ async function loadTasks(keepSelection) {
   showStatus('Looking at what needs doing…', false);
   noteTaskIndex = null;   // the note view's copy is now stale
   const args = { format: 'json', limit: 200 };
-  if (taskFilter === 'done') args.status = ['done'];
-  else if (taskFilter !== 'open') args.status = [taskFilter];
+  // Done keeps dropped tasks too: deciding not to do something is a way of
+  // finishing it, and it is the only place a dropped task can be found again.
+  if (taskFilter === 'done') args.status = ['done', 'dropped'];
+  else if (taskFilter === 'inbox') args.status = ['inbox'];
+  if (taskFilter === 'open' || taskFilter === 'inbox') args.owner = 'me';
+  else if (taskFilter === 'claude') args.owner = 'claude';
   // Deferred tasks come back only when you go looking for them: the point of
   // deferring something is not to see it.
-  if (taskFilter !== 'open') args.include_deferred = true;
+  if (taskFilter === 'inbox' || taskFilter === 'done') args.include_deferred = true;
 
   try {
     const text = await callTool('list_tasks', args);
@@ -5616,7 +5627,7 @@ function renderTaskCount() {
   // The badge counts what is actually pressing, not the size of the list —
   // a number that only ever grows stops meaning anything.
   const pressing = allTasks.filter(t =>
-    t.status !== 'done' && t.status !== 'dropped' &&
+    t.owner !== 'claude' && t.status !== 'done' && t.status !== 'dropped' &&
     t.due_date && daysBetween(today, t.due_date) <= 0).length;
   el.textContent = pressing ? String(pressing) : '';
 }
@@ -5707,7 +5718,9 @@ function renderTaskList() {
     status.className = 'list-status';
     status.textContent = taskFilter === 'done'
       ? 'Nothing finished yet.'
-      : 'Nothing to do. Type above to add something.';
+      : taskFilter === 'claude'
+        ? 'Nothing waiting for Claude. Type above to give it a job.'
+        : 'Nothing to do. Type above to add something.';
     listScroll.appendChild(status);
     return;
   }
@@ -5724,7 +5737,8 @@ function renderTaskList() {
 
 function taskRow(t, today) {
   const row = document.createElement('div');
-  const done = t.status === 'done';
+  // A dropped task is closed as surely as a done one: no tick to press.
+  const done = t.status === 'done' || t.status === 'dropped';
   row.className = 'task-row' + (selectedTaskId === t.id ? ' selected' : '') + (done ? ' is-done' : '');
 
   const bits = [];
@@ -5738,6 +5752,7 @@ function taskRow(t, today) {
     bits.push(`<span>hidden until ${escapeHtml(t.defer_until)}</span>`);
   }
   if (t.thought_id) bits.push('<span class="note-link">from a note</span>');
+  if (t.owner === 'claude' && taskFilter !== 'claude') bits.push('<span class="task-status-tag">for Claude</span>');
   if (t.status !== 'inbox' && t.status !== 'done') {
     bits.push(`<span class="task-status-tag">${escapeHtml(TASK_STATUS_LABELS[t.status] || t.status)}</span>`);
   }
@@ -5797,6 +5812,8 @@ async function quickAddTask(text) {
   const parsed = parseQuickAdd(text, todayISO());
   if (!parsed.title) return;
   const args = { title: parsed.title, source: 'catalog' };
+  // Typed while looking at Claude's list, it is a job for Claude.
+  if (taskFilter === 'claude') args.owner = 'claude';
   if (parsed.due_date) args.due_date = parsed.due_date;
   if (parsed.project) args.project = parsed.project;
   try {
@@ -5898,6 +5915,16 @@ function selectTask(t) {
           <label class="task-label" for="tdStatus">Status</label>
           <select class="task-select" id="tdStatus">${statusOptions}</select>
         </div>
+        <div class="task-field">
+          <label class="task-label" for="tdOwner">For</label>
+          <select class="task-select" id="tdOwner">
+            <option value="me"${t.owner !== 'claude' ? ' selected' : ''}>Me</option>
+            <option value="claude"${t.owner === 'claude' ? ' selected' : ''}>Claude</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="task-row-fields">
         ${taskFieldRow('Project', 'tdProject', t.project, 'e.g. house')}
       </div>
 
@@ -5925,8 +5952,9 @@ function selectTask(t) {
 
       <div class="task-actions">
         <button class="task-btn" id="tdSave" type="button">Save</button>
-        ${t.status !== 'done'
-          ? '<button class="task-btn ghost" id="tdDone" type="button">Mark done</button>'
+        ${t.status !== 'done' && t.status !== 'dropped'
+          ? '<button class="task-btn ghost" id="tdDone" type="button">Mark done</button>' +
+            '<button class="task-btn ghost" id="tdDrop" type="button" title="Not doing it — kept, so the decision is on record">Drop</button>'
           : '<button class="task-btn ghost" id="tdReopen" type="button">Reopen</button>'}
         <button class="task-btn danger" id="tdDelete" type="button">Delete</button>
         <span class="task-detail-status" id="tdStatusMsg"></span>
@@ -5981,6 +6009,7 @@ function wireTaskDetail(t) {
       defer_until: defer || null,
       recur: recur || null,
       recur_from: document.getElementById('tdRecurFrom').value,
+      owner: document.getElementById('tdOwner').value,
     };
 
     saveBtn.disabled = true;
@@ -6016,6 +6045,23 @@ function wireTaskDetail(t) {
     }
   });
 
+  // Drop sits beside Delete so that the right one is the easy one: Delete is for
+  // mistakes, and deciding not to do something is worth keeping.
+  const dropBtn = document.getElementById('tdDrop');
+  if (dropBtn) dropBtn.addEventListener('click', async () => {
+    dropBtn.disabled = true;
+    say('Dropping…');
+    try {
+      await callTool('update_task', { id: t.id, status: 'dropped' });
+      await loadTasks(true);
+      showTaskEmptyState();
+      showToastStatus('Dropped — ' + t.title + '. It is under Done if you want it back.');
+    } catch (err) {
+      dropBtn.disabled = false;
+      say(String(err.message || err), 'bad');
+    }
+  });
+
   const reopenBtn = document.getElementById('tdReopen');
   if (reopenBtn) reopenBtn.addEventListener('click', async () => {
     reopenBtn.disabled = true;
@@ -6035,7 +6081,7 @@ function wireTaskDetail(t) {
     if (delBtn.getAttribute('data-armed') !== 'yes') {
       delBtn.setAttribute('data-armed', 'yes');
       delBtn.textContent = 'Really delete';
-      say('Deleting is permanent. To keep the record, set the status to Dropped instead.');
+      say('Deleting is permanent. To keep the record, use Drop instead.');
       return;
     }
     try {
@@ -6265,10 +6311,17 @@ document.getElementById('journalTemplateBtn').addEventListener('click', openJour
 
 // ---------- switching between the three ----------
 
+// The add box says whose list a new task lands in, since on the Claude chip it
+// is Claude's.
+function setTaskAddPlaceholder() {
+  document.getElementById('taskAddInput').placeholder = taskFilter === 'claude'
+    ? 'Give Claude a job…  #project  due:friday'
+    : 'Add a task…  #project  due:friday';
+}
+
 function renderTaskFilters() {
   chipRow.innerHTML = '';
-  [['open', 'To do'], ['inbox', 'Inbox'], ['next', 'Next'],
-   ['waiting', 'Waiting'], ['done', 'Done']].forEach(([key, label]) => {
+  TASK_FILTERS.forEach(([key, label]) => {
     const chip = document.createElement('button');
     chip.className = 'chip' + (taskFilter === key ? ' active' : '');
     chip.type = 'button';
@@ -6277,6 +6330,7 @@ function renderTaskFilters() {
     chip.addEventListener('click', () => {
       taskFilter = key;
       renderTaskFilters();
+      setTaskAddPlaceholder();
       loadTasks(false);
     });
     chipRow.appendChild(chip);

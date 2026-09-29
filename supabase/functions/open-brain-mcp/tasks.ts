@@ -8,10 +8,14 @@
 // A single literal rather than a concatenation: supabase-js reads the column
 // list at the type level, and it can only do that if the string stays literal.
 export const TASK_COLUMNS =
-  "id, title, notes, status, project, due_date, defer_until, recur, recur_from, parent_id, thought_id, source, created_at, updated_at, completed_at" as const;
+  "id, title, notes, status, project, due_date, defer_until, recur, recur_from, parent_id, thought_id, source, owner, created_at, updated_at, completed_at" as const;
 
 export const TASK_STATUSES = ["inbox", "next", "waiting", "done", "dropped"] as const;
 export const OPEN_STATUSES = ["inbox", "next", "waiting"];
+
+// Who the task is for. 'me' is Stewart and the default; 'claude' is a job for a
+// Claude session to pick up, kept out of Stewart's own To do list.
+export const TASK_OWNERS = ["me", "claude"] as const;
 
 export interface TaskRecord {
   id: string;
@@ -26,6 +30,7 @@ export interface TaskRecord {
   parent_id: string | null;
   thought_id: string | null;
   source: string | null;
+  owner: string;
   created_at: string;
   updated_at: string;
   completed_at: string | null;
@@ -163,6 +168,7 @@ export function nextRecurrence(spec: RecurSpec, base: Date, today: Date): Date {
 // still has something to quote.
 export function formatTask(t: TaskRecord, i: number, today: string): string {
   const bits: string[] = [];
+  if (t.owner === "claude") bits.push("for Claude");
   if (t.due_date) {
     bits.push(t.due_date < today ? `overdue ${t.due_date}` : `due ${t.due_date}`);
   }

@@ -417,6 +417,7 @@ Only extract what's explicitly there.`,
 
 import {
   TASK_COLUMNS,
+  TASK_OWNERS,
   TASK_STATUSES,
   OPEN_STATUSES,
   RECUR_HELP,
@@ -1708,6 +1709,10 @@ function buildServer(): McpServer {
         parent_id: z.string().optional().describe("The id of a task this one is a subtask of"),
         thought_id: z.string().optional().describe("The id of the thought this task came out of, linking the task back to the note that prompted it"),
         source: z.string().optional().describe("Where it was captured, e.g. 'claude' or 'catalog'. Defaults to 'mcp'."),
+        owner: z
+          .enum(TASK_OWNERS)
+          .optional()
+          .describe("Who the task is for: 'me' (Stewart — the default) or 'claude' (a job for a Claude session, such as checking a scheduled task exists). Claude's tasks are kept out of Stewart's own To do list."),
       },
     },
     async (args) => {
@@ -1750,6 +1755,7 @@ function buildServer(): McpServer {
           parent_id: args.parent_id ?? null,
           thought_id: args.thought_id ?? null,
           source: args.source ?? "mcp",
+          owner: args.owner ?? "me",
         };
 
         const { data, error } = await supabase
@@ -1795,6 +1801,10 @@ function buildServer(): McpServer {
           .optional()
           .describe("Which statuses to include. Defaults to the open ones: inbox, next, waiting."),
         project: z.string().optional().describe("Only tasks in this project"),
+        owner: z
+          .enum(TASK_OWNERS)
+          .optional()
+          .describe("Only tasks for 'me' (Stewart) or 'claude'. Omit for both. When a Claude session asks what it has been given to do, pass 'claude'."),
         due_before: z.string().optional().describe("YYYY-MM-DD — only tasks due on or before this date. Pass today's date for 'what is due now'."),
         include_deferred: z
           .boolean()
@@ -1808,7 +1818,7 @@ function buildServer(): McpServer {
           .describe("\"text\" (default) for one readable line per task. \"json\" for an array of full task objects, used by the Open Brain Catalog GUI."),
       },
     },
-    async ({ status, project, due_before, include_deferred, search, limit, format }) => {
+    async ({ status, project, owner, due_before, include_deferred, search, limit, format }) => {
       try {
         const today = todayISO();
         const wanted = status && status.length ? status : OPEN_STATUSES;
@@ -1822,6 +1832,7 @@ function buildServer(): McpServer {
           .limit(limit ?? 50);
 
         if (project) q = q.eq("project", project);
+        if (owner) q = q.eq("owner", owner);
         if (due_before) {
           if (!parseISODate(due_before)) {
             return {
@@ -1893,6 +1904,7 @@ function buildServer(): McpServer {
         recur_from: z.enum(["due", "completion"]).optional().describe("Whether repeats count from the due date or from completion"),
         parent_id: z.string().nullable().optional().describe("New parent task id (null to detach)"),
         thought_id: z.string().nullable().optional().describe("New linked thought id (null to unlink)"),
+        owner: z.enum(TASK_OWNERS).optional().describe("Hand the task to 'me' (Stewart) or 'claude'"),
       },
     },
     async (args) => {
@@ -2069,6 +2081,7 @@ function buildServer(): McpServer {
             parent_id: task.parent_id,
             thought_id: task.thought_id,
             source: task.source,
+            owner: task.owner,
           })
           .select(TASK_COLUMNS)
           .single();
