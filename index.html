@@ -2361,7 +2361,7 @@ function findThought(id) {
 // the Author topic tag happens to mirror the person_note type.
 function renderChips() {
   const counts = new Map();
-  allThoughts.forEach(t => {
+  noteThoughts().forEach(t => {
     const k = t.type || '__unfiled__';
     counts.set(k, (counts.get(k) || 0) + 1);
   });
@@ -2458,6 +2458,20 @@ function noteSides(t) {
   return sides;
 }
 
+// Notes, Journal and Tasks are three separate drawers. A journal entry is a
+// note tagged Journal and a task-typed thought is a task, so neither belongs in
+// the Notes view under any combination of side, kind or tag filters — they show
+// only in their own sections. Link pickers and the dashboard still see them.
+function isJournalEntry(t) {
+  return (t.topics || []).some(x => x.trim().toLowerCase() === JOURNAL_TOPIC.toLowerCase());
+}
+function inNotesView(t) {
+  return t.type !== 'task' && !isJournalEntry(t);
+}
+function noteThoughts() {
+  return allThoughts.filter(inNotesView);
+}
+
 function onActiveSide(t) {
   if (activeSide === 'all' || !headingSides.size) return true;
   const sides = noteSides(t);
@@ -2514,7 +2528,7 @@ function headingGroups(counts) {
     activeSide === 'all' || !headingSides.has(g.heading) || headingSides.get(g.heading) === activeSide);
   list.forEach(g => {
     const norms = new Set(g.tags.map(([n]) => n));
-    g.notes = allThoughts.filter(t =>
+    g.notes = noteThoughts().filter(t =>
       (t.topics || []).some(top => norms.has(top.trim().toLowerCase()))).length;
     g.tags.sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label));
   });
@@ -2553,7 +2567,7 @@ function renderHeadingGroups(counts) {
 
 function topicCounts() {
   const counts = new Map();   // normalised -> { label, n }
-  allThoughts.forEach(t => {
+  noteThoughts().forEach(t => {
     (t.topics || []).forEach(raw => {
       const norm = raw.trim().toLowerCase();
       if (!norm) return;
@@ -2567,7 +2581,7 @@ function topicCounts() {
 
 function listCounts(field) {
   const counts = new Map();
-  allThoughts.forEach(t => (t[field] || []).forEach(raw => {
+  noteThoughts().forEach(t => (t[field] || []).forEach(raw => {
     const norm = (raw || '').trim().toLowerCase();
     if (!norm) return;
     const entry = counts.get(norm) || { label: raw.trim(), n: 0 };
@@ -2579,7 +2593,7 @@ function listCounts(field) {
 
 function valueCounts(field) {
   const counts = new Map();
-  allThoughts.forEach(t => {
+  noteThoughts().forEach(t => {
     const raw = t[field];
     if (!raw) return;
     const norm = raw.trim().toLowerCase();
@@ -2712,7 +2726,7 @@ function renderFacets() {
 
 function applyFilters() {
   const base = searchMode ? displayed.baseResults : allThoughts;
-  let filtered = base.filter(onActiveSide);
+  let filtered = base.filter(t => inNotesView(t) && onActiveSide(t));
   if (activeTypes.size > 0) {
     filtered = filtered.filter(t => activeTypes.has(t.type || '__unfiled__'));
   }
