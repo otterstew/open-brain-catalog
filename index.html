@@ -2749,6 +2749,7 @@ function applyFilters() {
   renderChips();
   renderFacets();
   renderList(filtered, searchMode);
+  recordNav();
 }
 
 const RESULTS_SHOWN = 1000;
@@ -2874,17 +2875,100 @@ function renderList(items, isSearch) {
 
 // Shared by both the author and source field-value clicks in the detail
 // view — exits any active search and narrows the drawer to just that value.
+// Clicking an author, source, tag or person on a note starts a fresh filter.
+// It used to replace only its own kind and keep the rest, so clicking the source
+// of a note reached through "Written by" ANDed the two and showed the same note
+// back as a list of one (3 Oct 2026).
 function filterToSingleValue(setRef, value) {
   if (viewMode !== 'notes') setViewMode('notes');
   searchMode = false;
   lastSearchQuery = '';
   searchInput.value = '';
   searchClear.style.display = 'none';
-  setRef.clear();
+  [activeTypes, activeTopics, activeAuthors, activeSources, activePeople].forEach(s => s.clear());
   setRef.add(value.trim().toLowerCase());
   showEmptyState();
   applyFilters();
 }
+
+// ---------- back and forward ----------
+// The catalog is a single page, so the browser's Back (and a phone's back
+// gesture) had nothing to return to: from a note reached through "Written by"
+// there was no way back to the author's list. Each filter and each open note is
+// now an entry in the browser's history, and Back restores it (3 Oct 2026).
+// Only the notes view keeps its filters; journal and tasks record the view alone.
+let navRestoring = false;
+const searchCache = new Map();   // query -> results, so Back to a search does not re-ask
+
+function navSnapshot() {
+  if (viewMode !== 'notes') return { ob: 1, view: viewMode };
+  return {
+    ob: 1, view: 'notes',
+    q: searchMode ? lastSearchQuery : '',
+    types: [...activeTypes], topics: [...activeTopics], people: [...activePeople],
+    authors: [...activeAuthors], sources: [...activeSources],
+    note: editingId ? null : selectedIndex,
+  };
+}
+
+function navKey(state, withQuery) {
+  const { depth, ...rest } = state;
+  if (!withQuery) rest.q = Boolean(rest.q);
+  return JSON.stringify(rest);
+}
+
+function recordNav() {
+  if (navRestoring) return;
+  const next = navSnapshot();
+  const cur = history.state && history.state.ob ? history.state : null;
+  if (cur && navKey(cur, true) === navKey(next, true)) return;
+  // Typing a search changes the query once per keystroke; that is one step, not ten.
+  const retyped = cur && cur.q && next.q && navKey(cur) === navKey(next);
+  if (!cur || retyped) {
+    next.depth = cur ? cur.depth : 0;
+    history.replaceState(next, '');
+  } else {
+    next.depth = (cur.depth || 0) + 1;
+    history.pushState(next, '');
+  }
+}
+
+function restoreNav(state) {
+  if (state.view !== viewMode) setViewMode(state.view);
+  if (state.view !== 'notes') return;
+  if (state.q) {
+    searchMode = true;
+    lastSearchQuery = state.q;
+    searchInput.value = state.q;
+    searchClear.style.display = 'block';
+    displayed.baseResults = searchCache.get(state.q) || localSearch(state.q);
+  } else {
+    searchMode = false;
+    lastSearchQuery = '';
+    searchInput.value = '';
+    searchClear.style.display = 'none';
+  }
+  activeTypes = new Set(state.types);
+  activeTopics = new Set(state.topics);
+  activePeople = new Set(state.people);
+  activeAuthors = new Set(state.authors);
+  activeSources = new Set(state.sources);
+  applyFilters();
+  const t = state.note && findThought(state.note);
+  if (t) selectThought(t); else showEmptyState();
+}
+
+window.addEventListener('popstate', (e) => {
+  const state = e.state;
+  if (!state || !state.ob) return;
+  if (!confirmLeavingEdit()) {
+    // Stay put: put back the entry Back just stepped off.
+    history.pushState(Object.assign(navSnapshot(), { depth: (state.depth || 0) + 1 }), '');
+    return;
+  }
+  navRestoring = true;
+  try { restoreNav(state); } finally { navRestoring = false; }
+});
 
 function renderLinksSection(t) {
   const items = t.extracted_links.map(l => {
@@ -3144,34 +3228,19 @@ function selectThought(t, mark) {
 
   main.querySelectorAll('[data-person]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (viewMode !== 'notes') setViewMode('notes');
-      searchMode = false;
-      lastSearchQuery = '';
-      searchInput.value = '';
-      searchClear.style.display = 'none';
-      activePeople = new Set([btn.getAttribute('data-person').trim().toLowerCase()]);
-      activeTopics = new Set();
       openFacet = 'people';
-      showEmptyState();
-      applyFilters();
+      filterToSingleValue(activePeople, btn.getAttribute('data-person'));
     });
   });
 
   main.querySelectorAll('[data-topic]').forEach(btn => {
     btn.addEventListener('click', () => {
-      if (viewMode !== 'notes') setViewMode('notes');
-      searchMode = false;
-      lastSearchQuery = '';
-      searchInput.value = '';
-      searchClear.style.display = 'none';
       const tag = btn.getAttribute('data-topic');
-      activeTopics = new Set([tag.trim().toLowerCase()]);
       // Open the topics dropdown at this tag's letter, so the filter you just
       // switched on is visible rather than hidden inside a closed control.
       openFacet = 'topics';
       topicLetter = (tag.trim()[0] || '').toUpperCase();
-      showEmptyState();
-      applyFilters();
+      filterToSingleValue(activeTopics, tag);
     });
   });
   const authorBtn = main.querySelector('[data-author]');
@@ -3224,6 +3293,7 @@ function selectThought(t, mark) {
   main.prepend(toList);
 
   app.classList.add('detail-open');
+  recordNav();
 }
 
 // Back to the top of whichever card is on screen. Both the reading view and the
@@ -3833,6 +3903,7 @@ function showEmptyState() {
   `;
   renderList(displayed, searchMode);
   app.classList.remove('detail-open');
+  recordNav();
 }
 
 // opts (all optional): label, title and tags to start with, focusBody to put the
@@ -4149,6 +4220,7 @@ async function runSearch(query) {
     // the archive found by meaning that the words alone would have missed.
     const seen = new Set(local.map(t => t.id));
     const results = local.concat(semantic.filter(t => !seen.has(t.id)));
+    searchCache.set(query, results);
     displayed.baseResults = results;
     activeTypes = new Set();
     activeTopics = new Set();
@@ -6391,6 +6463,7 @@ function setViewMode(mode) {
     showEmptyState();
     renderFacets();
   }
+  recordNav();
 }
 
 // Switching to the task list mid-edit is the exact way notes were being lost —
