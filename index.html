@@ -864,6 +864,24 @@
     min-width: 0;
   }
   .linked-note-open:hover { color: var(--brass); }
+  /* A journal day's links sit in plain view above the text; on a phone the
+     Linked notes section is folded away under "Details, links & tags". */
+  .journal-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin: 12px 24px 0;
+    font-size: 12.5px;
+  }
+  .journal-links-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .journal-links .linked-note-open { flex: 0 1 auto; color: var(--blue); }
   .link-create-btn, .link-add-toggle {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -3008,6 +3026,22 @@ function renderLinkedNotesSection(t) {
   `;
 }
 
+// The meditation, teacher or person a journal day refers to, as one line of
+// links. Only notes still in the archive are shown; a dangling id stays in
+// "Linked notes" where it can be removed.
+function renderJournalLinks(t) {
+  const found = t.linked_thought_ids.map(findThought).filter(Boolean);
+  if (!found.length) return '';
+  return '<div class="journal-links"><span class="journal-links-label">Linked</span>'
+    + found.map(n => {
+      // A person note's title runs on after the name ("Ayya Anandabodhi — bhikkhuni, …").
+      let label = n.title || n.content.replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (n.type === 'person_note') label = label.split(/\s+[—–-]\s+/)[0];
+      return `<button class="linked-note-open" data-id="${escapeAttr(n.id)}" type="button">${escapeHtml(label)}</button>`;
+    }).join('')
+    + '</div>';
+}
+
 function setupLinkPicker(t) {
   const toggle = document.getElementById('linkAddToggle');
   const picker = document.getElementById('linkPicker');
@@ -3122,6 +3156,7 @@ function selectThought(t, mark) {
     : '';
   const linksHtml = t.extracted_links.length ? renderLinksSection(t) : '';
   const linkedNotesHtml = renderLinkedNotesSection(t);
+  const journalLinksHtml = isJournalEntry(t) ? renderJournalLinks(t) : '';
 
   main.innerHTML = `
     <div class="index-card">
@@ -3156,6 +3191,7 @@ function selectThought(t, mark) {
       ${linksHtml}
       ${linkedNotesHtml}
       </div>
+      ${journalLinksHtml}
       <div class="note-tasks" id="noteTasks" hidden></div>
       <div class="index-card-confirm" id="cardConfirm"></div>
       <div class="index-card-body">
