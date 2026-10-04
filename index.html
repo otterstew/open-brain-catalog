@@ -2853,8 +2853,11 @@ function renderList(items, isSearch) {
   // this is where it turns back into the journal — and leaves the note list's
   // own state alone for when you switch back.
   if (viewMode === 'journal') { renderJournalList(); return; }
+  // Read the search results off the old list before replacing it: the new
+  // array has no baseResults, and losing them made the next facet click throw.
+  const base = isSearch ? displayed.baseResults : items;
   displayed = items;
-  displayed.baseResults = isSearch ? displayed.baseResults : items;
+  displayed.baseResults = base;
   listScroll.innerHTML = '';
   if (mainShowsList()) renderMainList(items);
 
