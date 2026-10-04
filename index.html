@@ -2486,6 +2486,9 @@ function isJournalEntry(t) {
 // System notes are a separate shelf, not an addition: switched on, the list
 // holds only the machine's changelog entries and work orders; switched off,
 // only everything else (4 Oct 2026 — mixing the two buried Stewart's notes).
+function isPinned(t) {
+  return (t.topics || []).some(x => x.trim().toLowerCase() === 'pinned');
+}
 function inNotesView(t) {
   return t.type !== 'task' && !isJournalEntry(t) && t.shelved === showShelved;
 }
@@ -2767,6 +2770,9 @@ function applyFilters() {
   if (activeSources.size > 0) {
     filtered = filtered.filter(t => t.source && activeSources.has(t.source.trim().toLowerCase()));
   }
+  // A note tagged Pinned heads its list (the System directory, 4 Oct 2026).
+  // Search results keep their ranking; pins only reorder a plain list.
+  if (!searchMode) filtered = filtered.filter(isPinned).concat(filtered.filter(t => !isPinned(t)));
   renderChips();
   renderFacets();
   renderList(filtered, searchMode);
@@ -2875,7 +2881,7 @@ function renderList(items, isSearch) {
         <div class="card-row-meta">
           <span class="card-row-type" style="color:${style.color}">${style.label}</span>
           <span class="card-row-date">${formatDate(t.created_at)}</span>
-          ${t.shelved ? '<span class="card-row-shelf">bookkeeping</span>' : ''}
+          ${isPinned(t) ? '<span class="card-row-shelf">pinned</span>' : t.shelved ? '<span class="card-row-shelf">bookkeeping</span>' : ''}
         </div>
         <div class="card-row-preview">${escapeHtml(t.title || t.content)}</div>
         ${(t.people || []).length
