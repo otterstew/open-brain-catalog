@@ -2012,7 +2012,7 @@
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
         <button class="facet-btn shelf-toggle" id="shelfToggle" type="button" aria-pressed="false"
-                title="Changelog entries and work orders the machine wrote about itself. Your own notes are never hidden by this.">
+                title="Changelog entries and work orders the machine wrote about itself. Switched on, the list shows only these; switched off, only your own notes.">
           <span>System notes</span><span class="shelf-state" id="shelfState">hidden</span>
         </button>
       </div>
@@ -2483,8 +2483,11 @@ function noteSides(t) {
 function isJournalEntry(t) {
   return (t.topics || []).some(x => x.trim().toLowerCase() === JOURNAL_TOPIC.toLowerCase());
 }
+// System notes are a separate shelf, not an addition: switched on, the list
+// holds only the machine's changelog entries and work orders; switched off,
+// only everything else (4 Oct 2026 — mixing the two buried Stewart's notes).
 function inNotesView(t) {
-  return t.type !== 'task' && !isJournalEntry(t);
+  return t.type !== 'task' && !isJournalEntry(t) && t.shelved === showShelved;
 }
 function noteThoughts() {
   return allThoughts.filter(inNotesView);
@@ -4252,6 +4255,10 @@ async function runSearch(query) {
     const text = await callTool('search_thoughts',
       { query, limit: 50, format: 'json', include_shelved: showShelved });
     const semantic = parseJsonThoughts(text);
+    // The server marks only its meaning-matches as system notes, not the
+    // keyword top-ups; the full list in hand knows which is which.
+    const shelfOf = new Map(allThoughts.map(t => [t.id, t.shelved]));
+    semantic.forEach(t => { if (shelfOf.has(t.id)) t.shelved = shelfOf.get(t.id); });
     // Literal matches first — they are what the typist meant — then anything
     // the archive found by meaning that the words alone would have missed.
     const seen = new Set(local.map(t => t.id));
@@ -4276,7 +4283,7 @@ function renderShelfToggle() {
   const btn = document.getElementById('shelfToggle');
   if (!btn) return;
   btn.setAttribute('aria-pressed', showShelved ? 'true' : 'false');
-  document.getElementById('shelfState').textContent = showShelved ? 'shown' : 'hidden';
+  document.getElementById('shelfState').textContent = showShelved ? 'only these' : 'hidden';
 }
 
 document.getElementById('shelfToggle').addEventListener('click', () => {
