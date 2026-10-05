@@ -16,6 +16,7 @@
     --ruled:rgba(232,223,200,0.07); --hairline:rgba(232,223,200,0.13);
     --ink:#E9DFC7; --ink-dim:#A79A7D; --ink-faint:#766B54;
     --brass:#C9A227; --moss:#7C9A6E; --rust:#B15B45; --blue:#6C93A8; --plum:#9A79A0;
+    --ok:#6FAE5E; --warn:#E3A33B; --fail:#E5483B; --idle:#8A8170;
     --font-display:'Fraunces',Georgia,serif;
     --font-body:'Source Serif 4','Iowan Old Style',Georgia,serif;
     --font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;
@@ -68,6 +69,18 @@
   .body th,.body td{border-bottom:1px solid var(--hairline);padding:7px 10px;text-align:left;vertical-align:top}
   .body th{font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)}
   .empty{color:var(--ink-faint);padding:40px 0}
+  /* ---- system health ---- */
+  .hdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--st);flex:none;margin-right:7px;vertical-align:1px}
+  .hdot.paused{background:none;box-shadow:inset 0 0 0 1.5px var(--ink-faint)}
+  .item.paused{opacity:.55}
+  .cloud{display:inline-block;font-family:var(--font-mono);font-size:10px;letter-spacing:.03em;color:var(--blue);border:1px solid var(--blue);border-radius:999px;padding:0 6px;margin-left:6px;vertical-align:1px}
+  .hbar{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);margin:0 6px 12px}
+  .hbar button{background:none;border:1px solid var(--hairline);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--ink-dim);font-family:var(--font-mono);font-size:11px;margin-top:6px}
+  .key{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:14px;margin:12px 0}
+  .key .hdot{margin-top:6px}
+  .item .t{overflow-wrap:anywhere}
+  .htbl table{min-width:0;width:100%}
+  .htbl th{white-space:nowrap;width:1%}
   .backbtn{display:none}
   /* ---- unlock ---- */
   .unlock{max-width:420px;margin:12vh auto;padding:28px;background:var(--panel);border:1px solid var(--hairline);border-radius:14px}
@@ -122,6 +135,24 @@ const SECTIONS = [
   { tag: 'Personal project status',   name: 'Projects – personal',   colour: 'var(--plum)',  blurb: 'Where each personal project is up to, and the next step.' },
 ];
 
+// System health (added 5 Oct 2026): not notes, but the current state of the
+// health check, read from the system-health function with the same key. One
+// dot per check; the nav dot takes the worst colour. See the system-health
+// skill for what each status means.
+const HEALTH_URL = MCP_URL.replace('open-brain-mcp', 'system-health');
+const HEALTH = '__health';
+const STATUS = {
+  fail:    { label: 'Failing', colour: 'var(--fail)' },
+  warn:    { label: 'Needs a look', colour: 'var(--warn)' },
+  waiting: { label: 'Waiting for the Mac', colour: 'var(--idle)' },
+  unknown: { label: 'Not checked', colour: 'var(--idle)' },
+  late:    { label: 'Ran late: Mac was off', colour: 'var(--ok)' },
+  ok:      { label: 'Working', colour: 'var(--ok)' },
+  paused:  { label: 'Paused', colour: 'var(--ink-faint)' },
+};
+const RANK = { fail: 6, warn: 5, waiting: 4, unknown: 3, late: 2, ok: 1, paused: 0 };
+let health = null, healthErr = '';
+
 let accessKey = '';
 try { accessKey = localStorage.getItem(KEY_STORAGE) || ''; } catch (_) {}
 let notes = [];
@@ -160,8 +191,23 @@ async function callTool(name, args) {
   return block ? block.text : '';
 }
 
+// Never throws: a broken health check must not stop the notes loading.
+async function loadHealth(runFirst) {
+  try {
+    if (runFirst) {
+      const r = await fetch(HEALTH_URL + '/run', { method: 'POST', headers: { 'x-brain-key': accessKey } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    }
+    const res = await fetch(HEALTH_URL, { headers: { 'x-brain-key': accessKey } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    health = await res.json(); healthErr = '';
+  } catch (e) { healthErr = 'Could not load the health check (' + e.message + ').'; }
+}
+
 async function load() {
+  const healthLoaded = loadHealth(false);
   const text = await callTool('list_thoughts', { topic: DASH_TAG, limit: 300, format: 'json' });
+  await healthLoaded;
   let arr = [];
   try { arr = JSON.parse(text); } catch (_) { arr = []; }
   notes = (Array.isArray(arr) ? arr : []).map(r => {
@@ -239,13 +285,99 @@ function visibleNotes() {
   return notes.filter(n => n.section === state.section);
 }
 
+function healthWorst() {
+  const cs = (health && health.checks) || [];
+  return cs.reduce((w, c) => (RANK[c.status] > RANK[w] ? c.status : w), 'paused');
+}
+// A task that ran late or is waiting for the Mac, and could run without it.
+const cloudable = (c) => c.check_id.startsWith('task:') && c.needs_mac === null && (c.status === 'late' || c.status === 'waiting');
+const when = (iso, withDay) => iso ? new Date(iso).toLocaleString('en-GB', withDay ? { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' }) : '–';
+
+function navHtml(counts) {
+  const cs = (health && health.checks) || [];
+  const problems = cs.filter(c => c.status === 'fail' || c.status === 'warn').length;
+  const w = healthErr ? 'unknown' : healthWorst();
+  const hcolour = healthErr ? 'var(--idle)' : (w === 'paused' ? 'var(--ok)' : STATUS[w].colour);
+  return '<div class="navlist">' +
+    '<button class="sec' + (!state.query && state.section === HEALTH ? ' on' : '') + '" data-sec="' + HEALTH + '" style="--sec-colour:' + hcolour + '"><span class="dot"></span>System health<span class="n">' + (healthErr ? '?' : problems || '✓') + '</span></button>' +
+    SECTIONS.map(s =>
+      '<button class="sec' + (!state.query && s.tag === state.section ? ' on' : '') + '" data-sec="' + esc(s.tag) + '" style="--sec-colour:' + s.colour + '"><span class="dot"></span>' + esc(s.name) + '<span class="n">' + counts[s.tag] + '</span></button>').join('') +
+    '</div>';
+}
+
+function navFoot() {
+  return '<div class="navfoot">Loaded ' + (loadedAt ? loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–') + ' · ' + notes.length + ' notes<br><button data-refresh>Refresh</button> <button data-lock>Lock</button></div>';
+}
+
+function healthDetail(c) {
+  if (!c) {
+    const cs = (health && health.checks) || [];
+    const n = (s) => cs.filter(c => c.status === s).length;
+    const cloud = cs.filter(cloudable);
+    return '<div class="crumb" style="--sec-colour:var(--ok)">System health</div><h1>Is everything working?</h1>' +
+      '<div class="meta">' + cs.length + ' checks · ' + n('fail') + ' failing · ' + n('warn') + ' to look at · ' + (n('waiting') + n('late')) + ' affected by the Mac being off</div>' +
+      '<div class="body"><p>One check covers the Mac’s scheduled tasks, the Supabase jobs and functions, the websites and GitHub. The cloud half runs every hour, Mac or no Mac. The Mac half runs once a day when the Claude app is open.</p>' +
+      '<div class="key">' + ['fail', 'warn', 'waiting', 'late', 'ok', 'paused'].map(s => '<span class="hdot' + (s === 'paused' ? ' paused' : '') + '" style="--st:' + STATUS[s].colour + '"></span><span><strong>' + STATUS[s].label + '.</strong> ' + ({
+        fail: 'Broken: it failed, ran empty, or missed its time while the Mac was on.',
+        warn: 'Working, but something is off: running late on GitHub, stuck, or noisy.',
+        waiting: 'Hasn’t run since its time because the Mac or the Claude app has been off. It catches up when the app opens.',
+        late: 'Ran, but late, because the Mac was off at its time.',
+        ok: 'Working.',
+        paused: 'Switched off on purpose.',
+      })[s] + '</span>').join('') + '</div>' +
+      (cloud.length ? '<p><span class="cloud">could run in the cloud</span> marks a task held up by the Mac being off that doesn’t need the Mac: ' + cloud.map(c => esc(c.name)).join(', ') + '.</p>' : '') +
+      '<p>Pick a check on the left for its detail.</p></div>';
+  }
+  const st = STATUS[c.status] || STATUS.unknown;
+  const isTask = c.check_id.startsWith('task:');
+  const rows = [
+    ['Status', st.label + ' since ' + when(c.status_since, true)],
+    ['Last worked', when(c.last_ok_at, true)],
+    ['Checked', when(c.checked_at, true) + (c.half === 'mac' ? ' (Mac check)' : ' (cloud check)')],
+  ];
+  if (isTask) rows.push(['Needs the Mac?', c.needs_mac === null ? 'No: it could run in the cloud without the Mac.' : 'Yes: ' + c.needs_mac]);
+  return '<button class="backbtn" data-back>← System health</button>' +
+    '<div class="crumb" style="--sec-colour:' + st.colour + '">' + esc(c.app) + '</div>' +
+    '<h1><span class="hdot' + (c.status === 'paused' ? ' paused' : '') + '" style="--st:' + st.colour + '"></span>' + esc(c.name) + '</h1>' +
+    '<div class="meta">' + esc(st.label) + (cloudable(c) ? ' <span class="cloud">could run in the cloud</span>' : '') + '</div>' +
+    '<div class="body"><p>' + esc(c.detail) + '</p><div class="tbl htbl"><table><tbody>' +
+    rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>').join('') + '</tbody></table></div></div>';
+}
+
+function renderHealth(counts) {
+  const cs = ((health && health.checks) || []).slice()
+    .sort((a, b) => RANK[b.status] - RANK[a.status] || a.app.localeCompare(b.app) || a.name.localeCompare(b.name));
+  const current = cs.find(c => c.check_id === state.noteId) || null;
+  const bar = healthErr ? '<div class="hbar err">' + esc(healthErr) + '</div>' :
+    '<div class="hbar">Cloud checked ' + when(health && health.cloud && health.cloud.ran_at, true) + '<br>Mac reported ' + when(health && health.mac && health.mac.ran_at, true) + '<br><button data-healthrun>Check now</button></div>';
+  const list = cs.map(c => {
+    const st = STATUS[c.status] || STATUS.unknown;
+    return '<button class="item' + (c.check_id === state.noteId ? ' on' : '') + (c.status === 'paused' ? ' paused' : '') + '" data-check="' + esc(c.check_id) + '">' +
+      '<div class="t"><span class="hdot' + (c.status === 'paused' ? ' paused' : '') + '" style="--st:' + st.colour + '"></span>' + esc(c.name) + (cloudable(c) ? '<span class="cloud">cloud?</span>' : '') + '</div>' +
+      '<div class="m">' + esc(st.label) + ' · ' + esc(c.app) + '</div></button>';
+  }).join('');
+  $('#app').innerHTML =
+    '<div class="shell">' +
+      '<nav><div class="brand">AI Desk</div><div class="brand-sub">FROM OPEN BRAIN · LIVE</div>' +
+        '<input class="search" id="q" type="search" placeholder="Search everything" value="" autocomplete="off">' +
+        navHtml(counts) + navFoot() +
+      '</nav>' +
+      '<main class="' + (state.reading ? 'reading' : '') + '">' +
+        '<section class="list"><h2>System health</h2><p class="blurb">Every check, problems first.</p>' + bar + (list || '<div class="empty">No checks yet.</div>') + '</section>' +
+        '<article class="detail">' + healthDetail(current) + '</article>' +
+      '</main>' +
+    '</div>';
+  saveView();
+}
+
 function render() {
+  const counts = Object.fromEntries(SECTIONS.map(s => [s.tag, notes.filter(n => n.section === s.tag).length]));
+  if (!state.query && state.section === HEALTH) return renderHealth(counts);
   const sec = SECTIONS.find(s => s.tag === state.section) || SECTIONS[0];
   const list = visibleNotes();
   if (!state.query && (!state.noteId || !list.some(n => n.id === state.noteId))) state.noteId = list[0] ? list[0].id : null;
   const current = notes.find(n => n.id === state.noteId) || null;
   const curSec = current ? (SECTIONS.find(s => s.tag === current.section) || sec) : sec;
-  const counts = Object.fromEntries(SECTIONS.map(s => [s.tag, notes.filter(n => n.section === s.tag).length]));
 
   let detail = '<div class="empty">Nothing here yet.</div>';
   if (current) {
@@ -262,10 +394,7 @@ function render() {
     '<div class="shell">' +
       '<nav><div class="brand">AI Desk</div><div class="brand-sub">FROM OPEN BRAIN · LIVE</div>' +
         '<input class="search" id="q" type="search" placeholder="Search everything" value="' + esc(state.query) + '" autocomplete="off">' +
-        '<div class="navlist">' + SECTIONS.map(s =>
-          '<button class="sec' + (!state.query && s.tag === state.section ? ' on' : '') + '" data-sec="' + esc(s.tag) + '" style="--sec-colour:' + s.colour + '"><span class="dot"></span>' + esc(s.name) + '<span class="n">' + counts[s.tag] + '</span></button>').join('') +
-        '</div>' +
-        '<div class="navfoot">Loaded ' + (loadedAt ? loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–') + ' · ' + notes.length + ' notes<br><button data-refresh>Refresh</button> <button data-lock>Lock</button></div>' +
+        navHtml(counts) + navFoot() +
       '</nav>' +
       '<main class="' + (state.reading ? 'reading' : '') + '">' +
         '<section class="list"><h2>' + esc(state.query ? 'Search' : sec.name) + '</h2><p class="blurb">' + esc(state.query ? list.length + ' match' + (list.length === 1 ? '' : 'es') + ' for “' + state.query + '”' : sec.blurb) + '</p>' +
@@ -303,8 +432,10 @@ async function start() {
 
 /* ---------- events ---------- */
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-sec],[data-note],[data-jump],[data-refresh],[data-lock],[data-back],.copy');
+  const t = e.target.closest('[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-back],.copy');
   if (!t) return;
+  if (t.dataset.check) { state.noteId = t.dataset.check; state.reading = true; render(); window.scrollTo(0, 0); return; }
+  if (t.hasAttribute('data-healthrun')) { t.textContent = 'Checking…'; t.disabled = true; await loadHealth(true); render(); return; }
   if (t.matches('.copy')) {
     const txt = t.parentElement.getAttribute('data-copy');
     try { await navigator.clipboard.writeText(txt); t.textContent = 'Copied'; setTimeout(() => (t.textContent = 'Copy'), 1500); } catch (_) { t.textContent = 'Select & copy'; }
