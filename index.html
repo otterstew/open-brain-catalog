@@ -1243,6 +1243,10 @@
     background: rgba(22,20,15,0.9);
   }
   .import[hidden] { display: none; }
+  /* The tag step opens while the import panel is still up, and comes first in
+     the page, so at an equal z-index it painted underneath — invisible, with
+     "Save as new note" greyed out waiting on it. */
+  #tagPanel { z-index: 76; }
   .import-panel {
     width: 100%;
     max-width: 760px;
