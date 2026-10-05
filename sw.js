@@ -5,7 +5,7 @@
 // carrying the access key, and stale notes would be worse than none.
 // Bump SHELL_VERSION whenever the shell files change: the browser only re-runs
 // install when this script's bytes differ, and the cache name goes with it.
-const SHELL_VERSION = 72;
+const SHELL_VERSION = 73;
 const CACHE = 'open-brain-shell-v' + SHELL_VERSION;
 const SHELL = [
   './',
@@ -25,6 +25,8 @@ const SHELL = [
   './trip.webmanifest',
   './trip-192.png',
   './trip-512.png',
+  // AI Desk: meeting dashboard over the "AI Dashboard" notes.
+  './ai.html',
 ];
 
 self.addEventListener('install', (event) => {
