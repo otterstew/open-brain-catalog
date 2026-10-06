@@ -211,7 +211,7 @@ async function loadHealth(runFirst) {
 
 async function load() {
   const healthLoaded = loadHealth(false);
-  const text = await callTool('list_thoughts', { topic: DASH_TAG, limit: 300, format: 'json' });
+  const text = await callTool('list_thoughts', { topic: DASH_TAG, limit: 300, format: 'json', include_shelved: true });
   await healthLoaded;
   let arr = [];
   try { arr = JSON.parse(text); } catch (_) { arr = []; }
