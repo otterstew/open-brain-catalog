@@ -53,6 +53,8 @@
   .item .t{font-size:15px;line-height:1.3}
   .item .m{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);margin-top:3px}
   .detail{padding:28px 36px 60px;min-width:0;max-width:880px}
+  .detail.wide{max-width:1240px}
+  .detail.wide .body{max-width:808px}
   .crumb{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sec-colour,var(--brass))}
   .detail h1{font-family:var(--font-display);font-weight:600;font-size:30px;line-height:1.15;margin:6px 0 4px}
   .meta{font-family:var(--font-mono);font-size:12px;color:var(--ink-faint);margin-bottom:18px}
@@ -85,6 +87,33 @@
   .htbl table{min-width:0;width:100%}
   .htbl th{white-space:nowrap;width:1%}
   .backbtn{display:none}
+  .navgroup{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:14px 10px 4px;border-top:1px solid var(--ruled);margin-top:10px}
+  /* ---- model scores ---- */
+  .sc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 12px}
+  .sc-bar button{background:var(--panel);border:1px solid var(--hairline);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--ink-dim)}
+  .sc-bar button.on{color:var(--paper);background:var(--brass);border-color:var(--brass)}
+  .sc-bar label{font-size:13px;color:var(--ink-dim);display:flex;gap:6px;align-items:center;margin-left:auto;cursor:pointer}
+  .sc .tbl{margin:0 0 8px}
+  .sc table{border-collapse:separate;border-spacing:2px;font-size:13px;min-width:0}
+  .sc th,.sc td{border:0;padding:6px 5px;text-align:center;white-space:nowrap}
+  .sc th{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);cursor:pointer;vertical-align:bottom;white-space:normal;min-width:48px;line-height:1.25}
+  .sc th.on{color:var(--brass)}
+  .sc th.m,.sc td.m{text-align:left;position:sticky;left:0;background:var(--paper);z-index:1;min-width:132px}
+  .sc td.m .lab{display:block;font-family:var(--font-mono);font-size:10px;color:var(--ink-faint)}
+  .sc td.v{font-family:var(--font-mono);border-radius:5px;background:color-mix(in srgb,var(--moss) var(--h),transparent)}
+  .sc td.v.best{box-shadow:inset 0 0 0 1.5px var(--brass);font-weight:600}
+  .sc td.v.na{color:var(--ink-faint);background:none}
+  .sc tr.ours td.m{box-shadow:inset 3px 0 0 var(--ok)}
+  .route{display:inline-block;font-family:var(--font-mono);font-size:10px;border-radius:999px;padding:0 6px;margin-top:2px;border:1px solid currentColor}
+  .route.inuse{color:var(--ok)} .route.possible{color:var(--brass)} .route.selfhost{color:var(--blue)} .route.eu{color:var(--plum)}
+  .bars{display:grid;grid-template-columns:minmax(120px,170px) 1fr auto;gap:5px 10px;align-items:center;font-size:14px;margin:6px 0 10px}
+  .bars .track{height:16px;background:var(--panel);border-radius:4px;overflow:hidden}
+  .bars .fill{height:100%;background:var(--moss);border-radius:4px}
+  .bars .ours .fill{background:var(--ok)}
+  .bars .val{font-family:var(--font-mono);font-size:12px;color:var(--ink-dim);text-align:right;min-width:42px}
+  .bars .nm.ours{color:var(--ok)}
+  .sc-key{font-size:13px;color:var(--ink-faint);margin:0 0 6px}
+  .body pre{background:var(--panel);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:12px}
   /* ---- unlock ---- */
   .unlock{max-width:420px;margin:12vh auto;padding:28px;background:var(--panel);border:1px solid var(--hairline);border-radius:14px}
   .unlock h1{font-family:var(--font-display);margin:0 0 8px}
@@ -102,6 +131,8 @@
     .navlist{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
     .sec{white-space:nowrap;width:auto;padding:7px 10px}
     .sec .n{display:none}
+    .navgroup{border-top:0;border-left:1px solid var(--hairline);margin:0 0 0 6px;padding:9px 4px 0 12px;white-space:nowrap}
+    .bars{grid-template-columns:minmax(90px,120px) 1fr auto}
     .navfoot{display:none}
     main{grid-template-columns:1fr}
     .list{height:auto;position:static;border-right:0;padding:14px 16px}
@@ -115,38 +146,75 @@
 <body>
 <div id="app"></div>
 <script>
+// <owner>
 // AI Desk: a meeting-friendly view of the Open Brain notes tagged "AI Dashboard".
 // The page holds no content. It reads the notes live from the Open Brain MCP
 // server with the same access key as the catalog (same origin, same
 // localStorage entry), so updating a note updates the dashboard. Never put the
 // key or any note content in this file.
+//
+// The same file also builds the SHARED view for colleagues (7 Oct 2026):
+// ~/Documents/Claude Code/AI Desk Share/build.js takes this file, deletes every
+// region between "// <owner>" and "// </owner>" and every line ending
+// "// owner", fills in SNAPSHOT with the shared sections' notes, and encrypts
+// the lot under a passphrase. So: anything personal (keys, URLs, health,
+// private sections, other apps) must sit inside an owner marker, and the code
+// left after stripping must still run. The build refuses to publish if
+// owner-only words survive.
 const MCP_URL = "https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mcp";
 const KEY_STORAGE = 'openbrain.accessKey';
 const DASH_TAG = 'AI Dashboard';
+// </owner>
+const SNAPSHOT = null; // the share build replaces this line with the shared notes
 
-// Sections in display order. `tag` is the second Open Brain tag on each note.
+// Sections in display order. `tag` is the second tag on each note.
+// Private sections are owner-only: never in the shared view, and the share
+// build drops any note carrying one of their tags, whatever else it carries.
 const SECTIONS = [
   { tag: 'AI weekly update',          name: 'This week',             colour: 'var(--brass)', blurb: 'The latest research, newest first.' },
+  { tag: 'AI tools and data location',name: 'Models & data location',colour: 'var(--rust)',  blurb: 'How the leading AI models score, and which ones the no-US rule lets us use.' },
   { tag: 'AI Forum',                  name: 'AI Forum',              colour: 'var(--moss)',  blurb: 'Round-table agenda and notes. Use the chips to jump between items.' },
   { tag: 'Copilot and automation',    name: 'Copilot & automation',  colour: 'var(--blue)',  blurb: 'What Copilot can do for us, and what it can’t yet.' },
   { tag: 'Prompt library',            name: 'Prompt library',        colour: 'var(--plum)',  blurb: 'Prompts worth sharing. Tap Copy on any prompt.' },
-  { tag: 'AI tools and data location',name: 'Tools & data location', colour: 'var(--rust)',  blurb: 'What the no-US rule allows.' },
   { tag: 'AI build options',          name: 'Build options',         colour: 'var(--moss)',  blurb: 'Building our own agents within the rules.' },
   { tag: 'Microsoft watch',           name: 'Microsoft',             colour: 'var(--blue)',  blurb: 'Our platform: Copilot, Autopilot, Power Automate, Copilot Studio and Dataverse, and how they fit together.' },
   { tag: 'AI vendor watch',           name: 'Vendor watch',          colour: 'var(--blue)',  blurb: 'What our suppliers and the big AI labs are shipping: Harvey, iManage, Quantios, Aderant, OpenAI, Anthropic, Apple, Meta.' },
   { tag: 'AI impact',                 name: 'AI impact',             colour: 'var(--moss)',  blurb: 'Energy, water, environment and the social side of AI: who pays, and who is fixing it.' },
-  { tag: 'Project status',            name: 'Projects – work',       colour: 'var(--brass)', blurb: 'Where each work project is up to, and the next step.' },
-  { tag: 'Personal project status',   name: 'Projects – personal',   colour: 'var(--plum)',  blurb: 'Where each personal project is up to, and the next step.' },
-  { tag: 'Skills',                    name: 'Skills',                colour: 'var(--blue)',  blurb: 'Every skill I have: what it does, when to use it, what it can reach.' },
-  { tag: 'Security review',           name: 'Security',              colour: 'var(--rust)',  blurb: 'Keys, access, hooks and risks. The latest results refresh daily with the health check.' },
+  // <owner>
+  { tag: 'Project status',            name: 'Projects – work',       colour: 'var(--brass)', blurb: 'Where each work project is up to, and the next step.', private: true },
+  { tag: 'Personal project status',   name: 'Projects – personal',   colour: 'var(--plum)',  blurb: 'Where each personal project is up to, and the next step.', private: true },
+  { tag: 'Skills',                    name: 'Skills',                colour: 'var(--blue)',  blurb: 'Every skill I have: what it does, when to use it, what it can reach.', private: true },
+  { tag: 'Security review',           name: 'Security',              colour: 'var(--rust)',  blurb: 'Keys, access, hooks and risks. The latest results refresh daily with the health check.', private: true },
+  // </owner>
 ];
 
+// Model scores (7 Oct 2026): a note tagged "AI model scores" carries its data
+// in a ```scores JSON block, drawn as a heat-map grid or ranked bars above the
+// note's text. The ai-desk-weekly-update task refreshes the block on Mondays.
+const SCORE_TAG = 'AI model scores';
+const SCORE_COLS = [
+  { k: 'overall',  label: 'Overall',        tip: 'Artificial Analysis Intelligence Index, 0–100' },
+  { k: 'work',     label: 'Office work',    tip: 'GDPval-AA: real professional tasks, 0–100' },
+  { k: 'hle',      label: 'Hard questions', tip: 'Humanity’s Last Exam, %' },
+  { k: 'coding',   label: 'Agentic coding', tip: 'Terminal-Bench, %' },
+  { k: 'banking',  label: 'Banking agent',  tip: 'τ³-Banking, %' },
+  { k: 'longdocs', label: 'Long docs',      tip: 'AA-LCR long-context reasoning, %' },
+  { k: 'accuracy', label: 'Accuracy',       tip: 'AA-Omniscience: right minus wrong, −100 to 100' },
+  { k: 'science',  label: 'Science',        tip: 'GPQA Diamond, %' },
+  { k: 'arena',    label: 'People’s pick',  tip: 'LMArena text rating (blind votes)' },
+  { k: 'price',    label: '$ per M tokens', tip: 'Blended price, lower is better', low: true },
+  { k: 'speed',    label: 'Speed',          tip: 'Output tokens per second' },
+];
+const ROUTES = { inuse: 'In use', possible: 'Possible', selfhost: 'Self-host', eu: 'EU lab' };
+let scoreView = { mode: 'grid', sort: 'overall', metric: 'overall', usable: false };
+
+const HEALTH = '__health';
+// <owner>
 // System health (added 5 Oct 2026): not notes, but the current state of the
 // health check, read from the system-health function with the same key. One
 // dot per check; the nav dot takes the worst colour. See the system-health
 // skill for what each status means.
 const HEALTH_URL = MCP_URL.replace('open-brain-mcp', 'system-health');
-const HEALTH = '__health';
 const STATUS = {
   fail:    { label: 'Failing', colour: 'var(--fail)' },
   warn:    { label: 'Needs a look', colour: 'var(--warn)' },
@@ -161,6 +229,7 @@ let health = null, healthErr = '';
 
 let accessKey = '';
 try { accessKey = localStorage.getItem(KEY_STORAGE) || ''; } catch (_) {}
+// </owner>
 let notes = [];
 let loadedAt = null;
 let state = { section: SECTIONS[0].tag, noteId: null, query: '' };
@@ -169,6 +238,24 @@ try { const s = JSON.parse(sessionStorage.getItem('aidesk.view') || 'null'); if 
 const $ = (s, r = document) => r.querySelector(s);
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
+// One raw note row (as list_thoughts json returns it) to what the views use.
+function toNote(r) {
+  const m = r.metadata || {};
+  const topics = Array.isArray(m.topics) ? m.topics : [];
+  const content = r.content || '';
+  const firstHeading = (content.match(/^#\s+(.+)$/m) || [])[1];
+  return {
+    id: r.id, content, topics,
+    title: m.title || firstHeading || content.slice(0, 70),
+    date: m.updated_date || m.published_date || (r.created_at || '').slice(0, 10),
+    created: r.created_at || '',
+    section: (SECTIONS.find(s => topics.includes(s.tag)) || {}).tag || null,
+  };
+}
+// Newest first, except the model scores note, which leads its section.
+const noteOrder = (a, b) => (b.topics.includes(SCORE_TAG) - a.topics.includes(SCORE_TAG)) || (b.date + b.created).localeCompare(a.date + a.created);
+
+// <owner>
 /* ---------- server ---------- */
 async function callTool(name, args) {
   let res;
@@ -216,21 +303,10 @@ async function load() {
   await healthLoaded;
   let arr = [];
   try { arr = JSON.parse(text); } catch (_) { arr = []; }
-  notes = (Array.isArray(arr) ? arr : []).map(r => {
-    const m = r.metadata || {};
-    const topics = Array.isArray(m.topics) ? m.topics : [];
-    const content = r.content || '';
-    const firstHeading = (content.match(/^#\s+(.+)$/m) || [])[1];
-    return {
-      id: r.id, content, topics,
-      title: m.title || firstHeading || content.slice(0, 70),
-      date: m.updated_date || m.published_date || (r.created_at || '').slice(0, 10),
-      created: r.created_at || '',
-      section: (SECTIONS.find(s => topics.includes(s.tag)) || {}).tag || null,
-    };
-  }).sort((a, b) => (b.date + b.created).localeCompare(a.date + a.created));
+  notes = (Array.isArray(arr) ? arr : []).map(toNote).sort(noteOrder);
   loadedAt = new Date();
 }
+// </owner>
 
 /* ---------- markdown (small, escape-first) ---------- */
 function inline(s) {
@@ -258,9 +334,11 @@ function md(src, dropTitle) {
     table = [];
   };
   const flushAll = () => { flushList(); flushQuote(); flushTable(); };
-  let titleDropped = !dropTitle;
+  let titleDropped = !dropTitle, fence = null;
   for (const line of lines) {
     const t = line.trim();
+    if (t.startsWith('```')) { flushAll(); if (fence) { out.push('<pre>' + esc(fence.join('\n')) + '</pre>'); fence = null; } else fence = []; continue; }
+    if (fence) { fence.push(line); continue; }
     if (!titleDropped && /^#\s+/.test(t)) { titleDropped = true; continue; }
     if (t.startsWith('|')) { flushList(); flushQuote(); table.push(t); continue; }
     if (t.startsWith('>')) { flushList(); flushTable(); quote.push(t.replace(/^>\s?/, '')); continue; }
@@ -279,7 +357,71 @@ function md(src, dropTitle) {
     } else out.push('<p>' + inline(t) + '</p>');
   }
   flushAll();
+  if (fence) out.push('<pre>' + esc(fence.join('\n')) + '</pre>');
   return { html: out.join('\n'), headings };
+}
+
+/* ---------- model scores ---------- */
+// Splits the ```scores block out of a note: { rows, rest } (rows null if none).
+function extractScores(content) {
+  const m = content.match(/```scores\s*\n([\s\S]*?)\n```/);
+  if (!m) return { rows: null, rest: content };
+  let rows = null;
+  try { rows = JSON.parse(m[1]); } catch (_) {}
+  return { rows: Array.isArray(rows) ? rows : null, rest: content.replace(m[0], '') };
+}
+
+function scoresHtml(all) {
+  const rows = scoreView.usable ? all.filter(r => r.route && r.route !== 'none') : all.slice();
+  const col = (k) => SCORE_COLS.find(c => c.k === k);
+  const range = {};
+  for (const c of SCORE_COLS) {
+    const vs = all.map(r => r[c.k]).filter(v => typeof v === 'number');
+    range[c.k] = vs.length ? [Math.min(...vs), Math.max(...vs)] : [0, 1];
+  }
+  // 0 = worst in the column, 1 = best (price inverted).
+  const rel = (c, v) => { const [lo, hi] = range[c.k]; const t = hi === lo ? 1 : (v - lo) / (hi - lo); return c.low ? 1 - t : t; };
+  const fmt = (c, v) => typeof v !== 'number' ? '–' : c.k === 'price' ? '$' + (v < 1 ? v.toFixed(2) : v.toFixed(v % 1 ? 2 : 0)) : String(v);
+  const byKey = (k) => (a, b) => {
+    const c = col(k), av = a[k], bv = b[k];
+    if (typeof av !== 'number') return 1; if (typeof bv !== 'number') return -1;
+    return c.low ? av - bv : bv - av;
+  };
+  const routeTag = (r) => ROUTES[r.route] ? '<span class="route ' + esc(r.route) + '">' + esc(ROUTES[r.route]) + '</span>' : '';
+  const name = (r) => esc(r.model) + '<span class="lab">' + esc(r.lab) + (r.setting ? ' · ' + esc(r.setting) : '') + '</span>' + routeTag(r);
+
+  let view;
+  if (scoreView.mode === 'grid') {
+    rows.sort(byKey(scoreView.sort));
+    view = '<p class="sc-key">Deeper green is better within each column; the gold outline marks the leader. Tap a column to rank by it.</p>' +
+      '<div class="tbl"><table><thead><tr><th class="m">Model</th>' +
+      SCORE_COLS.map(c => '<th title="' + esc(c.tip) + '" data-ssort="' + c.k + '"' + (c.k === scoreView.sort ? ' class="on"' : '') + '>' + esc(c.label) + (c.k === scoreView.sort ? ' ▾' : '') + '</th>').join('') +
+      '</tr></thead><tbody>' +
+      rows.map(r => '<tr' + (r.route === 'inuse' ? ' class="ours"' : '') + '><td class="m">' + name(r) + '</td>' +
+        SCORE_COLS.map(c => {
+          const v = r[c.k];
+          if (typeof v !== 'number') return '<td class="v na" title="Not tested yet">–</td>';
+          const t = rel(c, v);
+          const best = all.every(o => typeof o[c.k] !== 'number' || rel(c, o[c.k]) <= t);
+          return '<td class="v' + (best ? ' best' : '') + '" style="--h:' + Math.round(8 + t * 62) + '%" title="' + esc(c.tip) + '">' + fmt(c, v) + '</td>';
+        }).join('') + '</tr>').join('') +
+      '</tbody></table></div>';
+  } else {
+    const c = col(scoreView.metric);
+    const ranked = rows.filter(r => typeof r[c.k] === 'number').sort(byKey(c.k));
+    const missing = rows.length - ranked.length;
+    view = '<div class="sc-bar">' + SCORE_COLS.map(o => '<button data-smetric="' + o.k + '"' + (o.k === c.k ? ' class="on"' : '') + '>' + esc(o.label) + '</button>').join('') + '</div>' +
+      '<p class="sc-key">' + esc(c.tip) + (missing ? ' · ' + missing + ' not tested yet' : '') + '</p>' +
+      '<div class="bars">' + ranked.map(r => {
+        const ours = r.route === 'inuse' ? ' ours' : '';
+        return '<div class="nm' + ours + '">' + esc(r.model) + '</div><div class="track' + ours + '"><div class="fill" style="width:' + Math.max(3, Math.round(rel(c, r[c.k]) * 100)) + '%"></div></div><div class="val">' + fmt(c, r[c.k]) + '</div>';
+      }).join('') + '</div>';
+  }
+  return '<div class="sc"><div class="sc-bar">' +
+    '<button data-smode="grid"' + (scoreView.mode === 'grid' ? ' class="on"' : '') + '>Grid</button>' +
+    '<button data-smode="bars"' + (scoreView.mode === 'bars' ? ' class="on"' : '') + '>Ranked bars</button>' +
+    '<label><input type="checkbox" data-susable' + (scoreView.usable ? ' checked' : '') + '> Only models we could use</label></div>' +
+    view + '</div>';
 }
 
 /* ---------- views ---------- */
@@ -291,6 +433,26 @@ function visibleNotes() {
   return notes.filter(n => n.section === state.section);
 }
 
+let BRAND_SUB = 'SHARED VIEW';
+BRAND_SUB = 'FROM OPEN BRAIN · LIVE'; // owner
+const secBtn = (counts) => (s) =>
+  '<button class="sec' + (!state.query && s.tag === state.section ? ' on' : '') + '" data-sec="' + esc(s.tag) + '" style="--sec-colour:' + s.colour + '"><span class="dot"></span>' + esc(s.name) + '<span class="n">' + counts[s.tag] + '</span></button>';
+
+function navHtml(counts) {
+  // The shared view hides sections with nothing shared in them.
+  let h = '<div class="navlist">' + SECTIONS.filter(s => !s.private && !(SNAPSHOT && !counts[s.tag])).map(secBtn(counts)).join('');
+  h += '<div class="navgroup">Private · not shared</div>' + healthBtn() + SECTIONS.filter(s => s.private).map(secBtn(counts)).join(''); // owner
+  return h + '</div>';
+}
+
+function navFoot() {
+  let f = '<div class="navfoot">';
+  if (SNAPSHOT) f += 'Updated ' + new Date(SNAPSHOT.built).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + notes.length + ' notes<br><button data-forget>Lock</button>';
+  f += 'Loaded ' + (loadedAt ? loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–') + ' · ' + notes.length + ' notes<br><button data-refresh>Refresh</button> <button data-lock>Lock</button>' + '<div class="apps">Other apps: <a href="/index.html">Catalog</a> · <a href="/trip.html">Trips</a> · <a href="/cards.html">Cards</a> · <a href="https://ba.thewishingstream.com" target="_blank" rel="noopener">BA Toolkit</a> · <a href="https://owner.thewishingstream.com" target="_blank" rel="noopener">Wishing Stream</a> · <a href="https://aidesk.thewishingstream.com" target="_blank" rel="noopener">Shared desk</a></div>'; // owner
+  return f + '</div>';
+}
+
+// <owner>
 function healthWorst() {
   const cs = (health && health.checks) || [];
   return cs.reduce((w, c) => (RANK[c.status] > RANK[w] ? c.status : w), 'paused');
@@ -299,21 +461,12 @@ function healthWorst() {
 const cloudable = (c) => c.check_id.startsWith('task:') && c.needs_mac === null && (c.status === 'late' || c.status === 'waiting');
 const when = (iso, withDay) => iso ? new Date(iso).toLocaleString('en-GB', withDay ? { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' }) : '–';
 
-function navHtml(counts) {
+function healthBtn() {
   const cs = (health && health.checks) || [];
   const problems = cs.filter(c => c.status === 'fail' || c.status === 'warn').length;
   const w = healthErr ? 'unknown' : healthWorst();
   const hcolour = healthErr ? 'var(--idle)' : (w === 'paused' ? 'var(--ok)' : STATUS[w].colour);
-  return '<div class="navlist">' +
-    '<button class="sec' + (!state.query && state.section === HEALTH ? ' on' : '') + '" data-sec="' + HEALTH + '" style="--sec-colour:' + hcolour + '"><span class="dot"></span>System health<span class="n">' + (healthErr ? '?' : problems || '✓') + '</span></button>' +
-    SECTIONS.map(s =>
-      '<button class="sec' + (!state.query && s.tag === state.section ? ' on' : '') + '" data-sec="' + esc(s.tag) + '" style="--sec-colour:' + s.colour + '"><span class="dot"></span>' + esc(s.name) + '<span class="n">' + counts[s.tag] + '</span></button>').join('') +
-    '</div>';
-}
-
-function navFoot() {
-  return '<div class="navfoot">Loaded ' + (loadedAt ? loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–') + ' · ' + notes.length + ' notes<br><button data-refresh>Refresh</button> <button data-lock>Lock</button>' +
-    '<div class="apps">Other apps: <a href="/index.html">Catalog</a> · <a href="/trip.html">Trips</a> · <a href="/cards.html">Cards</a> · <a href="https://ba.thewishingstream.com" target="_blank" rel="noopener">BA Toolkit</a> · <a href="https://owner.thewishingstream.com" target="_blank" rel="noopener">Wishing Stream</a></div></div>';
+  return '<button class="sec' + (!state.query && state.section === HEALTH ? ' on' : '') + '" data-sec="' + HEALTH + '" style="--sec-colour:' + hcolour + '"><span class="dot"></span>System health<span class="n">' + (healthErr ? '?' : problems || '✓') + '</span></button>';
 }
 
 function healthDetail(c) {
@@ -365,7 +518,7 @@ function renderHealth(counts) {
   }).join('');
   $('#app').innerHTML =
     '<div class="shell">' +
-      '<nav><div class="brand">AI Desk</div><div class="brand-sub">FROM OPEN BRAIN · LIVE</div>' +
+      '<nav><div class="brand">AI Desk</div><div class="brand-sub">' + esc(BRAND_SUB) + '</div>' +
         '<input class="search" id="q" type="search" placeholder="Search everything" value="" autocomplete="off">' +
         navHtml(counts) + navFoot() +
       '</nav>' +
@@ -376,30 +529,34 @@ function renderHealth(counts) {
     '</div>';
   saveView();
 }
+// </owner>
 
 function render() {
   const counts = Object.fromEntries(SECTIONS.map(s => [s.tag, notes.filter(n => n.section === s.tag).length]));
-  if (!state.query && state.section === HEALTH) return renderHealth(counts);
+  if (!state.query && state.section === HEALTH) return renderHealth(counts); // owner
   const sec = SECTIONS.find(s => s.tag === state.section) || SECTIONS[0];
   const list = visibleNotes();
   if (!state.query && (!state.noteId || !list.some(n => n.id === state.noteId))) state.noteId = list[0] ? list[0].id : null;
   const current = notes.find(n => n.id === state.noteId) || null;
   const curSec = current ? (SECTIONS.find(s => s.tag === current.section) || sec) : sec;
 
-  let detail = '<div class="empty">Nothing here yet.</div>';
+  let detail = '<div class="empty">Nothing here yet.</div>', wide = false;
   if (current) {
-    const { html, headings } = md(current.content, true);
+    const { rows, rest } = extractScores(current.content);
+    wide = !!rows;
+    const { html, headings } = md(rest, true);
     detail = '<button class="backbtn" data-back>← ' + esc(state.query ? 'Results' : curSec.name) + '</button>' +
       '<div class="crumb" style="--sec-colour:' + curSec.colour + '">' + esc(curSec.name) + '</div>' +
       '<h1>' + esc(current.title) + '</h1>' +
       '<div class="meta">' + esc(current.date || '') + '</div>' +
       (headings.length > 2 ? '<div class="chips">' + headings.map(h => '<button class="chip" data-jump="' + slug(h) + '">' + esc(h.replace(/^\d+\.\s*/, '')) + '</button>').join('') + '</div>' : '') +
+      (rows ? scoresHtml(rows) : '') +
       '<div class="body">' + html + '</div>';
   }
 
   $('#app').innerHTML =
     '<div class="shell">' +
-      '<nav><div class="brand">AI Desk</div><div class="brand-sub">FROM OPEN BRAIN · LIVE</div>' +
+      '<nav><div class="brand">AI Desk</div><div class="brand-sub">' + esc(BRAND_SUB) + '</div>' +
         '<input class="search" id="q" type="search" placeholder="Search everything" value="' + esc(state.query) + '" autocomplete="off">' +
         navHtml(counts) + navFoot() +
       '</nav>' +
@@ -407,12 +564,13 @@ function render() {
         '<section class="list"><h2>' + esc(state.query ? 'Search' : sec.name) + '</h2><p class="blurb">' + esc(state.query ? list.length + ' match' + (list.length === 1 ? '' : 'es') + ' for “' + state.query + '”' : sec.blurb) + '</p>' +
           (list.length ? list.map(n => '<button class="item' + (n.id === state.noteId ? ' on' : '') + '" data-note="' + n.id + '"><div class="t">' + esc(n.title) + '</div><div class="m">' + esc(n.date || '') + (state.query && n.section ? ' · ' + esc((SECTIONS.find(s => s.tag === n.section) || {}).name || '') : '') + '</div></button>').join('') : '<div class="empty">No notes.</div>') +
         '</section>' +
-        '<article class="detail">' + detail + '</article>' +
+        '<article class="detail' + (wide ? ' wide' : '') + '">' + detail + '</article>' +
       '</main>' +
     '</div>';
   saveView();
 }
 
+// <owner>
 function showUnlock(msg) {
   $('#app').innerHTML = '<div class="unlock"><h1>AI Desk</h1><p>Enter your Open Brain access key. It’s kept in this browser only, shared with the catalog on this site.</p>' +
     '<input id="key" type="password" autocomplete="off" placeholder="Access key"><div class="err">' + esc(msg || '') + '</div><button id="go">Unlock</button></div>';
@@ -427,7 +585,12 @@ function showUnlock(msg) {
   $('#key').focus();
 }
 
+// </owner>
+
 async function start() {
+  // The shared view: notes come baked in (decrypted by the share page's lock screen).
+  if (SNAPSHOT) { notes = SNAPSHOT.notes.map(toNote).sort(noteOrder); loadedAt = new Date(SNAPSHOT.built); render(); return; }
+  // <owner>
   if (!accessKey) return showUnlock();
   $('#app').innerHTML = '<div class="unlock"><p>Loading from Open Brain…</p></div>';
   try { await load(); render(); }
@@ -435,14 +598,20 @@ async function start() {
     if (e.auth) { try { localStorage.removeItem(KEY_STORAGE); } catch (_) {} accessKey = ''; return showUnlock(e.message); }
     $('#app').innerHTML = '<div class="unlock"><h1>AI Desk</h1><div class="err">' + esc(e.message) + '</div><button onclick="start()">Try again</button></div>';
   }
+  // </owner>
 }
 
 /* ---------- events ---------- */
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-back],.copy');
+  const t = e.target.closest('[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-forget],[data-back],[data-ssort],[data-smode],[data-smetric],[data-susable],.copy');
   if (!t) return;
-  if (t.dataset.check) { state.noteId = t.dataset.check; state.reading = true; render(); window.scrollTo(0, 0); return; }
-  if (t.hasAttribute('data-healthrun')) { t.textContent = 'Checking…'; t.disabled = true; await loadHealth(true); render(); return; }
+  if (t.dataset.check) { state.noteId = t.dataset.check; state.reading = true; render(); window.scrollTo(0, 0); return; } // owner
+  if (t.hasAttribute('data-healthrun')) { t.textContent = 'Checking…'; t.disabled = true; await loadHealth(true); render(); return; } // owner
+  if (t.dataset.ssort) { scoreView.sort = t.dataset.ssort; render(); return; }
+  if (t.dataset.smode) { scoreView.mode = t.dataset.smode; render(); return; }
+  if (t.dataset.smetric) { scoreView.metric = t.dataset.smetric; render(); return; }
+  if (t.hasAttribute('data-susable')) { scoreView.usable = t.checked; render(); return; }
+  if (t.hasAttribute('data-forget')) { try { localStorage.removeItem('aidesk-pass'); } catch (_) {} location.reload(); return; }
   if (t.matches('.copy')) {
     const txt = t.parentElement.getAttribute('data-copy');
     try { await navigator.clipboard.writeText(txt); t.textContent = 'Copied'; setTimeout(() => (t.textContent = 'Copy'), 1500); } catch (_) { t.textContent = 'Select & copy'; }
@@ -452,8 +621,8 @@ document.addEventListener('click', async (e) => {
   if (t.dataset.note) { state.noteId = t.dataset.note; state.reading = true; render(); window.scrollTo(0, 0); return; }
   if (t.dataset.jump) { const el = document.getElementById(t.dataset.jump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   if (t.hasAttribute('data-back')) { state.reading = false; render(); return; }
-  if (t.hasAttribute('data-refresh')) { t.textContent = 'Loading…'; try { await load(); } catch (_) {} render(); return; }
-  if (t.hasAttribute('data-lock')) { if (confirm('Remove the access key from this browser? The catalog on this site will lock too.')) { try { localStorage.removeItem(KEY_STORAGE); } catch (_) {} accessKey = ''; notes = []; showUnlock(); } }
+  if (t.hasAttribute('data-refresh')) { t.textContent = 'Loading…'; try { await load(); } catch (_) {} render(); return; } // owner
+  if (t.hasAttribute('data-lock')) { if (confirm('Remove the access key from this browser? The catalog on this site will lock too.')) { try { localStorage.removeItem(KEY_STORAGE); } catch (_) {} accessKey = ''; notes = []; showUnlock(); } } // owner
 });
 let qTimer;
 document.addEventListener('input', (e) => {
