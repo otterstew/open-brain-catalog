@@ -7,8 +7,8 @@
 <meta name="description" content="An encrypted flashcard deck.">
 <meta name="robots" content="noindex, nofollow">
 <link rel="manifest" href="./cards.webmanifest">
-<meta name="theme-color" content="#DEE3DE" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0C1418" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F3EEE7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#12122A" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <link rel="icon" href="./cards-192.png">
 <link rel="apple-touch-icon" href="./cards-192.png">
@@ -21,25 +21,25 @@
      change of temperature, so you can tell which face is up without reading it.
      Everything else stays quiet so those two do the talking. */
   :root {
-    --ground:      #DEE3DE;
-    --ground-2:    #EBEEE9;
-    --front:       #14303E;
-    --front-ink:   #EDE6D6;
-    --front-faint: #7C99A5;
-    --back:        #F5EDDD;
-    --back-ink:    #1E2C36;
-    --back-faint:  #9C8E76;
-    --ink:         #16303D;
-    --ink-dim:     #4C646F;
-    --ink-faint:   #7B8E95;
-    --hairline:    #C5CEC7;
-    --accent:      #B0741B;
-    --on-accent:   #FFF7E8;
-    --good:        #2E7A4C;
-    --good-soft:   #D9E9DD;
-    --again:       #AF4E2C;
-    --again-soft:  #F2DED4;
-    --shadow:      0 1px 2px rgba(20,48,62,.08), 0 10px 28px rgba(20,48,62,.12);
+    --ground:      #F3EEE7;
+    --ground-2:    #FBF8F3;
+    --front:       #2B2E6E;
+    --front-ink:   #FBF3E4;
+    --front-faint: #A3A6DE;
+    --back:        #FFF8EC;
+    --back-ink:    #23254A;
+    --back-faint:  #A3967E;
+    --ink:         #22244A;
+    --ink-dim:     #575A7E;
+    --ink-faint:   #8D8FAA;
+    --hairline:    #E2DACE;
+    --accent:      #E5603F;
+    --on-accent:   #FFF8F1;
+    --good:        #23896A;
+    --good-soft:   #D7F0E6;
+    --again:       #C2413A;
+    --again-soft:  #F9DEDA;
+    --shadow:      0 1px 2px rgba(43,46,110,.08), 0 10px 28px rgba(43,46,110,.12);
 
     --f-display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
     --f-body:    "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -49,47 +49,47 @@
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
       color-scheme: dark;
-      --ground:      #0C1418;
-      --ground-2:    #152229;
-      --front:       #123444;
-      --front-ink:   #E9E2D2;
-      --front-faint: #7A97A3;
-      --back:        #2C2418;
-      --back-ink:    #F0E5CD;
-      --back-faint:  #A2916F;
-      --ink:         #DCE5E8;
-      --ink-dim:     #93A6AD;
-      --ink-faint:   #6D8189;
-      --hairline:    #23323A;
-      --accent:      #DDA23C;
-      --on-accent:   #1F1503;
-      --good:        #5BBE89;
-      --good-soft:   #14301F;
-      --again:       #E0885B;
-      --again-soft:  #331F17;
+      --ground:      #12122A;
+      --ground-2:    #1B1B3B;
+      --front:       #2D2F72;
+      --front-ink:   #F3ECDD;
+      --front-faint: #9C9FDA;
+      --back:        #33283A;
+      --back-ink:    #F6E9D5;
+      --back-faint:  #B09C86;
+      --ink:         #E6E6F5;
+      --ink-dim:     #A2A3C6;
+      --ink-faint:   #74769C;
+      --hairline:    #2A2B4D;
+      --accent:      #FF8A6B;
+      --on-accent:   #2A0E06;
+      --good:        #5ED1A5;
+      --good-soft:   #12332A;
+      --again:       #F37F75;
+      --again-soft:  #3A1D20;
       --shadow:      0 1px 2px rgba(0,0,0,.45), 0 12px 32px rgba(0,0,0,.5);
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --ground:      #0C1418;
-    --ground-2:    #152229;
-    --front:       #123444;
-    --front-ink:   #E9E2D2;
-    --front-faint: #7A97A3;
-    --back:        #2C2418;
-    --back-ink:    #F0E5CD;
-    --back-faint:  #A2916F;
-    --ink:         #DCE5E8;
-    --ink-dim:     #93A6AD;
-    --ink-faint:   #6D8189;
-    --hairline:    #23323A;
-    --accent:      #DDA23C;
-    --on-accent:   #1F1503;
-    --good:        #5BBE89;
-    --good-soft:   #14301F;
-    --again:       #E0885B;
-    --again-soft:  #331F17;
+    --ground:      #12122A;
+    --ground-2:    #1B1B3B;
+    --front:       #2D2F72;
+    --front-ink:   #F3ECDD;
+    --front-faint: #9C9FDA;
+    --back:        #33283A;
+    --back-ink:    #F6E9D5;
+    --back-faint:  #B09C86;
+    --ink:         #E6E6F5;
+    --ink-dim:     #A2A3C6;
+    --ink-faint:   #74769C;
+    --hairline:    #2A2B4D;
+    --accent:      #FF8A6B;
+    --on-accent:   #2A0E06;
+    --good:        #5ED1A5;
+    --good-soft:   #12332A;
+    --again:       #F37F75;
+    --again-soft:  #3A1D20;
     --shadow:      0 1px 2px rgba(0,0,0,.45), 0 12px 32px rgba(0,0,0,.5);
   }
 

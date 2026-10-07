@@ -6,8 +6,8 @@
 <title>Trips</title>
 <meta name="description" content="Travel, stays and plans for each trip, saved on the phone for offline use.">
 <link rel="manifest" href="./trip.webmanifest">
-<meta name="theme-color" content="#F3EFE6" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#12181B" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F7F2EC" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#15161F" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Trips">
@@ -15,21 +15,21 @@
 <link rel="icon" type="image/png" href="./trip-192.png">
 <style>
   :root {
-    --bg: #F3EFE6;
-    --surface: #FFFDF8;
-    --surface-2: #F8F4EB;
-    --line: #E3DCCD;
-    --ink: #1F2A2E;
-    --ink-2: #56625F;
-    --ink-3: #87918D;
-    --accent: #1F6B63;
+    --bg: #F7F2EC;
+    --surface: #FFFDFA;
+    --surface-2: #FBF6F0;
+    --line: #EADFD3;
+    --ink: #23263A;
+    --ink-2: #5D6075;
+    --ink-3: #8F90A3;
+    --accent: #D9553A;
     --accent-ink: #FFFFFF;
-    --accent-soft: #DCEBE6;
+    --accent-soft: #FBE2D9;
     --ok: #2E7D4F;     --ok-soft: #DDF0E3;
     --wait: #9A6400;   --wait-soft: #FBEBC8;
     --due: #B03A2E;    --due-soft: #F8DEDA;
     --info: #3F5F86;   --info-soft: #E0E8F2;
-    --shadow: 0 1px 2px rgba(31,42,46,.06), 0 4px 14px rgba(31,42,46,.05);
+    --shadow: 0 1px 2px rgba(35,38,58,.06), 0 4px 14px rgba(35,38,58,.05);
     --radius: 16px;
     --f: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
     --f-num: ui-rounded, "SF Pro Rounded", -apple-system, BlinkMacSystemFont, sans-serif;
@@ -38,18 +38,18 @@
   }
   @media (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) {
-      --bg: #12181B; --surface: #1A2226; --surface-2: #20292E; --line: #2C373C;
-      --ink: #E8ECEA; --ink-2: #A9B4B0; --ink-3: #7B8783;
-      --accent: #5FB8A9; --accent-ink: #0E1A18; --accent-soft: #1E3833;
+      --bg: #15161F; --surface: #1D1F2B; --surface-2: #252836; --line: #323546;
+      --ink: #EEEBE6; --ink-2: #B3B1BD; --ink-3: #81808F;
+      --accent: #FF8A6B; --accent-ink: #2A0E06; --accent-soft: #3D2219;
       --ok: #7BCB97; --ok-soft: #1D3325; --wait: #E6B45C; --wait-soft: #3A2E17;
       --due: #F08A7E; --due-soft: #3E211E; --info: #8FB0DA; --info-soft: #1F2A3A;
       --shadow: none; color-scheme: dark;
     }
   }
   :root[data-theme="dark"] {
-    --bg: #12181B; --surface: #1A2226; --surface-2: #20292E; --line: #2C373C;
-    --ink: #E8ECEA; --ink-2: #A9B4B0; --ink-3: #7B8783;
-    --accent: #5FB8A9; --accent-ink: #0E1A18; --accent-soft: #1E3833;
+    --bg: #15161F; --surface: #1D1F2B; --surface-2: #252836; --line: #323546;
+    --ink: #EEEBE6; --ink-2: #B3B1BD; --ink-3: #81808F;
+    --accent: #FF8A6B; --accent-ink: #2A0E06; --accent-soft: #3D2219;
     --ok: #7BCB97; --ok-soft: #1D3325; --wait: #E6B45C; --wait-soft: #3A2E17;
     --due: #F08A7E; --due-soft: #3E211E; --info: #8FB0DA; --info-soft: #1F2A3A;
     --shadow: none; color-scheme: dark;
@@ -288,7 +288,7 @@
   }
   .vbar { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 8px; padding: 10px 12px; border-bottom: 1px solid #e5e5e5; }
   .vbar span { text-align: center; font-weight: 650; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .vbar button, .vfoot button { background: none; border: 0; font-size: 16px; font-weight: 600; color: #1F6B63; padding: 8px 6px; cursor: pointer; }
+  .vbar button, .vfoot button { background: none; border: 0; font-size: 16px; font-weight: 600; color: #D9553A; padding: 8px 6px; cursor: pointer; }
   .vbar .vdel { color: #B03A2E; font-size: 14px; }
   .vimg { flex: 1; min-height: 0; display: grid; place-items: center; padding: 12px; }
   .vimg img { max-width: 100%; max-height: 100%; object-fit: contain; image-rendering: -webkit-optimize-contrast; }

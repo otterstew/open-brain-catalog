@@ -7,8 +7,8 @@
   "scope": "/cards.html",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#14303E",
-  "theme_color": "#14303E",
+  "background_color": "#2B2E6E",
+  "theme_color": "#2B2E6E",
   "icons": [
     { "src": "./cards-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "./cards-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
