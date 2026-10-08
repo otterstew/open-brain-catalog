@@ -7,8 +7,8 @@
   "scope": "/ai.html",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#10131A",
-  "theme_color": "#10131A",
+  "background_color": "#1B1638",
+  "theme_color": "#1B1638",
   "icons": [
     { "src": "./ai-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
     { "src": "./ai-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
