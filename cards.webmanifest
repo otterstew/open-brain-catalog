@@ -1,7 +1,7 @@
 {
-  "id": "/cards.html",
+  "id": "/two-sides-app",
   "name": "Two Sides",
-  "short_name": "Cards",
+  "short_name": "Two Sides",
   "description": "Flashcards: question on one side, answer on the other.",
   "start_url": "/cards.html",
   "scope": "/cards.html",
