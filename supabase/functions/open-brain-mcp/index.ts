@@ -245,6 +245,22 @@ async function refreshChunks(thoughtId: string, content: string, noteEmbedding?:
   }
 }
 
+// Clear the backlog a little at a time, after the answer has gone: a couple of
+// notes whose search pieces are missing or stale, cut and embedded in the
+// background of a search. Added because a connector's tool list is cached, so
+// a newly added backfill_chunks tool can stay invisible to the sessions meant
+// to call it. EdgeRuntime.waitUntil keeps the work alive after the response;
+// outside the edge runtime it simply runs.
+function backfillSomeChunks(n = 2): void {
+  const work = (async () => {
+    const { data } = await supabase.rpc("thoughts_needing_chunks", { max_rows: n });
+    for (const r of (data || []) as { id: string; content: string }[]) await refreshChunks(r.id, r.content);
+  })().catch(() => {});
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work);
+}
+
 // Which search to run. "chunks" ranks each note by its best-matching piece and
 // so reaches past a long note's first 24,000 characters; "note" is the original
 // whole-note embedding. If the chunk search fails for any reason, the note
@@ -255,6 +271,7 @@ async function matchThoughts(
   args: { query_embedding: number[]; match_threshold: number; match_count: number; filter: Record<string, unknown> },
   retrieval: "note" | "chunks" = DEFAULT_RETRIEVAL,
 ) {
+  backfillSomeChunks();
   if (retrieval === "chunks") {
     const r = await supabase.rpc("match_thought_chunks", args);
     if (!r.error) return r;
