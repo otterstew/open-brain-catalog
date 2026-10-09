@@ -5,6 +5,7 @@ import { StreamableHTTPTransport } from "@hono/mcp";
 import { Hono } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { chunkText } from "./chunks.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -194,6 +195,71 @@ async function getEmbedding(text: string): Promise<number[]> {
   }
   const d = await r.json();
   return d.data[0].embedding;
+}
+
+// Several embeddings in one request; the API takes an array and answers in
+// the same order. Each piece is already within the model's limit (chunks.ts).
+async function getEmbeddings(texts: string[]): Promise<number[][]> {
+  const r = await fetch(`${OPENROUTER_BASE}/embeddings`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "openai/text-embedding-3-small", input: texts }),
+  });
+  if (!r.ok) {
+    const msg = await r.text().catch(() => "");
+    throw new Error(`OpenRouter embeddings failed: ${r.status} ${msg}`);
+  }
+  const d = await r.json();
+  const rows = (d.data as { index?: number; embedding: number[] }[]);
+  return rows.map((row, i) => ({ i: row.index ?? i, e: row.embedding }))
+    .sort((a, b) => a.i - b.i).map((x) => x.e);
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Cut a note into pieces and embed each one, so search can reach the whole
+// of a long note (thought_chunks; "The Unembedded Quarter", 485beb5f). A note
+// short enough to be one piece reuses the note's own embedding: same text,
+// same vector, no second call. Never throws: a capture or edit must not fail
+// because of this, and the backfill (backfill_chunks) finds any note whose
+// pieces are missing or were cut from older text.
+async function refreshChunks(thoughtId: string, content: string, noteEmbedding?: number[]): Promise<string | null> {
+  try {
+    const hash = await sha256Hex(content);
+    const pieces = chunkText(content);
+    const vectors = pieces.length === 1 && noteEmbedding ? [noteEmbedding] : await getEmbeddings(pieces);
+    const { error: delErr } = await supabase.from("thought_chunks").delete().eq("thought_id", thoughtId);
+    if (delErr) return delErr.message;
+    const { error } = await supabase.from("thought_chunks").insert(
+      vectors.map((embedding, chunk_index) => ({ thought_id: thoughtId, chunk_index, content_hash: hash, embedding })),
+    );
+    return error ? error.message : null;
+  } catch (e) {
+    return (e as Error).message;
+  }
+}
+
+// Which search to run. "chunks" ranks each note by its best-matching piece and
+// so reaches past a long note's first 24,000 characters; "note" is the original
+// whole-note embedding. If the chunk search fails for any reason, the note
+// search answers instead: search must never come back empty because of this.
+const DEFAULT_RETRIEVAL: "note" | "chunks" = "note";
+
+async function matchThoughts(
+  args: { query_embedding: number[]; match_threshold: number; match_count: number; filter: Record<string, unknown> },
+  retrieval: "note" | "chunks" = DEFAULT_RETRIEVAL,
+) {
+  if (retrieval === "chunks") {
+    const r = await supabase.rpc("match_thought_chunks", args);
+    if (!r.error) return r;
+  }
+  return await supabase.rpc("match_thoughts", args);
 }
 
 // Canonical full names for people the AI extractor tends to return with
@@ -454,7 +520,7 @@ function buildServer(): McpServer {
     async ({ query }) => {
       try {
         const qEmb = await getEmbedding(query);
-        const { data: vector, error } = await supabase.rpc("match_thoughts", {
+        const { data: vector, error } = await matchThoughts({
           query_embedding: qEmb,
           // Over-fetch: the shelved ones are dropped below, and asking for
           // exactly ten would return six.
@@ -561,6 +627,41 @@ function buildServer(): McpServer {
     }
   );
 
+  // Maintenance: cut and embed the notes whose search pieces are missing or
+  // stale (thought_chunks). Shortest first; a few per call, because each long
+  // note is one embeddings request of up to ~15 pieces.
+  server.registerTool(
+    "backfill_chunks",
+    {
+      title: "Backfill search pieces",
+      description:
+        "Maintenance. Cut and embed up to `limit` notes whose search pieces (thought_chunks) are missing or were cut from older text, and say how many are left. Safe to call repeatedly; run it until nothing is left.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(25).optional().default(5),
+      },
+    },
+    async ({ limit }) => {
+      const { data, error } = await supabase.rpc("thoughts_needing_chunks", { max_rows: limit });
+      if (error) return { content: [{ type: "text" as const, text: `Could not list notes: ${error.message}` }], isError: true };
+      const rows = (data || []) as { id: string; content: string }[];
+      let done = 0;
+      const failed: string[] = [];
+      for (const r of rows) {
+        const e = await refreshChunks(r.id, r.content);
+        if (e) failed.push(`${r.id}: ${e}`);
+        else done++;
+      }
+      const { data: left } = await supabase.rpc("thoughts_needing_chunks", { max_rows: 1000 });
+      const remaining = ((left || []) as unknown[]).length;
+      return {
+        content: [{ type: "text" as const, text:
+          `Cut and embedded ${done} note(s). ${remaining} still need it.` +
+          (failed.length ? `\nFailed:\n${failed.join("\n")}` : "") }],
+        ...(failed.length && !done ? { isError: true } : {}),
+      };
+    }
+  );
+
   // Tool 1: Semantic Search
   server.registerTool(
     "search_thoughts",
@@ -587,12 +688,16 @@ function buildServer(): McpServer {
           .optional()
           .default("text")
           .describe("\"text\" (default) for a compact one-entry-per-match summary — title, type, topics, snippet and id. \"full\" for the complete text of every match (large; prefer fetch on a single id instead). \"json\" for a machine-parseable array of full thought objects (used by the Open Brain Catalog GUI)."),
+        retrieval: z
+          .enum(["note", "chunks"])
+          .optional()
+          .describe("Leave unset. \"chunks\" matches each note by its best ~6,000-character piece, so the whole of a long note is searchable; \"note\" uses one embedding of the note's first 24,000 characters. For comparing the two."),
       },
     },
-    async ({ query, limit, threshold, format, include_shelved }) => {
+    async ({ query, limit, threshold, format, include_shelved, retrieval }) => {
       try {
         const qEmb = await getEmbedding(query);
-        const { data: vector, error } = await supabase.rpc("match_thoughts", {
+        const { data: vector, error } = await matchThoughts({
           query_embedding: qEmb,
           match_threshold: threshold,
           // The RPC cannot filter on the shelved column, so ask for headroom
@@ -600,7 +705,7 @@ function buildServer(): McpServer {
           // returns a short list padded with changelog entries.
           match_count: include_shelved ? limit : limit * 2,
           filter: {},
-        });
+        }, retrieval ?? DEFAULT_RETRIEVAL);
 
         // Computed even when nothing is being hidden: format "json" labels each
         // result, so the catalog can offer its own toggle without a second copy
@@ -1026,6 +1131,7 @@ function buildServer(): McpServer {
             isError: true,
           };
         }
+        if (thoughtId) await refreshChunks(thoughtId, content, embedding);
 
         let linkWarning = "";
         if (parent_thought_id && thoughtId) {
@@ -1448,6 +1554,7 @@ function buildServer(): McpServer {
             isError: true,
           };
         }
+        if (content !== undefined) await refreshChunks(id, content, update.embedding as number[]);
 
         const preview = newContent.replace(/\s+/g, " ").trim().slice(0, 80);
         return {
