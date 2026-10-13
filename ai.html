@@ -448,7 +448,7 @@ function navHtml(counts) {
 function navFoot() {
   let f = '<div class="navfoot">';
   if (SNAPSHOT) f += 'Updated ' + new Date(SNAPSHOT.built).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + notes.length + ' notes<br><button data-forget>Lock</button>';
-  f += 'Loaded ' + (loadedAt ? loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–') + ' · ' + notes.length + ' notes<br><button data-refresh>Refresh</button> <button data-lock>Lock</button>' + '<div class="apps">Other apps: <a href="/index.html">Catalog</a> · <a href="/trip.html">Trips</a> · <a href="/cards.html">Cards</a> · <a href="https://ba.thewishingstream.com" target="_blank" rel="noopener">BA Toolkit</a> · <a href="https://owner.thewishingstream.com" target="_blank" rel="noopener">Wishing Stream</a> · <a href="https://aidesk.thewishingstream.com" target="_blank" rel="noopener">Shared desk</a></div>'; // owner
+  f += 'Loaded ' + (loadedAt ? loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–') + ' · ' + notes.length + ' notes<br><button data-refresh>Refresh</button> <button data-lock>Lock</button>' + '<div class="apps">Other apps: <a href="/index.html">Catalog</a> · <a href="/trip.html">Trips</a> · <a href="/cards.html">Cards</a> · <a href="/oneside.html">One Side</a> · <a href="https://ba.thewishingstream.com" target="_blank" rel="noopener">BA Toolkit</a> · <a href="https://owner.thewishingstream.com" target="_blank" rel="noopener">Wishing Stream</a> · <a href="https://aidesk.thewishingstream.com" target="_blank" rel="noopener">Shared desk</a></div>'; // owner
   return f + '</div>';
 }
 
