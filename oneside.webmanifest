@@ -1,0 +1,17 @@
+{
+  "id": "/one-side-meeting-prep",
+  "name": "One Side",
+  "short_name": "One Side",
+  "description": "Meeting prep: the words you want in front of you, one card at a time.",
+  "start_url": "/oneside.html",
+  "scope": "/oneside.html",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0F4A55",
+  "theme_color": "#0F4A55",
+  "icons": [
+    { "src": "./oneside-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./oneside-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "./oneside-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

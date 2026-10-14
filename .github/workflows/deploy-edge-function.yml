@@ -43,6 +43,9 @@ jobs:
       - name: Test task logic
         run: deno run --no-config supabase/functions/open-brain-mcp/tests/recurrence_test.ts
 
+      - name: Test how long notes are cut into search pieces
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/chunks_test.ts
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest

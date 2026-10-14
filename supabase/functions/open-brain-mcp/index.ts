@@ -5,6 +5,7 @@ import { StreamableHTTPTransport } from "@hono/mcp";
 import { Hono } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
+import { chunkText } from "./chunks.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -33,50 +34,76 @@ type ThoughtRecord = {
 const CITATION_BASE_URL =
   Deno.env.get("OPEN_BRAIN_CITATION_BASE_URL") || "https://openbrain.local/thoughts";
 
-// The controlled vocabulary. It lives in topics.txt at the project root, which
-// tidy-archive.py reads to fold aliases — but an edge function has no project
-// root at runtime, so the preferred list is duplicated here.
+// The controlled vocabulary lives in public.topic_vocabulary and nowhere else.
 //
-// THE TWO COPIES WILL DRIFT, and the drift is invisible: tidy keeps folding
-// aliases from topics.txt, so the archive still looks tidy while the prompt
-// that decides what gets coined in the first place is the old one. Run
-// `python3 tidy-archive.py --check-vocab` after any vocabulary change; it
-// compares this list against topics.txt and prints the block to paste back.
-// Then redeploy — editing this file changes nothing until you do.
+// It used to live in two places — topics.txt at the archive project's root, and
+// a hardcoded list right here — and the comment that stood in this spot was a
+// warning about it: the copies drift, the drift is invisible, and the remedy
+// was to remember to run a checker after every change and paste a block back.
+// Nobody remembers that. Adding a topic is now one INSERT and takes effect on
+// the next capture.
 //
-// vocabulary:start (generated from topics.txt)
-const PREFERRED_TOPICS = [
-  "AI",
-  "AI Agents",
-  "AI Skills",
-  "AI tools",
-  "AI integration",
-  "Automation",
-  "Knowledge Management",
-  "Knowledge Work",
-  "Memory Systems",
-  "Productivity",
-  "Prompt Engineering",
-  "Technology",
-  "Token Management",
-  "Workflow",
-  "prompts",
-  "communication",
-  "Task management",
-  "Team Collaboration",
-  "Work Management",
-  "AI Solutions Manager",
-  "Career Development",
-  "job market",
-  "Intent Engineering",
-  "ChatGPT",
-  "Codex",
-  "Open Brain",
-  "Science",
-  "plants",
-  "chemical signalling"
-];
-// vocabulary:end
+// topics.txt is gone, and with it tidy-archive.py, which read it to fold tags
+// on the Mac. The nightly tidy_thought_tags job does that work in the database
+// now — over every note rather than whatever was on that disk, whether the Mac
+// is awake or not, and writing what it changed to topic_tidy_log so it can be
+// undone. Two things folding tags to two different lists is the drift this
+// whole arrangement exists to end, so there is exactly one now, and it is not
+// on anybody's laptop. The topic_vocabulary tool below is for reading the list
+// from outside the database; nothing out there writes tags any more.
+// `usage` narrows a tag whose name reads wider than it is used here — Meditation
+// means guided meditations only. The extractor sees nothing but the list, so
+// without it a tag gets applied to everything its name could cover.
+type Vocabulary = {
+  preferred: string[];
+  collection: string[];
+  usage: Record<string, string>;
+};
+
+// Per isolate, briefly. Edge function isolates are short-lived, so this is at
+// most one small query a minute per live isolate, and an edit shows up in the
+// prompt within the minute rather than at the next deploy.
+const VOCAB_TTL_MS = 60_000;
+let vocabCache: Vocabulary | null = null;
+let vocabFetchedAt = 0;
+
+async function loadVocabulary(): Promise<Vocabulary> {
+  if (vocabCache && Date.now() - vocabFetchedAt < VOCAB_TTL_MS) return vocabCache;
+
+  const { data, error } = await supabase
+    .from("topic_vocabulary")
+    .select("topic, kind, usage")
+    .order("position", { ascending: true })
+    .order("topic", { ascending: true });
+
+  if (error || !data) {
+    // Stale beats empty. An empty vocabulary silently turns the extractor loose
+    // to coin a fresh tag for everything, which is the exact drift this table
+    // exists to stop, and nothing would look broken until the tags were a mess
+    // again. Serving the last known good list keeps captures correct through a
+    // blip; only a cold isolate that has never read the table gets nothing.
+    console.warn("topic_vocabulary unavailable, using cached list:", error?.message);
+    return vocabCache || { preferred: [], collection: [], usage: {} };
+  }
+
+  const rows = data as { topic: string; kind: string; usage: string | null }[];
+  vocabCache = {
+    preferred: rows.filter((r) => r.kind === "preferred").map((r) => r.topic),
+    collection: rows.filter((r) => r.kind === "collection").map((r) => r.topic),
+    usage: Object.fromEntries(
+      rows.filter((r) => r.usage?.trim()).map((r) => [r.topic, r.usage!.trim()])
+    ),
+  };
+  vocabFetchedAt = Date.now();
+  return vocabCache;
+}
+
+// "Reading", "Work" or "Projects" — the prompt reads better than a bare list.
+function quotedList(items: string[]): string {
+  const quoted = items.map((t) => `"${t}"`);
+  if (quoted.length < 2) return quoted.join("");
+  return quoted.slice(0, -1).join(", ") + " or " + quoted[quoted.length - 1];
+}
 
 
 // Prefer the note's real title. The extractor writes metadata.title on capture,
@@ -170,6 +197,88 @@ async function getEmbedding(text: string): Promise<number[]> {
   return d.data[0].embedding;
 }
 
+// Several embeddings in one request; the API takes an array and answers in
+// the same order. Each piece is already within the model's limit (chunks.ts).
+async function getEmbeddings(texts: string[]): Promise<number[][]> {
+  const r = await fetch(`${OPENROUTER_BASE}/embeddings`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ model: "openai/text-embedding-3-small", input: texts }),
+  });
+  if (!r.ok) {
+    const msg = await r.text().catch(() => "");
+    throw new Error(`OpenRouter embeddings failed: ${r.status} ${msg}`);
+  }
+  const d = await r.json();
+  const rows = (d.data as { index?: number; embedding: number[] }[]);
+  return rows.map((row, i) => ({ i: row.index ?? i, e: row.embedding }))
+    .sort((a, b) => a.i - b.i).map((x) => x.e);
+}
+
+async function sha256Hex(text: string): Promise<string> {
+  const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return [...new Uint8Array(h)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// Cut a note into pieces and embed each one, so search can reach the whole
+// of a long note (thought_chunks; "The Unembedded Quarter", 485beb5f). A note
+// short enough to be one piece reuses the note's own embedding: same text,
+// same vector, no second call. Never throws: a capture or edit must not fail
+// because of this, and the backfill (backfill_chunks) finds any note whose
+// pieces are missing or were cut from older text.
+async function refreshChunks(thoughtId: string, content: string, noteEmbedding?: number[]): Promise<string | null> {
+  try {
+    const hash = await sha256Hex(content);
+    const pieces = chunkText(content);
+    const vectors = pieces.length === 1 && noteEmbedding ? [noteEmbedding] : await getEmbeddings(pieces);
+    const { error: delErr } = await supabase.from("thought_chunks").delete().eq("thought_id", thoughtId);
+    if (delErr) return delErr.message;
+    const { error } = await supabase.from("thought_chunks").insert(
+      vectors.map((embedding, chunk_index) => ({ thought_id: thoughtId, chunk_index, content_hash: hash, embedding })),
+    );
+    return error ? error.message : null;
+  } catch (e) {
+    return (e as Error).message;
+  }
+}
+
+// Clear the backlog a little at a time, after the answer has gone: a couple of
+// notes whose search pieces are missing or stale, cut and embedded in the
+// background of a search. Added because a connector's tool list is cached, so
+// a newly added backfill_chunks tool can stay invisible to the sessions meant
+// to call it. EdgeRuntime.waitUntil keeps the work alive after the response;
+// outside the edge runtime it simply runs.
+function backfillSomeChunks(n = 2): void {
+  const work = (async () => {
+    const { data } = await supabase.rpc("thoughts_needing_chunks", { max_rows: n });
+    for (const r of (data || []) as { id: string; content: string }[]) await refreshChunks(r.id, r.content);
+  })().catch(() => {});
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work);
+}
+
+// Which search to run. "chunks" ranks each note by its best-matching piece and
+// so reaches past a long note's first 24,000 characters; "note" is the original
+// whole-note embedding. If the chunk search fails for any reason, the note
+// search answers instead: search must never come back empty because of this.
+const DEFAULT_RETRIEVAL: "note" | "chunks" = "note";
+
+async function matchThoughts(
+  args: { query_embedding: number[]; match_threshold: number; match_count: number; filter: Record<string, unknown> },
+  retrieval: "note" | "chunks" = DEFAULT_RETRIEVAL,
+) {
+  backfillSomeChunks();
+  if (retrieval === "chunks") {
+    const r = await supabase.rpc("match_thought_chunks", args);
+    if (!r.error) return r;
+  }
+  return await supabase.rpc("match_thoughts", args);
+}
+
 // Canonical full names for people the AI extractor tends to return with
 // just a first name, keyed by lowercased short form. Extend this map when
 // another short name needs a standing correction.
@@ -253,11 +362,40 @@ function extractLinksFromContent(content: string): ExtractedLink[] {
   return links;
 }
 
+// Some notes are written by the machine to keep track of itself — changelog
+// entries and work orders, 39 of the archive's 176 when the shelf was added.
+// They are real notes and they stay searchable, but they are not what anyone
+// opens the archive to read, and at a fifth of everything they crowd out what
+// is. `thoughts.shelved` is maintained by a trigger from the tags in
+// shelved_topics (see the tidy_tags_and_shelf migration), so the rule lives in
+// the database and no client re-implements it. Every tool that returns a LIST
+// hides them unless asked; fetch by id never does, because asking for a note by
+// its id is asking for that note.
+const SHELF_HINT =
+  "Machine bookkeeping (changelog entries, work orders) is hidden; pass include_shelved to see it.";
+
+// Which of these ids are shelved. Used where the rows come back from an RPC
+// that cannot filter on the column — the alternative, re-deriving the rule from
+// metadata in TypeScript, is a second copy of it that would drift.
+async function shelvedIds(ids: string[]): Promise<Set<string>> {
+  if (!ids.length) return new Set();
+  const { data } = await supabase
+    .from("thoughts")
+    .select("id")
+    .in("id", ids)
+    .eq("shelved", true);
+  return new Set(((data || []) as { id: string }[]).map((r) => r.id));
+}
+
 // Vector search answers "what is this about"; it does not answer "which notes
 // contain this word". A generic term like "building" is about nothing in
 // particular, so it scores below any sensible threshold even when it appears in
 // eleven titles. This fills that gap by matching the literal text as well.
-async function keywordMatches(query: string, limit: number): Promise<ThoughtMatch[]> {
+async function keywordMatches(
+  query: string,
+  limit: number,
+  includeShelved = false
+): Promise<ThoughtMatch[]> {
   const cleaned = query.trim().replace(/[%_,()]/g, " ").trim();
   if (cleaned.length < 2) return [];
 
@@ -274,11 +412,13 @@ async function keywordMatches(query: string, limit: number): Promise<ThoughtMatc
   const columns = ["metadata->>title", "content", "metadata->>topics",
                    "metadata->>people", "metadata->>author", "metadata->>source_name"];
   for (const column of columns) {
-    const { data } = await supabase
+    let kq = supabase
       .from("thoughts")
       .select("id, content, metadata, created_at")
       .ilike(column, `%${lead}%`)
       .limit(50);
+    if (!includeShelved) kq = kq.eq("shelved", false);
+    const { data } = await kq;
     for (const row of (data || []) as ThoughtRecord[]) {
       if (seen.has(row.id)) continue;
       const meta = (row.metadata || {}) as Record<string, unknown>;
@@ -300,6 +440,25 @@ async function keywordMatches(query: string, limit: number): Promise<ThoughtMatc
 }
 
 async function extractMetadata(text: string): Promise<Record<string, unknown>> {
+  const vocab = await loadVocabulary();
+
+  // Wording unchanged from when the list was hardcoded — only its source moved.
+  // With no list at all (a cold isolate that could not reach the table) the
+  // reuse paragraph would be nonsense, so it is dropped rather than shown empty.
+  const topicsGuidance = [
+    vocab.preferred.length
+      ? `These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:\n${vocab.preferred.join(", ")}\nThe list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag.`
+      : `Tag the note for what it is actually about.`,
+    Object.keys(vocab.usage).length
+      ? `Some tags here are narrower than their names. Use these only as described:\n${
+          Object.entries(vocab.usage).map(([t, u]) => `- "${t}": ${u}`).join("\n")
+        }`
+      : "",
+    vocab.collection.length
+      ? `Never use ${quotedList(vocab.collection)}: those are collection tags, applied later from the source.`
+      : "",
+  ].filter(Boolean).join(" ");
+
   const r = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
     method: "POST",
     headers: {
@@ -321,9 +480,7 @@ async function extractMetadata(text: string): Promise<Record<string, unknown>> {
 - "published_date": the ORIGINAL publish date of the external piece being referenced, as YYYY-MM-DD (null if none is stated or this isn't referencing external content). This is different from when the user captured the note — only fill this in if a publish/posted date is explicitly stated or strongly implied in the text.
 - "action_items": array of implied to-dos (empty if none)
 - "dates_mentioned": array of dates YYYY-MM-DD (empty if none)
-- "topics": array of 1-3 short topic tags (always at least one). These tags are already used here, so reuse one whenever it genuinely describes the note, copied exactly as spelled:
-${PREFERRED_TOPICS.join(", ")}
-The list is a convenience, not a constraint. It reflects what this archive usually collects, and notes on entirely different subjects are normal and expected. Tag the note for what it is actually about: if that needs a word not on the list, use that word. Never stretch a listed tag to cover something it does not really describe — a wrong tag from the list is the worst outcome of all, worse than any new tag. Never use "Reading", "Work" or "Projects": those are collection tags, applied later from the source.
+- "topics": array of 1-3 short topic tags (always at least one). ${topicsGuidance}
 - "type": one of "observation", "task", "idea", "reference", "person_note"
 Only extract what's explicitly there.`,
         },
@@ -343,6 +500,7 @@ Only extract what's explicitly there.`,
 
 import {
   TASK_COLUMNS,
+  TASK_OWNERS,
   TASK_STATUSES,
   OPEN_STATUSES,
   RECUR_HELP,
@@ -379,21 +537,24 @@ function buildServer(): McpServer {
     async ({ query }) => {
       try {
         const qEmb = await getEmbedding(query);
-        const { data: vector, error } = await supabase.rpc("match_thoughts", {
+        const { data: vector, error } = await matchThoughts({
           query_embedding: qEmb,
+          // Over-fetch: the shelved ones are dropped below, and asking for
+          // exactly ten would return six.
           match_threshold: 0.35,
-          match_count: 10,
+          match_count: 20,
           filter: {},
         });
 
-        const found = [...((vector || []) as ThoughtMatch[])];
+        const hidden = await shelvedIds(((vector || []) as ThoughtMatch[]).map((t) => t.id));
+        const found = ((vector || []) as ThoughtMatch[]).filter((t) => !hidden.has(t.id));
         if (found.length < 10) {
           const have = new Set(found.map((t) => t.id));
           for (const hit of await keywordMatches(query, 10 - found.length)) {
             if (!have.has(hit.id)) found.push(hit);
           }
         }
-        const data = found;
+        const data = found.slice(0, 10);
 
         if (error) {
           return {
@@ -483,6 +644,41 @@ function buildServer(): McpServer {
     }
   );
 
+  // Maintenance: cut and embed the notes whose search pieces are missing or
+  // stale (thought_chunks). Shortest first; a few per call, because each long
+  // note is one embeddings request of up to ~15 pieces.
+  server.registerTool(
+    "backfill_chunks",
+    {
+      title: "Backfill search pieces",
+      description:
+        "Maintenance. Cut and embed up to `limit` notes whose search pieces (thought_chunks) are missing or were cut from older text, and say how many are left. Safe to call repeatedly; run it until nothing is left.",
+      inputSchema: {
+        limit: z.number().int().min(1).max(25).optional().default(5),
+      },
+    },
+    async ({ limit }) => {
+      const { data, error } = await supabase.rpc("thoughts_needing_chunks", { max_rows: limit });
+      if (error) return { content: [{ type: "text" as const, text: `Could not list notes: ${error.message}` }], isError: true };
+      const rows = (data || []) as { id: string; content: string }[];
+      let done = 0;
+      const failed: string[] = [];
+      for (const r of rows) {
+        const e = await refreshChunks(r.id, r.content);
+        if (e) failed.push(`${r.id}: ${e}`);
+        else done++;
+      }
+      const { data: left } = await supabase.rpc("thoughts_needing_chunks", { max_rows: 1000 });
+      const remaining = ((left || []) as unknown[]).length;
+      return {
+        content: [{ type: "text" as const, text:
+          `Cut and embedded ${done} note(s). ${remaining} still need it.` +
+          (failed.length ? `\nFailed:\n${failed.join("\n")}` : "") }],
+        ...(failed.length && !done ? { isError: true } : {}),
+      };
+    }
+  );
+
   // Tool 1: Semantic Search
   server.registerTool(
     "search_thoughts",
@@ -497,32 +693,53 @@ function buildServer(): McpServer {
         query: z.string().describe("What to search for"),
         limit: z.number().optional().default(10),
         threshold: z.number().optional().default(0.35),
+        include_shelved: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Include the machine's own bookkeeping — changelog entries and work orders. Left out by default: they are a fifth of the archive and are not what anyone searches it to find. Pass true when the question is about the system's own history."
+          ),
         format: z
           .enum(["text", "full", "json"])
           .optional()
           .default("text")
           .describe("\"text\" (default) for a compact one-entry-per-match summary — title, type, topics, snippet and id. \"full\" for the complete text of every match (large; prefer fetch on a single id instead). \"json\" for a machine-parseable array of full thought objects (used by the Open Brain Catalog GUI)."),
+        retrieval: z
+          .enum(["note", "chunks"])
+          .optional()
+          .describe("Leave unset. \"chunks\" matches each note by its best ~6,000-character piece, so the whole of a long note is searchable; \"note\" uses one embedding of the note's first 24,000 characters. For comparing the two."),
       },
     },
-    async ({ query, limit, threshold, format }) => {
+    async ({ query, limit, threshold, format, include_shelved, retrieval }) => {
       try {
         const qEmb = await getEmbedding(query);
-        const { data: vector, error } = await supabase.rpc("match_thoughts", {
+        const { data: vector, error } = await matchThoughts({
           query_embedding: qEmb,
           match_threshold: threshold,
-          match_count: limit,
+          // The RPC cannot filter on the shelved column, so ask for headroom
+          // and drop them here. Without it a search for a well-covered subject
+          // returns a short list padded with changelog entries.
+          match_count: include_shelved ? limit : limit * 2,
           filter: {},
-        });
+        }, retrieval ?? DEFAULT_RETRIEVAL);
+
+        // Computed even when nothing is being hidden: format "json" labels each
+        // result, so the catalog can offer its own toggle without a second copy
+        // of the rule.
+        const hidden = await shelvedIds(((vector || []) as ThoughtMatch[]).map((t) => t.id));
+        const found = include_shelved
+          ? [...((vector || []) as ThoughtMatch[])]
+          : ((vector || []) as ThoughtMatch[]).filter((t) => !hidden.has(t.id));
 
         // Top up with literal matches so a plain keyword still finds its notes.
-        const found = [...((vector || []) as ThoughtMatch[])];
         if (found.length < limit) {
           const have = new Set(found.map((t) => t.id));
-          for (const hit of await keywordMatches(query, limit - found.length)) {
+          for (const hit of await keywordMatches(query, limit - found.length, include_shelved)) {
             if (!have.has(hit.id)) found.push(hit);
           }
         }
-        const data = found;
+        const data = found.slice(0, limit);
 
         if (error) {
           return {
@@ -546,6 +763,7 @@ function buildServer(): McpServer {
             content: t.content,
             created_at: t.created_at,
             similarity: t.similarity,
+            shelved: hidden.has(t.id),
             metadata: t.metadata || {},
           }));
           return { content: [{ type: "text" as const, text: JSON.stringify(items) }] };
@@ -559,7 +777,8 @@ function buildServer(): McpServer {
                 type: "text" as const,
                 text:
                   `Found ${data.length} thought(s):\n\n${lines.join("\n\n")}\n\n` +
-                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.`,
+                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.` +
+                  (!include_shelved && hidden.size ? `\n${SHELF_HINT}` : ""),
               },
             ],
           };
@@ -623,6 +842,13 @@ function buildServer(): McpServer {
         topic: z.string().optional().describe("Filter by topic tag"),
         person: z.string().optional().describe("Filter by person mentioned"),
         days: z.number().optional().describe("Only thoughts from the last N days"),
+        include_shelved: z
+          .boolean()
+          .optional()
+          .default(false)
+          .describe(
+            "Include the machine's own bookkeeping — changelog entries and work orders. Left out by default: they are a fifth of the archive and would fill a list of recent notes with the assistant talking about itself. Pass true to review what the system has been doing."
+          ),
         format: z
           .enum(["text", "full", "json"])
           .optional()
@@ -630,13 +856,38 @@ function buildServer(): McpServer {
           .describe("\"text\" (default) for a compact one-entry-per-note summary — title, type, topics, snippet and id. \"full\" for the complete text of every note (large; prefer fetch on a single id instead). \"json\" for a machine-parseable array of full thought objects (used by the Open Brain Catalog GUI)."),
       },
     },
-    async ({ limit, type, topic, person, days, format }) => {
+    async ({ limit, type, topic, person, days, format, include_shelved }) => {
       try {
         let q = supabase
           .from("thoughts")
-          .select("id, content, metadata, created_at")
+          .select("id, content, metadata, created_at, shelved")
           .order("created_at", { ascending: false })
           .limit(limit);
+
+        // In the query, not after it: filtering the page afterwards would let
+        // shelved rows eat the limit and return three notes where ten were
+        // asked for. thoughts_unshelved_recent_idx exists for exactly this.
+        let hideShelved = !include_shelved;
+
+        // Naming a shelved topic is asking for those notes, the same way
+        // fetching by id is asking for that note. Without this,
+        // list_thoughts(topic: "Changelog") answers "No thoughts found." about
+        // thirty-five notes that plainly exist — the shelf is there to stop
+        // bookkeeping crowding a general list, not to deny it exists when
+        // somebody asks for it by name.
+        //
+        // The whole table is read and compared here rather than matched in the
+        // query: it holds two rows, and an ilike on caller-supplied text would
+        // need % and _ escaped to avoid a topic quietly matching the wrong row.
+        if (hideShelved && topic) {
+          const { data: shelf } = await supabase.from("shelved_topics").select("topic");
+          const asked = topic.trim().toLowerCase();
+          if (((shelf || []) as { topic: string }[]).some((r) => r.topic.toLowerCase() === asked)) {
+            hideShelved = false;
+          }
+        }
+
+        if (hideShelved) q = q.eq("shelved", false);
 
         if (type) q = q.contains("metadata", { type });
         if (topic) q = q.contains("metadata", { topics: [topic] });
@@ -665,10 +916,17 @@ function buildServer(): McpServer {
 
         if (format === "json") {
           const items = data.map(
-            (t: { id: string; content: string; metadata: Record<string, unknown>; created_at: string }) => ({
+            (t: {
+              id: string;
+              content: string;
+              metadata: Record<string, unknown>;
+              created_at: string;
+              shelved?: boolean;
+            }) => ({
               id: t.id,
               content: t.content,
               created_at: t.created_at,
+              shelved: !!t.shelved,
               metadata: t.metadata || {},
             })
           );
@@ -690,7 +948,8 @@ function buildServer(): McpServer {
                 type: "text" as const,
                 text:
                   `${data.length} recent thought(s):\n\n${lines.join("\n\n")}\n\n` +
-                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.`,
+                  `Use fetch(id) for the full text of one, or fetch(id, max_chars) for its opening.` +
+                  (hideShelved ? `\n${SHELF_HINT}` : ""),
               },
             ],
           };
@@ -747,15 +1006,17 @@ function buildServer(): McpServer {
 
         const { data } = await supabase
           .from("thoughts")
-          .select("metadata, created_at")
+          .select("metadata, created_at, shelved")
           .order("created_at", { ascending: false });
 
+        let shelved = 0;
         const types: Record<string, number> = {};
         const topics: Record<string, number> = {};
         const people: Record<string, number> = {};
 
         for (const r of data || []) {
           const m = (r.metadata || {}) as Record<string, unknown>;
+          if ((r as { shelved?: boolean }).shelved) shelved++;
           if (m.type) types[m.type as string] = (types[m.type as string] || 0) + 1;
           if (Array.isArray(m.topics))
             for (const t of m.topics) topics[t as string] = (topics[t as string] || 0) + 1;
@@ -768,8 +1029,19 @@ function buildServer(): McpServer {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 10);
 
+        // The head request comes back with a null count against the live
+        // database, which printed "Total thoughts: null" and, once the split
+        // was added, a reading list of minus thirty-nine. The rows are already
+        // in hand and every other figure below is tallied from them, so they
+        // are the better source; the exact count stays as the preferred one
+        // for the day the archive outgrows a single PostgREST page.
+        const total = count ?? (data?.length ?? 0);
+
         const lines: string[] = [
-          `Total thoughts: ${count}`,
+          `Total thoughts: ${total}` +
+            (shelved
+              ? ` (${total - shelved} in the reading list, ${shelved} machine bookkeeping)`
+              : ""),
           `Date range: ${
             data?.length
               ? new Date(data[data.length - 1].created_at).toLocaleDateString() +
@@ -876,6 +1148,7 @@ function buildServer(): McpServer {
             isError: true,
           };
         }
+        if (thoughtId) await refreshChunks(thoughtId, content, embedding);
 
         let linkWarning = "";
         if (parent_thought_id && thoughtId) {
@@ -1005,7 +1278,7 @@ function buildServer(): McpServer {
     {
       title: "Backfill Author/Source Metadata",
       description:
-        "Maintenance tool: re-extracts \"author\" and \"source_name\"/\"source_url\" metadata for existing thoughts captured before those fields existed, without touching their existing type/topics/people/action_items. Safe to re-run — it only processes thoughts that don't already have author/source_name set (even to null), so it's a one-time catch-up rather than something that needs regular use.",
+        "Maintenance tool: re-extracts \"author\" and \"source_name\"/\"source_url\" metadata for existing thoughts that are missing them, without touching their existing type/topics/people/action_items. \"Missing\" means the field is absent OR explicitly null, so imports that write {\"author\": null} are picked up. It fills only the empty fields and never overwrites a value that is already set. Safe to re-run: each processed thought is stamped with \"author_backfilled_at\", and stamped thoughts are skipped, so a row the extractor genuinely found nothing in is not retried on every run.",
       annotations: {
         readOnlyHint: false,
         openWorldHint: false,
@@ -1026,7 +1299,21 @@ function buildServer(): McpServer {
 
         const candidates = (data || []).filter((t) => {
           const m = (t.metadata || {}) as Record<string, unknown>;
-          return m.author === undefined && m.source_name === undefined;
+          // A thought is a candidate when it has NEITHER author nor
+          // source_name — same rule as before. What changed is the test for
+          // "hasn't got one": missing means absent OR explicitly null. An
+          // import that writes {"author": null} leaves the key present, and
+          // the old check (=== undefined) skipped those rows permanently.
+          // Deliberately not "either field missing": a note with an author
+          // and no source is usually a note that never had one (a thought of
+          // your own, a policy document), and widening this would re-extract
+          // scores of them on every run for nothing.
+          const needsAuthor = m.author == null;
+          const needsSource = m.source_name == null;
+          if (!needsAuthor || !needsSource) return false;
+          // Idempotence: once a run has tried a row, don't try it again just
+          // because the extractor legitimately found nothing in it.
+          return m.author_backfilled_at === undefined;
         });
 
         if (!candidates.length) {
@@ -1034,7 +1321,7 @@ function buildServer(): McpServer {
             content: [
               {
                 type: "text" as const,
-                text: "Nothing to backfill — every thought already has author/source metadata (even if null).",
+                text: "Nothing to backfill — every thought either has author/source metadata or has already been through a backfill run.",
               },
             ],
           };
@@ -1054,10 +1341,20 @@ function buildServer(): McpServer {
             batch.map(async (t) => {
               try {
                 const extracted = (await extractMetadata(t.content)) as Record<string, unknown>;
-                const author = extracted.author ?? null;
-                const source_name = extracted.source_name ?? null;
-                const source_url = extracted.source_url ?? null;
-                const newMetadata = { ...(t.metadata || {}), author, source_name, source_url };
+                const m = (t.metadata || {}) as Record<string, unknown>;
+                // Fill only what is missing. Candidates have neither field
+                // today, so this is belt-and-braces — but it means widening
+                // the filter later cannot silently clobber a real value.
+                const author = m.author ?? extracted.author ?? null;
+                const source_name = m.source_name ?? extracted.source_name ?? null;
+                const source_url = m.source_url ?? extracted.source_url ?? null;
+                const newMetadata = {
+                  ...m,
+                  author,
+                  source_name,
+                  source_url,
+                  author_backfilled_at: new Date().toISOString(),
+                };
                 const { error: updErr } = await supabase
                   .from("thoughts")
                   .update({ metadata: newMetadata })
@@ -1078,6 +1375,71 @@ function buildServer(): McpServer {
         let summary = `Backfilled ${updated}/${candidates.length} thought(s); ${foundSomething} had an author or source to extract.`;
         if (errors.length) summary += `\n${errors.length} error(s):\n` + errors.join("\n");
         return { content: [{ type: "text" as const, text: summary }] };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // The vocabulary, for anything that needs to read it without reaching the
+  // database directly. Nothing does today — tidy-archive.py, which used to,
+  // was retired once the nightly job took over folding — but a list this
+  // central should be readable by a script that has the access key and no
+  // database credentials, rather than only by copying it out again.
+  server.registerTool(
+    "topic_vocabulary",
+    {
+      title: "Topic Vocabulary",
+      description:
+        "The controlled vocabulary: the topic tags the capture extractor is told to reuse, the collection tags it is told never to guess, the scope rule (`usage`) for any tag narrower than its name, and (json only) the heading each tag is grouped under in the catalog. This table is the single source of truth — the capture prompt reads it at runtime, so a change here takes effect on the next capture with no redeploy. Read-only; add or retire a term with one INSERT or DELETE on public.topic_vocabulary.",
+      annotations: {
+        readOnlyHint: true,
+      },
+      inputSchema: {
+        format: z
+          .enum(["text", "json"])
+          .optional()
+          .default("text")
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}, sides: {heading: personal|work}} — use this when a script is going to write the list to a file."),
+      },
+    },
+    async ({ format }) => {
+      try {
+        const vocab = await loadVocabulary();
+        if (format === "json") {
+          // Headings are read fresh, not cached with the vocabulary: only the
+          // catalog asks for them, once per load, and a heading Stewart has just
+          // set should show on the next reload rather than a minute later.
+          const { data: rows } = await supabase
+            .from("topic_headings")
+            .select("topic, heading, source");
+          const headings = Object.fromEntries(
+            ((rows || []) as { topic: string; heading: string; source: string }[])
+              .map((r) => [r.topic, { heading: r.heading, suggested: r.source === "suggested" }])
+          );
+          const { data: sideRows } = await supabase
+            .from("heading_sides")
+            .select("heading, side");
+          const sides = Object.fromEntries(
+            ((sideRows || []) as { heading: string; side: string }[]).map((r) => [r.heading, r.side])
+          );
+          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings, sides }) }] };
+        }
+        const lines = [
+          `Preferred topics (${vocab.preferred.length}), in the order the extractor is shown them:`,
+          ...vocab.preferred.map((t) => `  ${t}`),
+        ];
+        if (vocab.collection.length) {
+          lines.push(
+            "",
+            `Collection tags (${vocab.collection.length}) — applied later from the source, never guessed at capture:`,
+            ...vocab.collection.map((t) => `  ${t}`)
+          );
+        }
+        return { content: [{ type: "text" as const, text: lines.join("\n") }] };
       } catch (err: unknown) {
         return {
           content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
@@ -1209,6 +1571,7 @@ function buildServer(): McpServer {
             isError: true,
           };
         }
+        if (content !== undefined) await refreshChunks(id, content, update.embedding as number[]);
 
         const preview = newContent.replace(/\s+/g, " ").trim().slice(0, 80);
         return {
@@ -1470,6 +1833,10 @@ function buildServer(): McpServer {
         parent_id: z.string().optional().describe("The id of a task this one is a subtask of"),
         thought_id: z.string().optional().describe("The id of the thought this task came out of, linking the task back to the note that prompted it"),
         source: z.string().optional().describe("Where it was captured, e.g. 'claude' or 'catalog'. Defaults to 'mcp'."),
+        owner: z
+          .enum(TASK_OWNERS)
+          .optional()
+          .describe("Who the task is for: 'me' (Stewart — the default) or 'claude' (a job for a Claude session, such as checking a scheduled task exists). Claude's tasks are kept out of Stewart's own To do list."),
       },
     },
     async (args) => {
@@ -1512,6 +1879,7 @@ function buildServer(): McpServer {
           parent_id: args.parent_id ?? null,
           thought_id: args.thought_id ?? null,
           source: args.source ?? "mcp",
+          owner: args.owner ?? "me",
         };
 
         const { data, error } = await supabase
@@ -1557,6 +1925,10 @@ function buildServer(): McpServer {
           .optional()
           .describe("Which statuses to include. Defaults to the open ones: inbox, next, waiting."),
         project: z.string().optional().describe("Only tasks in this project"),
+        owner: z
+          .enum(TASK_OWNERS)
+          .optional()
+          .describe("Only tasks for 'me' (Stewart) or 'claude'. Omit for both. When a Claude session asks what it has been given to do, pass 'claude'."),
         due_before: z.string().optional().describe("YYYY-MM-DD — only tasks due on or before this date. Pass today's date for 'what is due now'."),
         include_deferred: z
           .boolean()
@@ -1570,7 +1942,7 @@ function buildServer(): McpServer {
           .describe("\"text\" (default) for one readable line per task. \"json\" for an array of full task objects, used by the Open Brain Catalog GUI."),
       },
     },
-    async ({ status, project, due_before, include_deferred, search, limit, format }) => {
+    async ({ status, project, owner, due_before, include_deferred, search, limit, format }) => {
       try {
         const today = todayISO();
         const wanted = status && status.length ? status : OPEN_STATUSES;
@@ -1584,6 +1956,7 @@ function buildServer(): McpServer {
           .limit(limit ?? 50);
 
         if (project) q = q.eq("project", project);
+        if (owner) q = q.eq("owner", owner);
         if (due_before) {
           if (!parseISODate(due_before)) {
             return {
@@ -1655,6 +2028,7 @@ function buildServer(): McpServer {
         recur_from: z.enum(["due", "completion"]).optional().describe("Whether repeats count from the due date or from completion"),
         parent_id: z.string().nullable().optional().describe("New parent task id (null to detach)"),
         thought_id: z.string().nullable().optional().describe("New linked thought id (null to unlink)"),
+        owner: z.enum(TASK_OWNERS).optional().describe("Hand the task to 'me' (Stewart) or 'claude'"),
       },
     },
     async (args) => {
@@ -1831,6 +2205,7 @@ function buildServer(): McpServer {
             parent_id: task.parent_id,
             thought_id: task.thought_id,
             source: task.source,
+            owner: task.owner,
           })
           .select(TASK_COLUMNS)
           .single();
@@ -1896,6 +2271,93 @@ function buildServer(): McpServer {
 
         return {
           content: [{ type: "text" as const, text: `Deleted "${(data as { title: string }).title}".` }],
+        };
+      } catch (err: unknown) {
+        return {
+          content: [{ type: "text" as const, text: `Error: ${(err as Error).message}` }],
+          isError: true,
+        };
+      }
+    }
+  );
+
+  // Tool 19: Sweep Unfiled Tasks
+  //
+  // The sweep itself is a Postgres function on a nightly pg_cron schedule, not
+  // anything this server drives — see the 20260823 migration for why. This tool
+  // exists so the sweep can be looked at rather than only trusted: run it dry to
+  // see what tonight would file, or run it now instead of waiting for 05:30.
+  server.registerTool(
+    "sweep_unfiled_tasks",
+    {
+      title: "Sweep Unfiled Tasks",
+      description:
+        "File any captured note the extractor typed as a task but which never became a task. This normally runs itself overnight; call it to see what is waiting (dry_run) or to file it now rather than waiting. Each note is considered once and then ledgered, so deleting a task it filed is a decision that sticks — the sweep will not put it back.",
+      annotations: {
+        readOnlyHint: false,
+        openWorldHint: false,
+        destructiveHint: false,
+        idempotentHint: false,
+      },
+      inputSchema: {
+        dry_run: z
+          .boolean()
+          .optional()
+          .describe("Report what would be filed without filing it or writing anything down. Nothing is ledgered, so a dry run can be repeated and the real sweep still does the same work afterwards."),
+        limit: z.number().optional().describe("Maximum notes to consider in one pass (default 25)"),
+      },
+    },
+    async ({ dry_run, limit }) => {
+      try {
+        const { data, error } = await supabase.rpc("sweep_unfiled_tasks", {
+          p_dry_run: dry_run ?? false,
+          p_limit: limit ?? 25,
+        });
+
+        if (error) {
+          return {
+            content: [{ type: "text" as const, text: `Could not run the sweep: ${error.message}` }],
+            isError: true,
+          };
+        }
+
+        type SweepRow = {
+          thought_id: string;
+          outcome: string;
+          task_id: string | null;
+          title: string | null;
+          defer_until: string | null;
+        };
+        const rows = (data ?? []) as SweepRow[];
+        const filed = rows.filter((r) => r.outcome === "filed");
+        const seen = rows.filter((r) => r.outcome === "already_filed");
+
+        // Nothing to file is the expected answer on most nights, so it gets a
+        // sentence of its own rather than an empty list that reads like a fault.
+        if (!rows.length) {
+          return {
+            content: [{ type: "text" as const, text: "Nothing to file — every captured task has already been through the sweep." }],
+          };
+        }
+
+        const verb = dry_run ? "Would file" : "Filed";
+        const lines = filed.map((r) => {
+          const when = r.defer_until ? `, hidden until ${r.defer_until}` : "";
+          const id = r.task_id ? ` [id: ${r.task_id}]` : "";
+          return `- ${r.title}${when}${id}\n  from note ${r.thought_id}`;
+        });
+
+        const parts: string[] = [];
+        parts.push(filed.length ? `${verb} ${filed.length} task(s):\n${lines.join("\n")}` : `${verb} nothing.`);
+        if (seen.length) {
+          parts.push(`${seen.length} note(s) already had a task and were left alone.`);
+        }
+        if (dry_run) {
+          parts.push("Dry run — nothing was written.");
+        }
+
+        return {
+          content: [{ type: "text" as const, text: parts.join("\n\n") }],
         };
       } catch (err: unknown) {
         return {

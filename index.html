@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Open Brain — Catalog</title>
 <link rel="manifest" href="manifest.webmanifest" />
-<meta name="theme-color" content="#16140F" />
+<meta name="theme-color" content="#1B1638" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
 <meta name="apple-mobile-web-app-title" content="Open Brain" />
@@ -15,20 +15,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Source+Serif+4:ital,wght@0,400;0,500;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --paper: #16140F;
-    --panel: #1E1A12;
-    --panel-raised: #262019;
-    --ruled: rgba(232,223,200,0.07);
-    --hairline: rgba(232,223,200,0.13);
-    --ink: #E9DFC7;
-    --ink-dim: #A79A7D;
-    --ink-faint: #766B54;
-    --brass: #C9A227;
-    --moss: #7C9A6E;
-    --rust: #B15B45;
-    --blue: #6C93A8;
-    --plum: #9A79A0;
-    --unfiled: #766B54;
+    --paper: #1B1638;
+    --panel: #241D47;
+    --panel-raised: #2E2657;
+    --ruled: rgba(246,238,227,0.07);
+    --hairline: rgba(246,238,227,0.13);
+    --ink: #F7EFE4;
+    --ink-dim: #BDB3D6;
+    --ink-faint: #8A80AD;
+    --brass: #F5C96B;
+    --moss: #7FD1AE;
+    --rust: #F7848F;
+    --blue: #8EC7EC;
+    --plum: #B3A4F5;
+    --unfiled: #8A80AD;
     --font-display: 'Fraunces', Georgia, serif;
     --font-body: 'Source Serif 4', 'Iowan Old Style', Georgia, serif;
     --font-mono: 'IBM Plex Mono', ui-monospace, 'SF Mono', monospace;
@@ -46,8 +46,8 @@
 
   body {
     background-image:
-      radial-gradient(ellipse at 20% -10%, rgba(201,162,39,0.05), transparent 45%),
-      radial-gradient(ellipse at 100% 110%, rgba(124,154,110,0.04), transparent 40%);
+      radial-gradient(ellipse at 20% -10%, rgba(245,201,107,0.05), transparent 45%),
+      radial-gradient(ellipse at 100% 110%, rgba(127,209,174,0.04), transparent 40%);
   }
 
   /* subtle paper grain */
@@ -193,6 +193,11 @@
   .chip.active { color: var(--paper); border-color: transparent; }
   .chip:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
   .chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  /* Matches .facet-n, so a count reads the same wherever it appears. On an
+     active chip the background is the type colour, so the faint ink would
+     disappear into it. */
+  .chip .chip-n { color: var(--ink-faint); }
+  .chip.active .chip-n { color: var(--paper); opacity: 0.75; }
 
   .chip-group-label {
     font-family: var(--font-mono);
@@ -202,6 +207,10 @@
     color: var(--ink-faint);
     margin-top: 12px;
   }
+  .chip-group-label[hidden] { display: none; }
+  /* The label carries the gap above the row, so the row itself gives up its
+     own top margin rather than doubling it. */
+  .chip-group-label + .chip-row { margin-top: 6px; }
 
   .topic-chip-row {
     max-height: 96px;
@@ -270,10 +279,10 @@
     transition: background 120ms, transform 120ms;
   }
 
-  .card-row:hover .card-row-body { background: rgba(232,223,200,0.03); transform: translateX(2px); }
+  .card-row:hover .card-row-body { background: rgba(246,238,227,0.03); transform: translateX(2px); }
   .card-row:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
-  .card-row.selected .card-row-body { background: rgba(201,162,39,0.08); }
-  .card-row.referencing .card-row-body { background: rgba(108,147,168,0.1); }
+  .card-row.selected .card-row-body { background: rgba(245,201,107,0.08); }
+  .card-row.referencing .card-row-body { background: rgba(142,199,236,0.1); }
 
   /* A note is often remembered by who is in it, and the AI-written title rarely
      names them — so the people ride along under the title. */
@@ -453,7 +462,7 @@
   .body-link {
     color: var(--blue);
     text-decoration: none;
-    border-bottom: 1px solid rgba(108,147,168,0.4);
+    border-bottom: 1px solid rgba(142,199,236,0.4);
   }
   .body-link:hover { border-bottom-color: var(--blue); }
 
@@ -461,7 +470,7 @@
   .thought-link {
     color: var(--brass);
     text-decoration: none;
-    border-bottom: 1px solid rgba(176,141,87,0.45);
+    border-bottom: 1px solid rgba(240,190,120,0.45);
     cursor: pointer;
   }
   .thought-link:hover { border-bottom-color: var(--brass); }
@@ -493,6 +502,37 @@
   .tag.topic::before { content: "# "; color: var(--ink-faint); }
   .tag.author::before { content: "by "; color: var(--ink-faint); }
   .tag.source::before { content: "via "; color: var(--ink-faint); }
+
+  /* ---------- results in the main pane ----------
+     On a wide screen the notes a filter finds are listed here, where there is
+     room to read them, rather than only in the drawer under the filters —
+     with the Topics panel open, that drawer list was squeezed to nothing. */
+  .results { width: 100%; max-width: 860px; }
+  .results-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 14px; }
+  .results-count { font-family: var(--font-display); font-size: 22px; color: var(--ink); }
+  .results-filters { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; color: var(--ink-faint); text-transform: uppercase; }
+  .result-row {
+    display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 4px 16px; width: 100%;
+    padding: 11px 12px; background: none; border: 0; border-top: 1px solid var(--hairline);
+    text-align: left; color: inherit; cursor: pointer; font: inherit;
+  }
+  .result-row:hover { background: var(--panel); }
+  .result-row:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+  .result-meta { display: flex; flex-direction: column; gap: 3px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; padding-top: 3px; }
+  .result-meta .result-date { color: var(--ink-faint); text-transform: none; letter-spacing: 0; }
+  .result-title { font-family: var(--font-body); font-size: 15.5px; line-height: 1.4; color: var(--ink); }
+  .result-tags { grid-column: 2; font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.04em; color: var(--ink-faint); }
+  .results-more { padding: 14px 12px; color: var(--ink-faint); font-style: italic; border-top: 1px solid var(--hairline); }
+  .list-return {
+    display: block; background: none; border: 0; padding: 4px 0; margin: 0 0 14px; cursor: pointer;
+    color: var(--ink-dim); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em;
+  }
+  .list-return:hover { color: var(--brass); }
+  .list-return:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  /* Keyed on the link itself, not a class on .main: every other view that
+     fills .main (editor, journal, tasks) would otherwise inherit the column. */
+  .main:has(> .list-return) { flex-direction: column; align-items: center; }
+  .main > .list-return { width: 100%; max-width: 1040px; }
 
   .back-btn {
     display: none;
@@ -538,7 +578,7 @@
     align-items: center;
     gap: 10px;
     padding: 12px 28px;
-    background: rgba(177,91,69,0.09);
+    background: rgba(247,132,143,0.09);
     border-top: 1px solid var(--hairline);
     flex-wrap: wrap;
   }
@@ -824,6 +864,24 @@
     min-width: 0;
   }
   .linked-note-open:hover { color: var(--brass); }
+  /* A journal day's links sit in plain view above the text; on a phone the
+     Linked notes section is folded away under "Details, links & tags". */
+  .journal-links {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    margin: 12px 24px 0;
+    font-size: 12.5px;
+  }
+  .journal-links-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    letter-spacing: 0.11em;
+    text-transform: uppercase;
+    color: var(--ink-dim);
+  }
+  .journal-links .linked-note-open { flex: 0 1 auto; color: var(--blue); }
   .link-create-btn, .link-add-toggle {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -879,7 +937,7 @@
     cursor: pointer;
     width: 100%;
   }
-  .link-picker-item:hover { background: rgba(232,223,200,0.05); color: var(--ink); }
+  .link-picker-item:hover { background: rgba(246,238,227,0.05); color: var(--ink); }
 
   /* ---------- reference panel ---------- */
   .ref-panel {
@@ -1022,14 +1080,35 @@
   .hubs button:hover { color: var(--brass); }
   .hubs span { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); }
 
-  #graphCanvas { width: 100%; height: 460px; display: block; cursor: pointer;
+  #graphCanvas { width: 100%; height: 580px; display: block; cursor: pointer;
                  touch-action: manipulation; }
-  @media (max-width: 760px) { #graphCanvas { height: 360px; } }
+  @media (max-width: 700px) { #graphCanvas { height: 380px; } }
+
+  /* The graph is the only view showing structure rather than counts, so it gets
+     the height. Everything that is a number or a word list sits two-up beneath
+     it. */
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 14px; align-items: start; }
+  .stats-grid .stats-card { margin-bottom: 0; }
+
+  /* Tasks filed from the note being read — the task detail's "Came from"
+     button, followed backwards. */
+  .note-tasks { padding: 12px 18px 4px; border-top: 1px solid var(--ruled); }
+  .note-tasks[hidden] { display: none; }
+  .note-task { display: flex; align-items: baseline; gap: 10px; width: 100%;
+               background: none; border: none; border-bottom: 1px solid var(--ruled);
+               padding: 7px 0; text-align: left; cursor: pointer; font-family: var(--font-body); }
+  .note-task:last-child { border-bottom: none; }
+  .note-task:hover .note-task-title { color: var(--brass); }
+  .note-task-title { flex: 1; font-size: 13.5px; color: var(--ink); }
+  .note-task.is-closed .note-task-title { color: var(--ink-faint); text-decoration: line-through; }
+  .note-task-meta { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em;
+                    text-transform: uppercase; color: var(--ink-faint); white-space: nowrap; }
 
   /* Tapping a dot opens the little neighbourhood around it: the note itself and
      everything it links to, as a list you can walk into. */
   .node-sheet { position: fixed; inset: 0; z-index: 95; display: flex; align-items: center;
-                justify-content: center; padding: 20px; background: rgba(10,9,7,0.6); }
+                justify-content: center; padding: 20px; background: rgba(10,7,26,0.62); }
   .node-sheet[hidden] { display: none; }
   .node-sheet-inner { background: var(--panel); border: 1px solid var(--hairline); border-radius: 4px;
                       width: 100%; max-width: 560px; max-height: 78vh;
@@ -1084,6 +1163,34 @@
   .facet-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
   .facet-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--brass); }
   .facet-btn.filtering { color: var(--brass); border-color: var(--brass); }
+  /* Not a facet — a view mode — so it gets the whole row rather than becoming
+     an odd fifth button in a grid built for pairs. */
+  .shelf-toggle { flex: 1 1 100%; justify-content: space-between; padding-left: 10px; padding-right: 10px; }
+  .shelf-toggle[aria-pressed="true"] { color: var(--brass); border-color: var(--brass); }
+  .shelf-state { color: var(--ink-faint); font-size: 10px; letter-spacing: 0.06em; }
+  /* Everything / Personal / Work & AI. A view of the whole drawer, so it sits
+     above the filters rather than among them. */
+  .side-switch { display: flex; margin: 10px 0 2px; border: 1px solid var(--hairline); border-radius: 3px; overflow: hidden; }
+  .side-switch[hidden] { display: none; }
+  .side-switch button {
+    flex: 1 1 0; min-width: 0; padding: 7px 4px; background: var(--panel); border: 0;
+    border-left: 1px solid var(--hairline); color: var(--ink-dim); cursor: pointer;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.09em; text-transform: uppercase;
+  }
+  .side-switch button:first-child { border-left: 0; }
+  .side-switch button:hover { color: var(--ink); }
+  .side-switch button[aria-pressed="true"] { background: var(--brass); color: var(--paper); }
+  .side-switch button:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+  /* Shown only when the shelf is open, so a bookkeeping note is never mistaken
+     for something Stewart wrote. */
+  .card-row.shelved .card-row-preview { color: var(--ink-dim); }
+  .card-row-shelf {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-faint);
+  }
   .facet-n { color: var(--ink-faint); font-size: 10px; }
   .facet-btn[aria-expanded="true"] .facet-caret { transform: rotate(180deg); }
   .facet-caret { transition: transform 140ms ease; }
@@ -1106,6 +1213,22 @@
   .alpha-btn:hover { color: var(--ink); border-color: var(--hairline); }
   .alpha-btn.on { color: var(--paper); background: var(--brass); border-color: var(--brass); }
   .facet-chips { max-height: 210px; overflow-y: auto; }
+  /* Grouped by heading: a column of shelves, each a label you can tap to
+     filter by the whole heading, over the chips for its tags. */
+  .facet-chips.grouped { display: block; max-height: 220px; }
+  .heading-group + .heading-group { margin-top: 10px; }
+  .heading-group .chip-row { margin-top: 5px; }
+  .heading-btn {
+    display: flex; align-items: baseline; gap: 8px;
+    background: none; border: 0; padding: 2px 0; cursor: pointer;
+    font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--ink);
+  }
+  .heading-btn:hover .heading-name { color: var(--brass); }
+  .heading-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  .heading-btn.on .heading-name { color: var(--brass); }
+  .heading-btn .heading-n { color: var(--ink-faint); }
+  .heading-btn .heading-note { color: var(--ink-faint); text-transform: none; letter-spacing: 0; font-style: italic; }
 
   /* ---------- import (drag a file in) ---------- */
   .drop-veil {
@@ -1115,7 +1238,7 @@
     display: none;
     align-items: center;
     justify-content: center;
-    background: rgba(22,20,15,0.86);
+    background: rgba(27,22,56,0.86);
     border: 2px dashed var(--brass);
   }
   .drop-veil.on { display: flex; }
@@ -1145,9 +1268,13 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    background: rgba(22,20,15,0.9);
+    background: rgba(27,22,56,0.9);
   }
   .import[hidden] { display: none; }
+  /* The tag step opens while the import panel is still up, and comes first in
+     the page, so at an equal z-index it painted underneath — invisible, with
+     "Save as new note" greyed out waiting on it. */
+  #tagPanel { z-index: 76; }
   .import-panel {
     width: 100%;
     max-width: 760px;
@@ -1415,6 +1542,7 @@
     .ref-panel { display: none !important; }
     .drawer { display: flex; }
     .main { display: none; padding: 0; --main-pad-top: 0px; }
+    .list-return { display: none !important; }
     .app.detail-open .drawer { display: none; }
 
     /* On a phone the card and the back button must stack. Left as a flex row,
@@ -1464,7 +1592,30 @@
      the mode switch toggles, so grant them the specificity to actually go. */
   .refresh-btn[hidden],
   .facet-bar[hidden],
+  .chip-row[hidden],
+  .journal-row[hidden],
   .search-row[hidden] { display: none; }
+
+  /* ---------- journal ----------
+     A journal entry is a note tagged Journal. The view is that tag read as a
+     diary: newest first, by month, with today's entry one tap away. */
+
+  .journal-row {
+    display: flex;
+    gap: 8px;
+  }
+  .journal-row .task-btn { padding: 9px 12px; }
+  .journal-row #journalToday { flex: 1; }
+
+  .journal-row-sub {
+    font-size: 12.5px;
+    color: var(--ink-faint);
+    margin-top: 3px;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
 
   /* ---------- tasks ----------
      The drawer shows one of two things: the archive, or the list of what needs
@@ -1530,8 +1681,8 @@
     border-bottom: 1px solid var(--ruled);
     transition: background 120ms;
   }
-  .task-row:hover { background: rgba(232,223,200,0.03); }
-  .task-row.selected { background: rgba(201,162,39,0.08); }
+  .task-row:hover { background: rgba(246,238,227,0.03); }
+  .task-row.selected { background: rgba(245,201,107,0.08); }
   .task-row.settling { opacity: 0.35; }
 
   /* Ticking something off is the most-used control in the whole view, so it is
@@ -1549,7 +1700,7 @@
     position: relative;
     transition: border-color 120ms, background 120ms;
   }
-  .task-tick:hover { border-color: var(--moss); background: rgba(124,154,110,0.15); }
+  .task-tick:hover { border-color: var(--moss); background: rgba(127,209,174,0.15); }
   .task-tick:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
   .task-tick.done { border-color: var(--moss); background: var(--moss); }
   .task-tick svg { position: absolute; inset: 0; margin: auto; opacity: 0; }
@@ -1633,6 +1784,8 @@
     line-height: 1.5;
   }
   .task-textarea { min-height: 90px; resize: vertical; }
+  .task-note-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+  .task-note-links:empty { display: none; }
   .task-select { font-family: var(--font-mono); font-size: 12px; }
   .task-input:focus, .task-textarea:focus, .task-select:focus {
     outline: none;
@@ -1641,6 +1794,34 @@
 
   .task-row-fields { display: flex; gap: 14px; flex-wrap: wrap; }
   .task-row-fields .task-field { flex: 1; min-width: 150px; }
+
+  /* A date field keeps its typed input — "friday", "1 Sep" — and gains a
+     calendar button beside it. The native date input underneath is the picker
+     only; it is never the thing you read the value from. */
+  .task-input-wrap { display: flex; align-items: stretch; gap: 6px; }
+  .task-input-wrap .task-input { flex: 1; min-width: 0; }
+  .task-cal-btn {
+    flex: none;
+    width: 40px;
+    border: 1px solid var(--hairline);
+    border-radius: 3px;
+    background: var(--panel);
+    color: var(--ink-dim);
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .task-cal-btn:hover { border-color: var(--brass); color: var(--ink); }
+  .task-cal-btn:focus-visible { outline: 2px solid var(--brass); outline-offset: 1px; }
+  /* Hidden, but not display:none — showPicker() throws on an unrendered input.
+     color-scheme makes the browser's own popup dark, like everything else. */
+  .task-cal-native {
+    position: absolute;
+    width: 1px; height: 1px;
+    opacity: 0;
+    pointer-events: none;
+    color-scheme: dark;
+  }
 
   .task-hint {
     margin-top: 4px;
@@ -1812,6 +1993,7 @@
 
       <div class="mode-row" id="modeRow">
         <button class="mode-btn" id="modeNotes" type="button" aria-pressed="true">Notes</button>
+        <button class="mode-btn" id="modeJournal" type="button" aria-pressed="false">Journal</button>
         <button class="mode-btn" id="modeTasks" type="button" aria-pressed="false">
           Tasks<span class="mode-n" id="modeTasksN"></span>
         </button>
@@ -1827,6 +2009,19 @@
                placeholder="Add a task…  #project  due:friday" />
       </div>
 
+      <div class="journal-row" id="journalRow" hidden>
+        <button class="task-btn" id="journalToday" type="button">Today’s entry</button>
+        <button class="task-btn ghost" id="journalTemplateBtn" type="button"
+                title="The headings every new entry starts with">Template</button>
+      </div>
+
+      <div class="side-switch" id="sideSwitch" role="group" aria-label="Which side of the archive" hidden>
+        <button type="button" data-side="all" aria-pressed="true">Everything</button>
+        <button type="button" data-side="personal" aria-pressed="false">Personal</button>
+        <button type="button" data-side="work" aria-pressed="false">Work &amp; AI</button>
+      </div>
+
+      <div class="chip-group-label" id="chipRowLabel" hidden>Kind of note</div>
       <div class="chip-row" id="chipRow"></div>
 
       <div class="facet-bar">
@@ -1834,17 +2029,23 @@
           <span>Topics</span><span class="facet-n" id="facetNTopics"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
-        <button class="facet-btn" id="facetBtnAuthors" type="button" aria-expanded="false">
-          <span>Authors</span><span class="facet-n" id="facetNAuthors"></span>
+        <button class="facet-btn" id="facetBtnAuthors" type="button" aria-expanded="false"
+                title="Whose words are these? You, Claude, or whoever wrote what was imported. For who a note is about, use People.">
+          <span>Written by</span><span class="facet-n" id="facetNAuthors"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
-        <button class="facet-btn" id="facetBtnPeople" type="button" aria-expanded="false">
+        <button class="facet-btn" id="facetBtnPeople" type="button" aria-expanded="false"
+                title="Who the note is about or mentions. An author's own note lives here, not under Written by.">
           <span>People</span><span class="facet-n" id="facetNPeople"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
         </button>
         <button class="facet-btn" id="facetBtnSources" type="button" aria-expanded="false">
           <span>Sources</span><span class="facet-n" id="facetNSources"></span>
           <span class="facet-caret" aria-hidden="true">▾</span>
+        </button>
+        <button class="facet-btn shelf-toggle" id="shelfToggle" type="button" aria-pressed="false"
+                title="Changelog entries and work orders the machine wrote about itself. Switched on, the list shows only these; switched off, only your own notes.">
+          <span>System notes</span><span class="shelf-state" id="shelfState">hidden</span>
         </button>
       </div>
 
@@ -1908,7 +2109,19 @@ function typeStyle(t) {
 }
 
 let allThoughts = [];   // full list, from last successful list fetch
+// Changelog entries and work orders are notes the machine writes about its own
+// housekeeping — a fifth of the archive. The server leaves them out of every
+// list unless asked, so this is a fetch parameter rather than a client-side
+// filter: spending the 100-note budget on notes worth reading is the point.
+// Remembered per browser; a private window simply starts hidden.
+let showShelved = false;
+try { showShelved = localStorage.getItem('ob.showShelved') === '1'; } catch (e) { /* storage blocked */ }
+
 let displayed = [];     // currently shown (after search/filter)
+// The journal is fetched by its tag rather than taken from allThoughts, which
+// holds only the latest hundred notes — a year of entries would fall off it.
+let allJournal = [];         // entries, newest day first
+let journalTemplate = null;  // the note titled "Journal template", once written
 let activeTypes = new Set();
 let activeTopics = new Set(); // normalized (lowercased) topic strings
 let activeAuthors = new Set(); // normalized (lowercased) author strings
@@ -1919,6 +2132,31 @@ let editingId = null;    // id of the thought currently open in the edit form, o
 let referenceId = null;  // id of the thought shown read-only in the reference panel, or null
 let searchMode = false;
 let lastSearchQuery = '';
+
+// ---------- unsaved work ----------
+// A note being edited lives only in the DOM until something replaces it, so
+// switching to the task list to look something up used to destroy it silently.
+// `editorIsDirty` is installed by whichever editor is open and answers whether
+// it holds changes; every route out of an editor goes through
+// `confirmLeavingEdit` first. Deliberately a confirm and not an autosave: a
+// half-written note saved over the finished one is a worse failure than a
+// prompt, and update_thought's content is a full replacement.
+let editorIsDirty = null;   // () => boolean, or null when no editor is open
+
+function confirmLeavingEdit() {
+  if (!editorIsDirty || !editorIsDirty()) return true;
+  const ok = confirm(
+    'This note has changes you have not saved.\n\n' +
+    'Leave without saving? The text cannot be recovered.');
+  if (ok) editorIsDirty = null;
+  return ok;
+}
+
+// Closing the tab or hitting reload bypasses every in-page route above. The
+// browser shows its own wording here; ours is not used.
+window.addEventListener('beforeunload', ev => {
+  if (editorIsDirty && editorIsDirty()) { ev.preventDefault(); ev.returnValue = ''; }
+});
 
 const listScroll = document.getElementById('listScroll');
 const chipRow = document.getElementById('chipRow');
@@ -2148,6 +2386,7 @@ function normalizeThought(raw) {
     title: m.title || null,
     published_date: m.published_date || null,
     updated_date: m.updated_date || null,
+    shelved: !!raw.shelved,
     extracted_links: Array.isArray(m.extracted_links) ? m.extracted_links : [],
     linked_thought_ids: Array.isArray(m.linked_thought_ids) ? m.linked_thought_ids : [],
   };
@@ -2161,20 +2400,41 @@ function parseJsonThoughts(text) {
 }
 
 function findThought(id) {
-  return allThoughts.find(t => t.id === id) || null;
+  return allThoughts.find(t => t.id === id)
+    || allJournal.find(t => t.id === id)
+    || (journalTemplate && journalTemplate.id === id ? journalTemplate : null);
 }
 
+// The kind-of-note filter. It predates the facet bar below it and had neither
+// a label nor a stable order, which made it read as decoration rather than as
+// a control — "show me every author note" was reachable only by knowing that
+// the Author topic tag happens to mirror the person_note type.
 function renderChips() {
-  const typesPresent = new Set(allThoughts.map(t => t.type || '__unfiled__'));
+  const counts = new Map();
+  noteThoughts().forEach(t => {
+    const k = t.type || '__unfiled__';
+    counts.set(k, (counts.get(k) || 0) + 1);
+  });
   chipRow.innerHTML = '';
-  if (typesPresent.size <= 1) return;
-  typesPresent.forEach(t => {
+  const label = document.getElementById('chipRowLabel');
+  if (counts.size <= 1) { if (label) label.hidden = true; return; }
+  if (label) label.hidden = false;
+
+  // Fixed order. Deriving it from the notes meant a chip moved position
+  // whenever the newest note happened to be of a different kind, so the one
+  // you wanted was never in the same place twice.
+  const known = Object.keys(TYPE_STYLES).concat('__unfiled__');
+  const ordered = known.filter(k => counts.has(k))
+    .concat(Array.from(counts.keys()).filter(k => known.indexOf(k) === -1));
+
+  ordered.forEach(t => {
     const key = t === '__unfiled__' ? null : t;
     const style = typeStyle(key);
     const chip = document.createElement('button');
     chip.className = 'chip' + (activeTypes.has(t) ? ' active' : '');
     if (activeTypes.has(t)) chip.style.background = style.color;
-    chip.innerHTML = '<span class="dot" style="background:' + style.color + '"></span>' + style.label;
+    chip.innerHTML = '<span class="dot" style="background:' + style.color + '"></span>'
+      + style.label + '<span class="chip-n">' + counts.get(t) + '</span>';
     chip.addEventListener('click', () => {
       if (activeTypes.has(t)) activeTypes.delete(t); else activeTypes.add(t);
       applyFilters();
@@ -2225,9 +2485,145 @@ const facetButtons = {
 let openFacet = null;      // 'topics' | 'authors' | 'sources' | null
 let topicLetter = null;    // null means the "common" view
 
+// Headings group tags for browsing; a note sits under every heading its tags
+// do. They come from public.topic_headings through the topic_vocabulary tool,
+// and are decided on the Tag Review page. Until any exist, or if the call
+// fails, the Topics panel falls back to its old Common view — headings are a
+// convenience, never a reason for the filter not to open.
+let topicHeadings = null;   // normalised tag -> { heading, suggested }
+let headingSides = new Map(); // heading -> 'personal' | 'work'
+let activeSide = 'all';
+try { activeSide = localStorage.getItem('ob.side') || 'all'; } catch (_) { activeSide = 'all'; }
+
+// Which sides a note sits on, from its tags' headings. A note none of whose
+// tags has a sided heading — untagged, or tagged since the last review — is on
+// both, so choosing a side never makes a note vanish for want of a heading.
+function noteSides(t) {
+  const sides = new Set();
+  (t.topics || []).forEach(top => {
+    const h = topicHeadings && topicHeadings.get(top.trim().toLowerCase());
+    const side = h && headingSides.get(h.heading);
+    if (side) sides.add(side);
+  });
+  return sides;
+}
+
+// Notes, Journal and Tasks are three separate drawers. A journal entry is a
+// note tagged Journal and a task-typed thought is a task, so neither belongs in
+// the Notes view under any combination of side, kind or tag filters — they show
+// only in their own sections. Link pickers and the dashboard still see them.
+function isJournalEntry(t) {
+  return (t.topics || []).some(x => x.trim().toLowerCase() === JOURNAL_TOPIC.toLowerCase());
+}
+// System notes are a separate shelf, not an addition: switched on, the list
+// holds only the machine's changelog entries and work orders; switched off,
+// only everything else (4 Oct 2026 — mixing the two buried Stewart's notes).
+function isPinned(t) {
+  return (t.topics || []).some(x => x.trim().toLowerCase() === 'pinned');
+}
+function inNotesView(t) {
+  return t.type !== 'task' && !isJournalEntry(t) && t.shelved === showShelved;
+}
+function noteThoughts() {
+  return allThoughts.filter(inNotesView);
+}
+
+function onActiveSide(t) {
+  if (activeSide === 'all' || !headingSides.size) return true;
+  const sides = noteSides(t);
+  return sides.size === 0 || sides.has(activeSide);
+}
+
+function renderSideSwitch() {
+  const box = document.getElementById('sideSwitch');
+  if (!box) return;
+  box.hidden = !headingSides.size || viewMode !== 'notes';
+  box.querySelectorAll('button[data-side]').forEach(b =>
+    b.setAttribute('aria-pressed', b.dataset.side === activeSide ? 'true' : 'false'));
+}
+
+document.getElementById('sideSwitch').addEventListener('click', ev => {
+  const b = ev.target.closest('button[data-side]');
+  if (!b) return;
+  activeSide = b.dataset.side;
+  try { localStorage.setItem('ob.side', activeSide); } catch (_) { /* storage blocked */ }
+  renderSideSwitch();
+  applyFilters();
+});
+
+async function loadTopicHeadings() {
+  try {
+    const v = JSON.parse(await callTool('topic_vocabulary', { format: 'json' }));
+    const map = new Map();
+    Object.entries(v.headings || {}).forEach(([tag, h]) => {
+      if (h && h.heading) map.set(tag.trim().toLowerCase(), h);
+    });
+    topicHeadings = map.size ? map : null;
+    headingSides = new Map(Object.entries(v.sides || {}));
+  } catch (_) {
+    topicHeadings = null;
+    headingSides = new Map();
+  }
+  renderSideSwitch();
+  applyFilters();
+}
+
+// [{ heading, notes, suggested, tags: [[norm, {label, n}], ...] }], largest
+// heading first, with tags nobody has placed yet gathered last.
+function headingGroups(counts) {
+  const groups = new Map();
+  counts.forEach((v, norm) => {
+    const h = topicHeadings.get(norm);
+    const name = h ? h.heading : 'No heading yet';
+    if (!groups.has(name)) groups.set(name, { heading: name, placed: !!h, suggested: false, tags: [] });
+    const g = groups.get(name);
+    if (h && h.suggested) g.suggested = true;
+    g.tags.push([norm, v]);
+  });
+  const list = [...groups.values()].filter(g =>
+    activeSide === 'all' || !headingSides.has(g.heading) || headingSides.get(g.heading) === activeSide);
+  list.forEach(g => {
+    const norms = new Set(g.tags.map(([n]) => n));
+    g.notes = noteThoughts().filter(t =>
+      (t.topics || []).some(top => norms.has(top.trim().toLowerCase()))).length;
+    g.tags.sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label));
+  });
+  return list.sort((a, b) => (b.placed - a.placed) || b.notes - a.notes || a.heading.localeCompare(b.heading));
+}
+
+function renderHeadingGroups(counts) {
+  facetChips.classList.add('grouped');
+  headingGroups(counts).forEach(g => {
+    const wrap = document.createElement('div');
+    wrap.className = 'heading-group';
+    const norms = g.tags.map(([n]) => n);
+    const allOn = norms.every(n => activeTopics.has(n));
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'heading-btn' + (allOn ? ' on' : '');
+    btn.setAttribute('aria-pressed', allOn ? 'true' : 'false');
+    btn.title = allOn ? 'Stop filtering by ' + g.heading : 'Show every note under ' + g.heading;
+    btn.innerHTML = '<span class="heading-name">' + escapeHtml(g.heading) + '</span>'
+      + '<span class="heading-n">' + g.notes + ' note' + (g.notes === 1 ? '' : 's') + '</span>'
+      + (g.suggested ? '<span class="heading-note">suggested</span>' : '');
+    btn.addEventListener('click', () => {
+      if (allOn) norms.forEach(n => activeTopics.delete(n));
+      else norms.forEach(n => activeTopics.add(n));
+      applyFilters();
+    });
+    const row = document.createElement('div');
+    row.className = 'chip-row';
+    g.tags.forEach(([norm, v]) =>
+      row.appendChild(facetChip(norm, '# ' + v.label, v.n, activeTopics, 'var(--brass)')));
+    wrap.appendChild(btn);
+    wrap.appendChild(row);
+    facetChips.appendChild(wrap);
+  });
+}
+
 function topicCounts() {
   const counts = new Map();   // normalised -> { label, n }
-  allThoughts.forEach(t => {
+  noteThoughts().forEach(t => {
     (t.topics || []).forEach(raw => {
       const norm = raw.trim().toLowerCase();
       if (!norm) return;
@@ -2241,7 +2637,7 @@ function topicCounts() {
 
 function listCounts(field) {
   const counts = new Map();
-  allThoughts.forEach(t => (t[field] || []).forEach(raw => {
+  noteThoughts().forEach(t => (t[field] || []).forEach(raw => {
     const norm = (raw || '').trim().toLowerCase();
     if (!norm) return;
     const entry = counts.get(norm) || { label: raw.trim(), n: 0 };
@@ -2253,7 +2649,7 @@ function listCounts(field) {
 
 function valueCounts(field) {
   const counts = new Map();
-  allThoughts.forEach(t => {
+  noteThoughts().forEach(t => {
     const raw = t[field];
     if (!raw) return;
     const norm = raw.trim().toLowerCase();
@@ -2288,8 +2684,8 @@ function renderAlphaStrip(counts) {
   const common = document.createElement('button');
   common.className = 'alpha-btn' + (topicLetter === null ? ' on' : '');
   common.type = 'button';
-  common.textContent = 'Common';
-  common.title = 'Topics used more than once';
+  common.textContent = topicHeadings ? 'Headings' : 'Common';
+  common.title = topicHeadings ? 'Topics grouped under their headings' : 'Topics used more than once';
   common.addEventListener('click', () => { topicLetter = null; renderFacetPanel(); });
   alphaStrip.appendChild(common);
 
@@ -2310,11 +2706,13 @@ function renderFacetPanel() {
   facetPanel.hidden = !openFacet;
   alphaStrip.hidden = openFacet !== 'topics';
   facetChips.innerHTML = '';
+  facetChips.classList.remove('grouped');
   if (!openFacet) return;
 
   if (openFacet === 'topics') {
     const counts = topicCounts();
     renderAlphaStrip(counts);
+    if (!topicLetter && topicHeadings) { renderHeadingGroups(counts); return; }
     let entries = [...counts.entries()];
     if (topicLetter) {
       entries = entries.filter(([, v]) => (v.label[0] || '').toUpperCase() === topicLetter)
@@ -2384,7 +2782,7 @@ function renderFacets() {
 
 function applyFilters() {
   const base = searchMode ? displayed.baseResults : allThoughts;
-  let filtered = base;
+  let filtered = base.filter(t => inNotesView(t) && onActiveSide(t));
   if (activeTypes.size > 0) {
     filtered = filtered.filter(t => activeTypes.has(t.type || '__unfiled__'));
   }
@@ -2404,15 +2802,96 @@ function applyFilters() {
   if (activeSources.size > 0) {
     filtered = filtered.filter(t => t.source && activeSources.has(t.source.trim().toLowerCase()));
   }
+  // A note tagged Pinned heads its list (the System directory, 4 Oct 2026).
+  // Search results keep their ranking; pins only reorder a plain list.
+  if (!searchMode) filtered = filtered.filter(isPinned).concat(filtered.filter(t => !isPinned(t)));
   renderChips();
   renderFacets();
   renderList(filtered, searchMode);
+  recordNav();
+}
+
+const RESULTS_SHOWN = 1000;
+
+// What the filters currently narrow to, in words, for the head of the list.
+function describeFilters() {
+  const parts = [];
+  if (activeSide !== 'all' && headingSides.size) parts.push(activeSide === 'personal' ? 'Personal' : 'Work & AI');
+  if (searchMode && lastSearchQuery) parts.push('“' + lastSearchQuery + '”');
+  const tags = [...activeTopics];
+  if (tags.length) {
+    // A heading whose every tag is on reads as the heading; anything else as tags.
+    const counts = topicCounts();
+    let rest = new Set(tags);
+    if (topicHeadings) {
+      const byHeading = new Map();
+      counts.forEach((v, norm) => {
+        const h = topicHeadings.get(norm);
+        if (h) { if (!byHeading.has(h.heading)) byHeading.set(h.heading, []); byHeading.get(h.heading).push(norm); }
+      });
+      byHeading.forEach((norms, heading) => {
+        if (norms.every(n => rest.has(n))) { parts.push(heading); norms.forEach(n => rest.delete(n)); }
+      });
+    }
+    rest = [...rest];
+    if (rest.length) parts.push(rest.length > 4 ? rest.length + ' tags'
+      : rest.map(t => '#' + ((counts.get(t) || {}).label || t)).join(' '));
+  }
+  [...activeTypes].forEach(t => parts.push(typeStyle(t === '__unfiled__' ? null : t).label));
+  [...activeAuthors, ...activePeople, ...activeSources].forEach(v => parts.push(v));
+  return parts.join(' · ');
+}
+
+function renderMainList(items) {
+  const shown = items.slice(0, RESULTS_SHOWN);
+  const filters = describeFilters();
+  main.innerHTML = `
+    <div class="results">
+      <div class="results-head">
+        <span class="results-count">${items.length} note${items.length === 1 ? '' : 's'}</span>
+        <span class="results-filters">${escapeHtml(filters || 'Everything in the drawer')}</span>
+      </div>
+      <div class="results-rows"></div>
+    </div>`;
+  const rows = main.querySelector('.results-rows');
+  shown.forEach(t => {
+    const style = typeStyle(t.type);
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'result-row';
+    row.innerHTML = `
+      <span class="result-meta"><span style="color:${style.color}">${style.label}</span>
+        <span class="result-date">${formatDate(t.created_at)}</span></span>
+      <span class="result-title">${escapeHtml(t.title || (t.content || '').replace(/\s+/g, ' ').slice(0, 140))}</span>
+      ${(t.topics || []).length ? `<span class="result-tags">${escapeHtml(t.topics.slice(0, 6).map(x => '#' + x).join('  '))}</span>` : ''}`;
+    row.addEventListener('click', () => selectThought(t));
+    rows.appendChild(row);
+  });
+  if (!items.length) rows.innerHTML = '<div class="results-more">No notes match these filters.</div>';
+  else if (items.length > shown.length) {
+    rows.insertAdjacentHTML('beforeend', `<div class="results-more">Showing the first ${shown.length}. Narrow the filters to see the rest.</div>`);
+  }
+}
+
+// The main pane follows the filters while it is showing the list (or the
+// untouched start screen) — never while a note, an editor or a form is open.
+function mainShowsList() {
+  return viewMode === 'notes' && !selectedIndex && !editingId
+    && !!main.querySelector(':scope > .results, :scope > .empty-state');
 }
 
 function renderList(items, isSearch) {
+  // Everything that refreshes the drawer comes through here, so in journal mode
+  // this is where it turns back into the journal — and leaves the note list's
+  // own state alone for when you switch back.
+  if (viewMode === 'journal') { renderJournalList(); return; }
+  // Read the search results off the old list before replacing it: the new
+  // array has no baseResults, and losing them made the next facet click throw.
+  const base = isSearch ? displayed.baseResults : items;
   displayed = items;
-  displayed.baseResults = isSearch ? displayed.baseResults : items;
+  displayed.baseResults = base;
   listScroll.innerHTML = '';
+  if (mainShowsList()) renderMainList(items);
 
   if (items.length === 0) {
     const status = document.createElement('div');
@@ -2429,13 +2908,15 @@ function renderList(items, isSearch) {
     const row = document.createElement('button');
     row.className = 'card-row'
       + (selectedIndex === t.id ? ' selected' : '')
-      + (referenceId === t.id ? ' referencing' : '');
+      + (referenceId === t.id ? ' referencing' : '')
+      + (t.shelved ? ' shelved' : '');
     row.innerHTML = `
       <div class="card-row-tab" style="background:${style.color}"></div>
       <div class="card-row-body">
         <div class="card-row-meta">
           <span class="card-row-type" style="color:${style.color}">${style.label}</span>
           <span class="card-row-date">${formatDate(t.created_at)}</span>
+          ${isPinned(t) ? '<span class="card-row-shelf">pinned</span>' : t.shelved ? '<span class="card-row-shelf">bookkeeping</span>' : ''}
         </div>
         <div class="card-row-preview">${escapeHtml(t.title || t.content)}</div>
         ${(t.people || []).length
@@ -2456,16 +2937,100 @@ function renderList(items, isSearch) {
 
 // Shared by both the author and source field-value clicks in the detail
 // view — exits any active search and narrows the drawer to just that value.
+// Clicking an author, source, tag or person on a note starts a fresh filter.
+// It used to replace only its own kind and keep the rest, so clicking the source
+// of a note reached through "Written by" ANDed the two and showed the same note
+// back as a list of one (3 Oct 2026).
 function filterToSingleValue(setRef, value) {
+  if (viewMode !== 'notes') setViewMode('notes');
   searchMode = false;
   lastSearchQuery = '';
   searchInput.value = '';
   searchClear.style.display = 'none';
-  setRef.clear();
+  [activeTypes, activeTopics, activeAuthors, activeSources, activePeople].forEach(s => s.clear());
   setRef.add(value.trim().toLowerCase());
   showEmptyState();
   applyFilters();
 }
+
+// ---------- back and forward ----------
+// The catalog is a single page, so the browser's Back (and a phone's back
+// gesture) had nothing to return to: from a note reached through "Written by"
+// there was no way back to the author's list. Each filter and each open note is
+// now an entry in the browser's history, and Back restores it (3 Oct 2026).
+// Only the notes view keeps its filters; journal and tasks record the view alone.
+let navRestoring = false;
+const searchCache = new Map();   // query -> results, so Back to a search does not re-ask
+
+function navSnapshot() {
+  if (viewMode !== 'notes') return { ob: 1, view: viewMode };
+  return {
+    ob: 1, view: 'notes',
+    q: searchMode ? lastSearchQuery : '',
+    types: [...activeTypes], topics: [...activeTopics], people: [...activePeople],
+    authors: [...activeAuthors], sources: [...activeSources],
+    note: editingId ? null : selectedIndex,
+  };
+}
+
+function navKey(state, withQuery) {
+  const { depth, ...rest } = state;
+  if (!withQuery) rest.q = Boolean(rest.q);
+  return JSON.stringify(rest);
+}
+
+function recordNav() {
+  if (navRestoring) return;
+  const next = navSnapshot();
+  const cur = history.state && history.state.ob ? history.state : null;
+  if (cur && navKey(cur, true) === navKey(next, true)) return;
+  // Typing a search changes the query once per keystroke; that is one step, not ten.
+  const retyped = cur && cur.q && next.q && navKey(cur) === navKey(next);
+  if (!cur || retyped) {
+    next.depth = cur ? cur.depth : 0;
+    history.replaceState(next, '');
+  } else {
+    next.depth = (cur.depth || 0) + 1;
+    history.pushState(next, '');
+  }
+}
+
+function restoreNav(state) {
+  if (state.view !== viewMode) setViewMode(state.view);
+  if (state.view !== 'notes') return;
+  if (state.q) {
+    searchMode = true;
+    lastSearchQuery = state.q;
+    searchInput.value = state.q;
+    searchClear.style.display = 'block';
+    displayed.baseResults = searchCache.get(state.q) || localSearch(state.q);
+  } else {
+    searchMode = false;
+    lastSearchQuery = '';
+    searchInput.value = '';
+    searchClear.style.display = 'none';
+  }
+  activeTypes = new Set(state.types);
+  activeTopics = new Set(state.topics);
+  activePeople = new Set(state.people);
+  activeAuthors = new Set(state.authors);
+  activeSources = new Set(state.sources);
+  applyFilters();
+  const t = state.note && findThought(state.note);
+  if (t) selectThought(t); else showEmptyState();
+}
+
+window.addEventListener('popstate', (e) => {
+  const state = e.state;
+  if (!state || !state.ob) return;
+  if (!confirmLeavingEdit()) {
+    // Stay put: put back the entry Back just stepped off.
+    history.pushState(Object.assign(navSnapshot(), { depth: (state.depth || 0) + 1 }), '');
+    return;
+  }
+  navRestoring = true;
+  try { restoreNav(state); } finally { navRestoring = false; }
+});
 
 function renderLinksSection(t) {
   const items = t.extracted_links.map(l => {
@@ -2503,6 +3068,22 @@ function renderLinkedNotesSection(t) {
       <div class="link-picker-results" id="linkPickerResults"></div>
     </div>
   `;
+}
+
+// The meditation, teacher or person a journal day refers to, as one line of
+// links. Only notes still in the archive are shown; a dangling id stays in
+// "Linked notes" where it can be removed.
+function renderJournalLinks(t) {
+  const found = t.linked_thought_ids.map(findThought).filter(Boolean);
+  if (!found.length) return '';
+  return '<div class="journal-links"><span class="journal-links-label">Linked</span>'
+    + found.map(n => {
+      // A person note's title runs on after the name ("Ayya Anandabodhi — bhikkhuni, …").
+      let label = n.title || n.content.replace(/\s+/g, ' ').trim().slice(0, 60);
+      if (n.type === 'person_note') label = label.split(/\s+[—–-]\s+/)[0];
+      return `<button class="linked-note-open" data-id="${escapeAttr(n.id)}" type="button">${escapeHtml(label)}</button>`;
+    }).join('')
+    + '</div>';
 }
 
 function setupLinkPicker(t) {
@@ -2619,6 +3200,7 @@ function selectThought(t, mark) {
     : '';
   const linksHtml = t.extracted_links.length ? renderLinksSection(t) : '';
   const linkedNotesHtml = renderLinkedNotesSection(t);
+  const journalLinksHtml = isJournalEntry(t) ? renderJournalLinks(t) : '';
 
   main.innerHTML = `
     <div class="index-card">
@@ -2653,6 +3235,8 @@ function selectThought(t, mark) {
       ${linksHtml}
       ${linkedNotesHtml}
       </div>
+      ${journalLinksHtml}
+      <div class="note-tasks" id="noteTasks" hidden></div>
       <div class="index-card-confirm" id="cardConfirm"></div>
       <div class="index-card-body">
         <div class="read-body-bar">
@@ -2686,6 +3270,8 @@ function selectThought(t, mark) {
   if (editHereBtn) {
     editHereBtn.addEventListener('click', () => startEdit(t, readingOffset(t)));
   }
+
+  renderNoteTasks(t.realId || t.id);
 
   deleteBtn.addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
@@ -2722,32 +3308,19 @@ function selectThought(t, mark) {
 
   main.querySelectorAll('[data-person]').forEach(btn => {
     btn.addEventListener('click', () => {
-      searchMode = false;
-      lastSearchQuery = '';
-      searchInput.value = '';
-      searchClear.style.display = 'none';
-      activePeople = new Set([btn.getAttribute('data-person').trim().toLowerCase()]);
-      activeTopics = new Set();
       openFacet = 'people';
-      showEmptyState();
-      applyFilters();
+      filterToSingleValue(activePeople, btn.getAttribute('data-person'));
     });
   });
 
   main.querySelectorAll('[data-topic]').forEach(btn => {
     btn.addEventListener('click', () => {
-      searchMode = false;
-      lastSearchQuery = '';
-      searchInput.value = '';
-      searchClear.style.display = 'none';
       const tag = btn.getAttribute('data-topic');
-      activeTopics = new Set([tag.trim().toLowerCase()]);
       // Open the topics dropdown at this tag's letter, so the filter you just
       // switched on is visible rather than hidden inside a closed control.
       openFacet = 'topics';
       topicLetter = (tag.trim()[0] || '').toUpperCase();
-      showEmptyState();
-      applyFilters();
+      filterToSingleValue(activeTopics, tag);
     });
   });
   const authorBtn = main.querySelector('[data-author]');
@@ -2792,7 +3365,15 @@ function selectThought(t, mark) {
   back.addEventListener('click', () => app.classList.remove('detail-open'));
   main.prepend(back);
 
+  const toList = document.createElement('button');
+  toList.type = 'button';
+  toList.className = 'list-return';
+  toList.textContent = '← Back to the list (' + displayed.length + ')';
+  toList.addEventListener('click', showEmptyState);
+  main.prepend(toList);
+
   app.classList.add('detail-open');
+  recordNav();
 }
 
 // Back to the top of whichever card is on screen. Both the reading view and the
@@ -3012,6 +3593,18 @@ function noteLabel(t) {
   return t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 70);
 }
 
+// The picker's markup, shared by the editor, the composer and a task's notes.
+// Only one of the three is ever on screen, so the fixed ids never collide.
+function bodyLinkPickerHtml() {
+  return `
+    <div class="link-picker inline-link-picker" id="editLinkPicker" hidden>
+      <input class="link-picker-input" id="editLinkInput" type="text" placeholder="Search notes to link into the text…" />
+      <div class="link-picker-results" id="editLinkResults"></div>
+      <span class="link-picker-hint">Selected text becomes the link; with nothing selected it lands at the cursor, or on its own line at the top of the screen.</span>
+    </div>`;
+}
+
+// current may be null: a note not yet saved has no id to leave out of the results.
 function setupBodyLinkPicker(current, bodyEl, autoGrow) {
   const toggle = document.getElementById('editLinkToggle');
   const picker = document.getElementById('editLinkPicker');
@@ -3053,7 +3646,7 @@ function setupBodyLinkPicker(current, bodyEl, autoGrow) {
   function render(query) {
     const q = query.trim();
     const matches = (q ? localSearch(q) : allThoughts)
-      .filter(o => o.id !== current.id)
+      .filter(o => !current || o.id !== current.id)
       .slice(0, 8);
     results.innerHTML = matches.length
       ? matches.map(o => '<button class="link-picker-item" data-id="' + escapeAttr(o.id) +
@@ -3110,6 +3703,63 @@ function setupBodyLinkPicker(current, bodyEl, autoGrow) {
   });
 }
 
+// Tag suggestions for the edit panel and the composer. The field itself stays a plain
+// comma-separated list — the save path reads it unchanged — but retyping a
+// tag from memory is how "Workflow" and "workflow" became two tags, so offer
+// the ones already in use rather than trusting recall.
+function wireTagSuggestions(fieldId, adderId, optionsId, commonId) {
+  const field = document.getElementById(fieldId);
+  const adder = document.getElementById(adderId);
+  const options = document.getElementById(optionsId);
+  const common = document.getElementById(commonId);
+  if (!field || !adder || !options || !common) return;
+
+  const current = () => field.value.split(',').map(x => x.trim()).filter(Boolean);
+
+  function append(tag) {
+    const clean = (tag || '').trim().replace(/,+$/, '').trim();
+    if (!clean) return;
+    const have = current();
+    if (have.some(x => x.toLowerCase() === clean.toLowerCase())) return;  // same tag, different case
+    field.value = have.concat(clean).join(', ');
+    paint();
+  }
+
+  // Most-used first: the vocabulary's preferred tags rise to the top on their
+  // own, so this offers what the archive actually contains rather than a
+  // second rendering of what it is supposed to.
+  const counts = Array.from(topicCounts().values())
+    .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
+
+  options.innerHTML = counts.map(c =>
+    '<option value="' + escapeAttr(c.label) + '">' + c.n + ' note' + (c.n === 1 ? '' : 's') + '</option>').join('');
+
+  function paint() {
+    const have = current().map(x => x.toLowerCase());
+    common.innerHTML = counts.slice(0, 14).map(c =>
+      '<button type="button" data-tag="' + escapeAttr(c.label) + '"' +
+      (have.indexOf(c.label.toLowerCase()) === -1 ? '' : ' disabled') + '>' +
+      escapeHtml(c.label) + '</button>').join('');
+  }
+  paint();
+
+  common.addEventListener('click', ev => {
+    const btn = ev.target.closest('button[data-tag]');
+    if (btn && !btn.disabled) append(btn.dataset.tag);
+  });
+  adder.addEventListener('keydown', ev => {
+    if (ev.key !== 'Enter' && ev.key !== ',') return;
+    ev.preventDefault();
+    append(adder.value);
+    adder.value = '';
+  });
+  // Picking from the browser's datalist fires input, not keydown.
+  adder.addEventListener('input', () => {
+    if (counts.some(c => c.label === adder.value)) { append(adder.value); adder.value = ''; }
+  });
+  field.addEventListener('input', paint);
+}
+
 // anchorOffset: a character position in the note to open at, so that leaving
 // the reading view halfway down an article does not land at the top of it.
 function startEdit(t, anchorOffset) {
@@ -3159,11 +3809,7 @@ function startEdit(t, anchorOffset) {
               <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
             </div>
           </div>
-          <div class="link-picker inline-link-picker" id="editLinkPicker" hidden>
-            <input class="link-picker-input" id="editLinkInput" type="text" placeholder="Search notes to link into the text…" />
-            <div class="link-picker-results" id="editLinkResults"></div>
-            <span class="link-picker-hint">Selected text becomes the link; with nothing selected it lands at the cursor, or on its own line at the top of the screen.</span>
-          </div>
+          ${bodyLinkPickerHtml()}
         </div>
         <textarea class="edit-body-textarea" id="editContent" spellcheck="true">${escapeHtml(t.content)}</textarea>
       </div>
@@ -3180,9 +3826,29 @@ function startEdit(t, anchorOffset) {
   const back = document.createElement('button');
   back.className = 'back-btn';
   back.textContent = '← Back to drawer';
-  back.addEventListener('click', () => { editingId = null; app.classList.remove('detail-open'); });
+  back.addEventListener('click', () => {
+    if (!confirmLeavingEdit()) return;
+    editingId = null;
+    editorIsDirty = null;
+    app.classList.remove('detail-open');
+  });
   main.prepend(back);
   app.classList.add('detail-open');
+
+  // What the editor looked like when it opened. Compared field by field rather
+  // than watching for keystrokes, so typing a character and deleting it again
+  // does not count as a change.
+  const EDIT_FIELDS = ['editTitle', 'editAuthor', 'editPublished', 'editSource',
+                       'editTags', 'editUrl', 'editContent'];
+  const editSnapshot = () =>
+    EDIT_FIELDS.map(id => (document.getElementById(id) || {}).value || '').join('\u0000');
+  const editOriginal = editSnapshot();
+  editorIsDirty = () => {
+    // The editor may already have been replaced by whatever we were guarding
+    // against; there is nothing left to lose in that case.
+    if (!document.getElementById('editContent')) return false;
+    return editSnapshot() !== editOriginal;
+  };
 
   // Two identical action bars, top and bottom; every handler drives both so
   // they never disagree about whether a save is in flight.
@@ -3210,61 +3876,7 @@ function startEdit(t, anchorOffset) {
   }
   bodyEl.addEventListener('input', autoGrow);
 
-  // Tag suggestions on the edit panel. The field itself stays a plain
-  // comma-separated list — the save path reads it unchanged — but retyping a
-  // tag from memory is how "Workflow" and "workflow" became two tags, so offer
-  // the ones already in use rather than trusting recall.
-  (function wireEditTagSuggestions() {
-    const field = document.getElementById('editTags');
-    const adder = document.getElementById('editTagAdd');
-    const options = document.getElementById('editTagOptions');
-    const common = document.getElementById('editTagCommon');
-    if (!field || !adder || !options || !common) return;
-
-    const current = () => field.value.split(',').map(x => x.trim()).filter(Boolean);
-
-    function append(tag) {
-      const clean = (tag || '').trim().replace(/,+$/, '').trim();
-      if (!clean) return;
-      const have = current();
-      if (have.some(x => x.toLowerCase() === clean.toLowerCase())) return;  // same tag, different case
-      field.value = have.concat(clean).join(', ');
-      paint();
-    }
-
-    // Most-used first: the vocabulary's preferred tags rise to the top on their
-    // own, without this file needing its own copy of topics.txt to drift from.
-    const counts = Array.from(topicCounts().values())
-      .sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
-
-    options.innerHTML = counts.map(c =>
-      '<option value="' + escapeAttr(c.label) + '">' + c.n + ' note' + (c.n === 1 ? '' : 's') + '</option>').join('');
-
-    function paint() {
-      const have = current().map(x => x.toLowerCase());
-      common.innerHTML = counts.slice(0, 14).map(c =>
-        '<button type="button" data-tag="' + escapeAttr(c.label) + '"' +
-        (have.indexOf(c.label.toLowerCase()) === -1 ? '' : ' disabled') + '>' +
-        escapeHtml(c.label) + '</button>').join('');
-    }
-    paint();
-
-    common.addEventListener('click', ev => {
-      const btn = ev.target.closest('button[data-tag]');
-      if (btn && !btn.disabled) append(btn.dataset.tag);
-    });
-    adder.addEventListener('keydown', ev => {
-      if (ev.key !== 'Enter' && ev.key !== ',') return;
-      ev.preventDefault();
-      append(adder.value);
-      adder.value = '';
-    });
-    // Picking from the browser's datalist fires input, not keydown.
-    adder.addEventListener('input', () => {
-      if (counts.some(c => c.label === adder.value)) { append(adder.value); adder.value = ''; }
-    });
-    field.addEventListener('input', paint);
-  })();
+  wireTagSuggestions('editTags', 'editTagAdd', 'editTagOptions', 'editTagCommon');
   autoGrow();
   setupBodyLinkPicker(t, bodyEl, autoGrow);
   wireTopButtons();
@@ -3289,8 +3901,10 @@ function startEdit(t, anchorOffset) {
   });
 
   cancelBtns.forEach(b => b.addEventListener('click', () => {
+    if (!confirmLeavingEdit()) return;
     const mark = readingMark(bodyEl);
     editingId = null;
+    editorIsDirty = null;
     selectThought(t, mark);
   }));
 
@@ -3346,6 +3960,7 @@ function startEdit(t, anchorOffset) {
     try {
       await callTool('update_thought', args);
       editingId = null;
+      editorIsDirty = null;
       await refreshAndReselect(t.id, mark);
     } catch (err) {
       setBusy(false);
@@ -3358,29 +3973,62 @@ function showEmptyState() {
   selectedIndex = null;
   editingId = null;
   closeReference();
-  renderList(displayed, searchMode);
   main.innerHTML = `
     <div class="empty-state">
       <div class="glyph">§</div>
-      <p>Select a card from the drawer to read it.</p>
+      <p>${viewMode === 'journal'
+        ? 'Pick a day from the drawer, or start today’s entry.'
+        : 'Select a card from the drawer to read it.'}</p>
     </div>
   `;
+  renderList(displayed, searchMode);
   app.classList.remove('detail-open');
+  recordNav();
 }
 
-function showComposer(prefill, parentId) {
+// opts (all optional): label, title and tags to start with, focusBody to put the
+// caret in the text, openAfter to open the note once saved, intro for a line of
+// guidance in the status slot. The journal uses these; a plain new note uses none.
+function showComposer(prefill, parentId, opts) {
+  opts = opts || {};
   selectedIndex = null;
   editingId = null;
   closeReference();
   renderList(displayed, searchMode);
+  // The same fields as the editor, filled in while the note is being written
+  // rather than in a second pass afterwards. Anything left blank is still
+  // worked out from the text when it is saved.
   main.innerHTML = `
     <div class="index-card">
       <div class="index-card-ribbon" style="background:var(--brass)"></div>
       <div class="index-card-head">
-        <span class="index-card-type" style="color:var(--brass)">New thought${parentId ? ' · linked' : ''}</span>
+        <span class="index-card-type" style="color:var(--brass)">${escapeHtml(opts.label || 'New thought')}${parentId ? ' · linked' : ''}</span>
+      </div>
+      <div class="edit-field-list">
+        <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="composeTitle" type="text" placeholder="blank — worked out from the text" value="${escapeAttr(opts.title || '')}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="composeAuthor" type="text" value="${escapeAttr(SELF_AUTHOR)}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="composePublished" type="text" placeholder="dd/mm/yyyy" value="${escapeAttr(formatDateInput(todayISO()))}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="composeSource" type="text" placeholder="blank — worked out from the text" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="composeTags" type="text" placeholder="comma, separated — blank to suggest them after saving" value="${escapeAttr((opts.tags || []).join(', '))}" /></div>
+        <div class="edit-field-row edit-tag-suggest">
+          <span class="edit-field-label"></span>
+          <div class="edit-tag-suggest-body">
+            <input class="edit-field-input" id="composeTagAdd" type="text" list="composeTagOptions"
+                   placeholder="Add a tag — type to search, Enter to add" autocomplete="off"
+                   aria-label="Add a tag from the ones already in use" />
+            <datalist id="composeTagOptions"></datalist>
+            <div class="import-tag-common" id="composeTagCommon"></div>
+          </div>
+        </div>
+        <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="composeUrl" type="text" /></div>
       </div>
       <div class="index-card-body">
-        <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought — it'll be auto-tagged when saved…">${escapeHtml(prefill || '')}</textarea>
+        <div class="edit-body-head">
+          <label class="edit-body-label" for="composeText">Body</label>
+          <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+        </div>
+        ${bodyLinkPickerHtml()}
+        <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought…">${escapeHtml(prefill || '')}</textarea>
       </div>
       <div class="index-card-foot compose-actions">
         <span class="compose-status" id="composeStatus"></span>
@@ -3389,72 +4037,155 @@ function showComposer(prefill, parentId) {
       </div>
     </div>
   `;
+  const card = main.querySelector('.index-card');
+  const field = id => document.getElementById(id);
+  const textEl = field('composeText');
+  const publishedEl = field('composePublished');
+  const statusEl = field('composeStatus');
+  const saveBtn = field('composeSave');
+  const cancelBtn = field('composeCancel');
+  setupBodyLinkPicker(null, textEl, () => {});
+
+  // With six fields as well as the body there is now real work to lose, so the
+  // composer takes part in the same unsaved-changes guard as the editor.
+  const COMPOSE_FIELDS = ['composeTitle', 'composeAuthor', 'composePublished', 'composeSource',
+                          'composeTags', 'composeUrl', 'composeText'];
+  const snapshot = () => COMPOSE_FIELDS.map(id => (field(id) || {}).value || '').join('\u0000');
+  const original = snapshot();
+  editorIsDirty = () => Boolean(field('composeText')) && snapshot() !== original;
+  function leave() {
+    if (!confirmLeavingEdit()) return false;
+    editorIsDirty = null;
+    return true;
+  }
+
   const back = document.createElement('button');
   back.className = 'back-btn';
   back.textContent = '← Back to drawer';
-  back.addEventListener('click', () => app.classList.remove('detail-open'));
+  back.addEventListener('click', () => { if (leave()) app.classList.remove('detail-open'); });
   main.prepend(back);
   app.classList.add('detail-open');
 
-  const textEl = document.getElementById('composeText');
-  const statusEl = document.getElementById('composeStatus');
-  const saveBtn = document.getElementById('composeSave');
-  const cancelBtn = document.getElementById('composeCancel');
+  wireTagSuggestions('composeTags', 'composeTagAdd', 'composeTagOptions', 'composeTagCommon');
 
-  textEl.focus();
-  if (prefill) textEl.setSelectionRange(0, 0);
+  function setStatus(message, colour) {
+    statusEl.textContent = message;
+    statusEl.style.color = colour;
+  }
+  const DATE_HINT = 'Date not recognised — try 01/08/1974, 1 Aug 1974 or 1974-08-01.';
+  publishedEl.addEventListener('blur', () => {
+    const iso = parseDateInput(publishedEl.value);
+    if (iso === null) {
+      publishedEl.style.borderColor = 'var(--rust)';
+      setStatus(DATE_HINT, 'var(--rust)');
+      return;
+    }
+    publishedEl.style.borderColor = '';
+    publishedEl.value = formatDateInput(iso);
+    if (statusEl.textContent === DATE_HINT) setStatus('', '');
+  });
 
-  cancelBtn.addEventListener('click', showEmptyState);
+  if (opts.focusBody) {
+    // Straight to the first prompt, ready to answer it.
+    const firstPrompt = /:[ \t]*$/m.exec(textEl.value);
+    const at = firstPrompt ? firstPrompt.index + firstPrompt[0].length : textEl.value.length;
+    textEl.focus();
+    textEl.setSelectionRange(at, at);
+  } else {
+    field('composeTitle').focus();
+  }
+  if (opts.intro) setStatus(opts.intro, 'var(--ink-faint)');
+
+  cancelBtn.addEventListener('click', () => { if (leave()) showEmptyState(); });
 
   async function submit() {
     const content = textEl.value.trim();
     if (!content) {
-      statusEl.textContent = 'Write something first.';
-      statusEl.style.color = 'var(--rust)';
+      setStatus('Write something first.', 'var(--rust)');
+      textEl.focus();
       return;
     }
+    const published = parseDateInput(publishedEl.value);
+    if (published === null) {
+      setStatus(DATE_HINT, 'var(--rust)');
+      publishedEl.focus();
+      return;
+    }
+    const title = field('composeTitle').value.trim();
+    const author = field('composeAuthor').value.trim();
+    const source = field('composeSource').value.trim();
+    const url = field('composeUrl').value.trim();
+    const tags = field('composeTags').value.split(',').map(x => x.trim()).filter(Boolean);
+
     saveBtn.disabled = true;
     cancelBtn.disabled = true;
     saveBtn.textContent = 'Saving…';
-    statusEl.style.color = 'var(--ink-faint)';
-    statusEl.textContent = parentId ? 'Sending to the archive and linking back…' : 'Sending to the archive…';
+    setStatus(parentId ? 'Sending to the archive and linking back…' : 'Sending to the archive…', 'var(--ink-faint)');
+
+    // What was typed is a fact and is stated; what was left blank goes to the
+    // extractor to infer from the prose.
+    const args = { content };
+    if (author) args.author = author;
+    if (published) args.published_date = published;
+    if (source) args.source_name = source;
+    if (parentId) args.parent_thought_id = parentId;
+
+    let res;
     try {
-      // Written here, now, by you — all three are facts, so they are stated
-      // rather than left to the extractor to infer from the prose. Imported
-      // files go the other way: their own byline and date are detected.
-      const args = { content, author: SELF_AUTHOR, published_date: todayISO() };
-      if (parentId) args.parent_thought_id = parentId;
-      const res = await callTool('capture_thought', args);
-      // The id is needed to offer the tag step. The extractor reads the text
-      // with no idea what this archive collects, so on an unfamiliar subject it
-      // reaches for the nearest tag it knows — a note about light waves came
-      // back tagged "AI". Confirming while the note is still in mind is the
-      // cheapest place to correct it.
-      const saved = /id: ([0-9a-f-]{36})/.exec(res);
-      statusEl.style.color = 'var(--moss)';
-      statusEl.textContent = 'Saved.';
-      setTimeout(async () => {
-        showEmptyState();
-        if (parentId) { await loadAll(); const found = findThought(parentId); if (found) selectThought(found); }
-        else { await loadAll(); }
-        if (saved) await confirmTags(saved[1]);
-      }, 500);
+      res = await callTool('capture_thought', args);
     } catch (err) {
       saveBtn.disabled = false;
       cancelBtn.disabled = false;
       saveBtn.textContent = 'Save to archive';
-      statusEl.style.color = 'var(--rust)';
-      statusEl.textContent = 'Could not save — ' + err.message;
+      setStatus('Could not save — ' + err.message, 'var(--rust)');
+      return;
     }
+    // The note exists from here on: never re-enable Save, or a retry files it twice.
+    editorIsDirty = null;
+    const saved = /id: ([0-9a-f-]{36})/.exec(res);
+    const savedId = saved && saved[1];
+
+    // capture_thought takes no title, tags or URL, so those follow as an edit
+    // of the note just made, replacing whatever the extractor guessed.
+    const extra = {};
+    if (title) extra.title = title;
+    if (url) extra.source_url = url;
+    if (tags.length) extra.topics = tags;
+    let extraFailed = null;
+    if (Object.keys(extra).length) {
+      try {
+        if (!savedId) throw new Error('the new note’s id did not come back');
+        await callTool('update_thought', Object.assign({ id: savedId }, extra));
+      } catch (err) {
+        extraFailed = err;
+      }
+    }
+
+    if (extraFailed) {
+      setStatus('Saved, but the title, tags or URL did not stick — ' + extraFailed.message +
+                '. Opening the note so you can add them.', 'var(--rust)');
+    } else {
+      setStatus('Saved.', 'var(--moss)');
+    }
+    setTimeout(async () => {
+      showEmptyState();
+      await loadAll();
+      const open = findThought(extraFailed || opts.openAfter ? savedId : parentId);
+      if (open) selectThought(open);
+      // Tags typed in were a decision already made. The confirmation step is
+      // only for the extractor's guesses — which read the text with no idea
+      // what this archive collects, and once tagged a note on light waves "AI".
+      if (savedId && !tags.length) await confirmTags(savedId);
+    }, extraFailed ? 2500 : 500);
   }
 
   saveBtn.addEventListener('click', submit);
-  textEl.addEventListener('keydown', (e) => {
+  card.addEventListener('keydown', (e) => {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); submit(); }
   });
 }
 
-newBtn.addEventListener('click', () => showComposer());
+newBtn.addEventListener('click', () => { if (confirmLeavingEdit()) showComposer(); });
 
 function showStatus(msg, isError, retryFn) {
   listScroll.innerHTML = '';
@@ -3480,14 +4211,23 @@ async function loadAll() {
   searchClear.style.display = 'none';
   showStatus('Opening the drawer…', false);
   try {
-    const text = await callTool('list_thoughts', { limit: 100, format: 'json' });
+    // Every note, not the newest hundred. The 100 dated from a 77-note archive
+    // and went on quietly hiding two thirds of it once it passed 300: a filter
+    // showed one Meditation note where fifteen existed. All 313 notes are about
+    // 2 MB and a second to fetch (24 Sep 2026); revisit if that stops being true.
+    const text = await callTool('list_thoughts',
+      { limit: 1000, format: 'json', include_shelved: showShelved });
     allThoughts = parseJsonThoughts(text);
+    loadTopicHeadings();
     activeTypes = new Set();
     activeTopics = new Set();
     activeAuthors = new Set();
     activeSources = new Set();
     activePeople = new Set();
     applyFilters();
+    // Saving, editing and deleting all end in loadAll; in the journal the entry
+    // just changed has to be re-read too, or it reopens with the old text.
+    if (viewMode === 'journal') await (journalReady = loadJournal());
   } catch (err) {
     showStatus('Could not reach the archive — ' + err.message, true, loadAll);
   }
@@ -3553,12 +4293,18 @@ async function runSearch(query) {
     showStatus('Searching the archive for "' + query + '"…', false);
   }
   try {
-    const text = await callTool('search_thoughts', { query, limit: 50, format: 'json' });
+    const text = await callTool('search_thoughts',
+      { query, limit: 50, format: 'json', include_shelved: showShelved });
     const semantic = parseJsonThoughts(text);
+    // The server marks only its meaning-matches as system notes, not the
+    // keyword top-ups; the full list in hand knows which is which.
+    const shelfOf = new Map(allThoughts.map(t => [t.id, t.shelved]));
+    semantic.forEach(t => { if (shelfOf.has(t.id)) t.shelved = shelfOf.get(t.id); });
     // Literal matches first — they are what the typist meant — then anything
     // the archive found by meaning that the words alone would have missed.
     const seen = new Set(local.map(t => t.id));
     const results = local.concat(semantic.filter(t => !seen.has(t.id)));
+    searchCache.set(query, results);
     displayed.baseResults = results;
     activeTypes = new Set();
     activeTopics = new Set();
@@ -3571,12 +4317,33 @@ async function runSearch(query) {
   }
 }
 
+// The shelf is a server-side fetch parameter, so flipping it re-asks rather
+// than re-filters what is already in hand — otherwise turning it on would only
+// reveal the bookkeeping notes that happened to be inside the last 100 rows.
+function renderShelfToggle() {
+  const btn = document.getElementById('shelfToggle');
+  if (!btn) return;
+  btn.setAttribute('aria-pressed', showShelved ? 'true' : 'false');
+  document.getElementById('shelfState').textContent = showShelved ? 'only these' : 'hidden';
+}
+
+document.getElementById('shelfToggle').addEventListener('click', () => {
+  showShelved = !showShelved;
+  try { localStorage.setItem('ob.showShelved', showShelved ? '1' : '0'); } catch (e) { /* storage blocked */ }
+  renderShelfToggle();
+  if (searchMode && lastSearchQuery) runSearch(lastSearchQuery);
+  else loadAll();
+});
+
+renderShelfToggle();
+
 document.getElementById('lockBtn').addEventListener('click', lockArchive);
 
 refreshBtn.addEventListener('click', () => {
   refreshBtn.classList.add('spinning');
   setTimeout(() => refreshBtn.classList.remove('spinning'), 700);
   if (viewMode === 'tasks') loadTasks(true);
+  else if (viewMode === 'journal') journalReady = loadJournal();
   else if (searchMode) runSearch(lastSearchQuery);
   else loadAll();
 });
@@ -4192,10 +4959,12 @@ importTagCommon.addEventListener('click', ev => {
   if (btn) addTag(btn.dataset.tag);
 });
 
-// Suggestions come from the tags already in the archive, most-used first. They
-// are not read from topics.txt: the browser cannot see that file, and a third
-// copy of the vocabulary would drift against the two that already exist. The
-// preferred tags rise to the top here anyway, by being the ones actually used.
+// Suggestions come from the tags already in the archive, most-used first —
+// still the right source now that the controlled vocabulary is one table the
+// topic_vocabulary tool could fetch. What the vocabulary holds is what should
+// be reused; what these suggestions hold is what IS in use, and when the two
+// disagree it is the disagreement worth seeing while tagging. The preferred
+// tags rise to the top here anyway, by being the ones actually used.
 function fillTagSuggestions() {
   const counts = Array.from(topicCounts().values()).sort((a, b) => b.n - a.n || a.label.localeCompare(b.label));
   importTagOptions.innerHTML = counts.map(function (c) {
@@ -4392,11 +5161,11 @@ importPickerInput.addEventListener('input', () => renderImportPicker(importPicke
 // full colour vision). These four are validated for the dark surface: inside
 // the lightness band, above the chroma floor, ΔE 13.9 deutan / 19.6 normal.
 const SERIES = {
-  reference:   '#C4802F',
+  reference:   '#F2A66B',
   observation: '#4292C4',
   task:        '#67A84F',
-  idea:        '#AE6FA6',
-  unfiled:     '#766B54',
+  idea:        '#D99BE0',
+  unfiled:     '#8A80AD',
 };
 const TYPE_ORDER = ['reference', 'observation', 'task', 'idea', 'unfiled'];
 
@@ -4602,7 +5371,9 @@ function drawGraph(f) {
   const canvas = document.getElementById('graphCanvas');
   if (!canvas) return;
   const dpr = window.devicePixelRatio || 1;
-  const w = canvas.clientWidth, h = canvas.clientHeight || 460;
+  // Height comes from the stylesheet so the media query can shrink it on a
+  // phone without the hit-testing drifting out of step with what is drawn.
+  const w = canvas.clientWidth, h = canvas.clientHeight || 580;
   canvas.width = w * dpr; canvas.height = h * dpr;
   const ctx = canvas.getContext('2d');
   ctx.scale(dpr, dpr);
@@ -4654,25 +5425,22 @@ function drawGraph(f) {
     });
   }
 
-  // Spread the settled layout across the canvas rather than leaving it knotted
-  // in the middle: the links are what this picture is for, and they need room.
-  if (nodes.length > 1) {
-    const xs = nodes.map(n => n.x), ys = nodes.map(n => n.y);
-    const minX = Math.min(...xs), maxX = Math.max(...xs);
-    const minY = Math.min(...ys), maxY = Math.max(...ys);
-    const pad = 20;
-    // One scale for both axes, so the shape is not stretched; capped so a
-    // three-note archive is not blown up into a smear.
-    const scale = Math.min(
-      maxX - minX > 1 ? (w - pad * 2) / (maxX - minX) : 3,
-      maxY - minY > 1 ? (h - pad * 2) / (maxY - minY) : 3,
-      3);
-    const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
-    nodes.forEach(n => {
-      n.x = w / 2 + (n.x - cx) * scale;
-      n.y = h / 2 + (n.y - cy) * scale;
-    });
-  }
+  // The simulation settles at a size of its own choosing, set by the repulsion
+  // constant rather than by the canvas. Without this the taller card would just
+  // be the same blob with more empty paper around it, so scale the finished
+  // layout to fill the box — uniformly, so the shape is not distorted.
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  nodes.forEach(n => {
+    minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+    minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+  });
+  const pad = 18;
+  const spanX = maxX - minX || 1, spanY = maxY - minY || 1;
+  // Capped, or a one- or two-note archive is flung off the edges of the box.
+  const scale = Math.min((w - pad * 2) / spanX, (h - pad * 2) / spanY, 3);
+  const offX = (w - spanX * scale) / 2 - minX * scale;
+  const offY = (h - spanY * scale) / 2 - minY * scale;
+  nodes.forEach(n => { n.x = n.x * scale + offX; n.y = n.y * scale + offY; });
 
   // Who each note sits next to, kept for the list a click opens.
   const near = nodes.map(() => new Set());
@@ -4697,7 +5465,7 @@ function drawGraph(f) {
     // and the ones touching the hovered note are drawn brighter still.
     edges.forEach(([i, j]) => {
       const lit = hover && (nodes[i] === hover || nodes[j] === hover);
-      ctx.strokeStyle = lit ? 'rgba(201,162,39,0.9)' : 'rgba(232,223,200,0.32)';
+      ctx.strokeStyle = lit ? 'rgba(245,201,107,0.9)' : 'rgba(246,238,227,0.32)';
       ctx.lineWidth = lit ? 3.5 : 2.2;
       ctx.beginPath();
       ctx.moveTo(nodes[i].x, nodes[i].y);
@@ -4707,11 +5475,11 @@ function drawGraph(f) {
     nodes.forEach(n => {
       ctx.beginPath();
       ctx.arc(n.x, n.y, radius(n), 0, Math.PI * 2);
-      ctx.fillStyle = n.deg ? (SERIES[n.t.type] || SERIES.unfiled) : 'rgba(118,107,84,0.75)';
+      ctx.fillStyle = n.deg ? (SERIES[n.t.type] || SERIES.unfiled) : 'rgba(138,128,173,0.75)';
       ctx.fill();
       if (hover === n) {
         ctx.lineWidth = 2;
-        ctx.strokeStyle = '#E9DFC7';
+        ctx.strokeStyle = '#F7EFE4';
         ctx.stroke();
       }
     });
@@ -4823,8 +5591,10 @@ function coverageCard(f) {
 function openStats() {
   if (!allThoughts.length) return;
   const f = archiveFigures();
-  statsBody.innerHTML = tileRow(f) + completeness(f) + graphCard(f) + weeksChart(f) +
-                        typeChart(f) + topicsChart(f) + hubsList(f) + coverageCard(f);
+  statsBody.innerHTML = tileRow(f) + graphCard(f) +
+                        '<div class="stats-grid">' + completeness(f) + weeksChart(f) +
+                        typeChart(f) + topicsChart(f) + hubsList(f) + coverageCard(f) +
+                        '</div>';
   statsPanel.hidden = false;
   drawGraph(f);
 
@@ -4905,6 +5675,29 @@ function parseWhen(text, today) {
     d.setUTCDate(d.getUTCDate() + delta);
     return iso(d);
   }
+
+  // "1 Sep" and "Sep 1", with no year. The Due field has always offered this in
+  // its placeholder and never accepted it: parseDateInput requires a year,
+  // because a note's published date has nothing to assume in place of one. A
+  // due date does — the next one coming, on the same reasoning as "friday".
+  let dm, day = null, monWord = null;
+  if ((dm = s.match(/^(\d{1,2})(?:st|nd|rd|th)? ([a-z]{3,9})\.?$/))) {
+    day = +dm[1]; monWord = dm[2];
+  } else if ((dm = s.match(/^([a-z]{3,9})\.? (\d{1,2})(?:st|nd|rd|th)?$/))) {
+    monWord = dm[1]; day = +dm[2];
+  }
+  if (day && monWord && MONTH_NAMES.indexOf(monWord.slice(0, 3)) >= 0) {
+    // The next one coming — today counts, yesterday rolls to next year. Four
+    // years of headroom so "29 feb" finds its leap year instead of being
+    // refused for the three years in between.
+    const from = base.getUTCFullYear();
+    for (let y = from; y <= from + 4; y++) {
+      const hit = parseDateInput(day + ' ' + monWord + ' ' + y);
+      if (hit && hit >= iso(base)) return hit;
+    }
+    return null;
+  }
+
   return parseDateInput(s) || null;
 }
 
@@ -4941,10 +5734,16 @@ function parseQuickAdd(raw, today) {
    share the shell and the access key and nothing else: a note is found by
    meaning, a task by when it is due. */
 
-let viewMode = 'notes';        // 'notes' | 'tasks'
+let viewMode = 'notes';        // 'notes' | 'journal' | 'tasks'
 let allTasks = [];
 let selectedTaskId = null;
-let taskFilter = 'open';       // 'open' | 'inbox' | 'next' | 'waiting' | 'done'
+let taskFilter = 'open';       // 'open' | 'inbox' | 'claude' | 'done'
+
+// Four chips, not six. Next and Waiting were chips of their own, but they are
+// parts of To do rather than lists you visit, so they show as a tag on the row
+// instead. Claude's jobs get a chip because they are not Stewart's to do at all:
+// To do and Inbox show only his, and a task for Claude never crowds them.
+const TASK_FILTERS = [['open', 'To do'], ['inbox', 'Inbox'], ['claude', 'Claude'], ['done', 'Done']];
 
 const TASK_STATUS_LABELS = {
   inbox: 'Inbox', next: 'Next', waiting: 'Waiting', done: 'Done', dropped: 'Dropped',
@@ -4952,6 +5751,12 @@ const TASK_STATUS_LABELS = {
 
 const RECUR_HINT = "daily · weekly · fortnightly · monthly · quarterly · yearly · " +
                    "weekdays · every 3 days · every 2 weeks · every tuesday";
+
+// The date fields' formats belong in the hint, not the placeholder: grey example
+// text sitting inside an empty box reads as a value the app has filled in, and
+// "friday, 1 Sep, 2026-09-01" read as one date — a Friday the 1st of September.
+// The placeholders now say what empty means, the way "Hide until" always did.
+const DATE_HINT = "friday · tomorrow · 1 Sep · 2026-09-01";
 
 function daysBetween(fromISO, toISO) {
   const a = Date.parse(fromISO + 'T00:00:00Z');
@@ -5026,6 +5831,7 @@ function normalizeTask(raw) {
     recur: raw.recur || '',
     recur_from: raw.recur_from || 'completion',
     thought_id: raw.thought_id || null,
+    owner: raw.owner || 'me',
     created_at: raw.created_at || null,
     completed_at: raw.completed_at || null,
   };
@@ -5033,12 +5839,17 @@ function normalizeTask(raw) {
 
 async function loadTasks(keepSelection) {
   showStatus('Looking at what needs doing…', false);
+  noteTaskIndex = null;   // the note view's copy is now stale
   const args = { format: 'json', limit: 200 };
-  if (taskFilter === 'done') args.status = ['done'];
-  else if (taskFilter !== 'open') args.status = [taskFilter];
+  // Done keeps dropped tasks too: deciding not to do something is a way of
+  // finishing it, and it is the only place a dropped task can be found again.
+  if (taskFilter === 'done') args.status = ['done', 'dropped'];
+  else if (taskFilter === 'inbox') args.status = ['inbox'];
+  if (taskFilter === 'open' || taskFilter === 'inbox') args.owner = 'me';
+  else if (taskFilter === 'claude') args.owner = 'claude';
   // Deferred tasks come back only when you go looking for them: the point of
   // deferring something is not to see it.
-  if (taskFilter !== 'open') args.include_deferred = true;
+  if (taskFilter === 'inbox' || taskFilter === 'done') args.include_deferred = true;
 
   try {
     const text = await callTool('list_tasks', args);
@@ -5060,9 +5871,82 @@ function renderTaskCount() {
   // The badge counts what is actually pressing, not the size of the list —
   // a number that only ever grows stops meaning anything.
   const pressing = allTasks.filter(t =>
-    t.status !== 'done' && t.status !== 'dropped' &&
+    t.owner !== 'claude' && t.status !== 'done' && t.status !== 'dropped' &&
     t.due_date && daysBetween(today, t.due_date) <= 0).length;
   el.textContent = pressing ? String(pressing) : '';
+}
+
+// ---------- tasks shown on the note they came from ----------
+
+// A task cites its note; the note holds no pointer back. The task detail has a
+// "Came from → Open the note" button, and this is that link followed the other
+// way, so a note answers "what did this make me do?".
+//
+// allTasks is only populated when the task view opens, and loadTasks() rewrites
+// listScroll — which in note mode holds the note list — so this cannot reuse
+// either. It takes its own copy instead: one call for the whole table, every
+// status, cached for the session. Under a hundred rows, so the breadth is free.
+let noteTaskIndex = null;
+
+async function noteTasksFor(id) {
+  if (!noteTaskIndex) {
+    const text = await callTool('list_tasks', {
+      format: 'json', limit: 200, include_deferred: true,
+      status: ['inbox', 'next', 'waiting', 'done', 'dropped'],
+    });
+    let raw;
+    try { raw = JSON.parse(text); } catch (_) { raw = []; }
+    noteTaskIndex = new Map();
+    (Array.isArray(raw) ? raw : []).map(normalizeTask).forEach(t => {
+      if (!t.thought_id) return;
+      const list = noteTaskIndex.get(t.thought_id) || [];
+      list.push(t);
+      noteTaskIndex.set(t.thought_id, list);
+    });
+  }
+  return noteTaskIndex.get(id) || [];
+}
+
+async function renderNoteTasks(noteId) {
+  const box = document.getElementById('noteTasks');
+  if (!box || !noteId) return;
+
+  let tasks;
+  try {
+    tasks = await noteTasksFor(noteId);
+  } catch (err) {
+    // A silent empty section and a failed lookup look identical, so say which.
+    if (document.getElementById('noteTasks') !== box) return;
+    box.hidden = false;
+    box.innerHTML = '<div class="section-label"><span>Tasks from this note</span></div>' +
+      '<p class="note-line">Could not load tasks — ' + escapeHtml(err.message) + '</p>';
+    return;
+  }
+
+  // The reader may have moved on while that was in flight; the card is rebuilt
+  // wholesale on every selection, so a stale box is no longer in the document.
+  if (document.getElementById('noteTasks') !== box) return;
+  if (!tasks.length) { box.hidden = true; box.innerHTML = ''; return; }
+
+  const today = todayISO();
+  const open = tasks.filter(t => t.status !== 'done' && t.status !== 'dropped').length;
+  box.hidden = false;
+  box.innerHTML = '<div class="section-label"><span>Tasks from this note</span>' +
+    '<span class="note-task-meta">' + open + ' open of ' + tasks.length + '</span></div>';
+
+  tasks.forEach(t => {
+    const closed = t.status === 'done' || t.status === 'dropped';
+    const meta = [];
+    if (t.due_date && !closed) meta.push(dueLabel(t.due_date, today).text);
+    meta.push(TASK_STATUS_LABELS[t.status] || t.status);
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'note-task' + (closed ? ' is-closed' : '');
+    btn.innerHTML = '<span class="note-task-title">' + escapeHtml(t.title) + '</span>' +
+                    '<span class="note-task-meta">' + escapeHtml(meta.join(' · ')) + '</span>';
+    btn.addEventListener('click', () => { setViewMode('tasks'); selectTask(t); });
+    box.appendChild(btn);
+  });
 }
 
 // ---------- the list ----------
@@ -5078,7 +5962,9 @@ function renderTaskList() {
     status.className = 'list-status';
     status.textContent = taskFilter === 'done'
       ? 'Nothing finished yet.'
-      : 'Nothing to do. Type above to add something.';
+      : taskFilter === 'claude'
+        ? 'Nothing waiting for Claude. Type above to give it a job.'
+        : 'Nothing to do. Type above to add something.';
     listScroll.appendChild(status);
     return;
   }
@@ -5095,7 +5981,8 @@ function renderTaskList() {
 
 function taskRow(t, today) {
   const row = document.createElement('div');
-  const done = t.status === 'done';
+  // A dropped task is closed as surely as a done one: no tick to press.
+  const done = t.status === 'done' || t.status === 'dropped';
   row.className = 'task-row' + (selectedTaskId === t.id ? ' selected' : '') + (done ? ' is-done' : '');
 
   const bits = [];
@@ -5109,6 +5996,7 @@ function taskRow(t, today) {
     bits.push(`<span>hidden until ${escapeHtml(t.defer_until)}</span>`);
   }
   if (t.thought_id) bits.push('<span class="note-link">from a note</span>');
+  if (t.owner === 'claude' && taskFilter !== 'claude') bits.push('<span class="task-status-tag">for Claude</span>');
   if (t.status !== 'inbox' && t.status !== 'done') {
     bits.push(`<span class="task-status-tag">${escapeHtml(TASK_STATUS_LABELS[t.status] || t.status)}</span>`);
   }
@@ -5168,6 +6056,8 @@ async function quickAddTask(text) {
   const parsed = parseQuickAdd(text, todayISO());
   if (!parsed.title) return;
   const args = { title: parsed.title, source: 'catalog' };
+  // Typed while looking at Claude's list, it is a job for Claude.
+  if (taskFilter === 'claude') args.owner = 'claude';
   if (parsed.due_date) args.due_date = parsed.due_date;
   if (parsed.project) args.project = parsed.project;
   try {
@@ -5192,14 +6082,50 @@ function showTaskEmptyState() {
   app.classList.remove('detail-open');
 }
 
-function taskFieldRow(label, id, value, placeholder, hint) {
+// `withPicker` adds a calendar button to a date field. The typed input stays the
+// field of record — parseWhen reads "friday" and "1 Sep", which no date picker
+// offers — and the picker is a second way in for when the date is easier found
+// than said.
+function taskFieldRow(label, id, value, placeholder, hint, withPicker) {
+  const input = `<input class="task-input" id="${id}" type="text" value="${escapeAttr(value || '')}"
+             placeholder="${escapeAttr(placeholder || '')}" />`;
+  const body = withPicker
+    ? `<div class="task-input-wrap">
+         ${input}
+         <button class="task-cal-btn" id="${id}Cal" type="button"
+                 title="Pick a date" aria-label="Pick a date for ${escapeAttr(label)}">🗓</button>
+         <input class="task-cal-native" id="${id}Native" type="date" tabindex="-1" aria-hidden="true" />
+       </div>`
+    : input;
   return `
     <div class="task-field">
       <label class="task-label" for="${id}">${label}</label>
-      <input class="task-input" id="${id}" type="text" value="${escapeAttr(value || '')}"
-             placeholder="${escapeAttr(placeholder || '')}" />
+      ${body}
       ${hint ? `<div class="task-hint" id="${id}Hint">${hint}</div>` : ''}
     </div>`;
+}
+
+// Wire one date field's calendar button to its hidden native input.
+function wireDatePicker(id) {
+  const text = document.getElementById(id);
+  const btn = document.getElementById(id + 'Cal');
+  const native = document.getElementById(id + 'Native');
+  if (!text || !btn || !native) return;
+
+  btn.addEventListener('click', () => {
+    // Open on whatever is already typed, when it can be read at all.
+    const current = text.value.trim() ? parseWhen(text.value.trim(), todayISO()) : '';
+    native.value = current || todayISO();
+    // showPicker is Safari 16+ / Chrome 99+; older browsers fall back to a
+    // click, and failing that the typed field still works on its own.
+    try { native.showPicker(); } catch (err) { native.click(); }
+  });
+
+  native.addEventListener('change', () => {
+    if (!native.value) return;
+    text.value = formatDateInput(native.value);
+    text.dispatchEvent(new Event('input', { bubbles: true }));
+  });
 }
 
 function selectTask(t) {
@@ -5218,9 +6144,14 @@ function selectTask(t) {
       </div>
 
       <div class="task-field">
-        <label class="task-label" for="tdNotes">Notes</label>
+        <div class="edit-body-head">
+          <label class="task-label" for="tdNotes">Notes</label>
+          <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+        </div>
+        ${bodyLinkPickerHtml()}
         <textarea class="task-textarea" id="tdNotes"
           placeholder="Context, a phone number, what done looks like…">${escapeHtml(t.notes)}</textarea>
+        <div class="task-note-links" id="tdNoteLinks"></div>
       </div>
 
       <div class="task-row-fields">
@@ -5228,12 +6159,22 @@ function selectTask(t) {
           <label class="task-label" for="tdStatus">Status</label>
           <select class="task-select" id="tdStatus">${statusOptions}</select>
         </div>
+        <div class="task-field">
+          <label class="task-label" for="tdOwner">For</label>
+          <select class="task-select" id="tdOwner">
+            <option value="me"${t.owner !== 'claude' ? ' selected' : ''}>Me</option>
+            <option value="claude"${t.owner === 'claude' ? ' selected' : ''}>Claude</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="task-row-fields">
         ${taskFieldRow('Project', 'tdProject', t.project, 'e.g. house')}
       </div>
 
       <div class="task-row-fields">
-        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'friday, 1 Sep, 2026-09-01')}
-        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'nothing to do before then')}
+        ${taskFieldRow('Due', 'tdDue', formatDateInput(t.due_date), 'no due date', DATE_HINT, true)}
+        ${taskFieldRow('Hide until', 'tdDefer', formatDateInput(t.defer_until), 'not hidden', DATE_HINT, true)}
       </div>
 
       <div class="task-row-fields">
@@ -5255,8 +6196,9 @@ function selectTask(t) {
 
       <div class="task-actions">
         <button class="task-btn" id="tdSave" type="button">Save</button>
-        ${t.status !== 'done'
-          ? '<button class="task-btn ghost" id="tdDone" type="button">Mark done</button>'
+        ${t.status !== 'done' && t.status !== 'dropped'
+          ? '<button class="task-btn ghost" id="tdDone" type="button">Mark done</button>' +
+            '<button class="task-btn ghost" id="tdDrop" type="button" title="Not doing it — kept, so the decision is on record">Drop</button>'
           : '<button class="task-btn ghost" id="tdReopen" type="button">Reopen</button>'}
         <button class="task-btn danger" id="tdDelete" type="button">Delete</button>
         <span class="task-detail-status" id="tdStatusMsg"></span>
@@ -5275,6 +6217,9 @@ function selectTask(t) {
 }
 
 function wireTaskDetail(t) {
+  wireDatePicker('tdDue');
+  wireDatePicker('tdDefer');
+
   const msg = document.getElementById('tdStatusMsg');
   const say = (text, tone) => {
     msg.textContent = text || '';
@@ -5308,6 +6253,7 @@ function wireTaskDetail(t) {
       defer_until: defer || null,
       recur: recur || null,
       recur_from: document.getElementById('tdRecurFrom').value,
+      owner: document.getElementById('tdOwner').value,
     };
 
     saveBtn.disabled = true;
@@ -5315,8 +6261,11 @@ function wireTaskDetail(t) {
     try {
       await callTool('update_task', args);
       await loadTasks(true);
-      const fresh = allTasks.find(x => x.id === t.id);
-      if (fresh) selectTask(fresh); else showTaskEmptyState();
+      // Saving is the end of editing a task, so close the panel rather than
+      // re-opening it on the saved copy — the same exit "Mark done" takes. The
+      // toast is what confirms it worked, now the status line has gone with it.
+      showTaskEmptyState();
+      showToastStatus('Saved — ' + title);
     } catch (err) {
       saveBtn.disabled = false;
       say(String(err.message || err), 'bad');
@@ -5340,6 +6289,23 @@ function wireTaskDetail(t) {
     }
   });
 
+  // Drop sits beside Delete so that the right one is the easy one: Delete is for
+  // mistakes, and deciding not to do something is worth keeping.
+  const dropBtn = document.getElementById('tdDrop');
+  if (dropBtn) dropBtn.addEventListener('click', async () => {
+    dropBtn.disabled = true;
+    say('Dropping…');
+    try {
+      await callTool('update_task', { id: t.id, status: 'dropped' });
+      await loadTasks(true);
+      showTaskEmptyState();
+      showToastStatus('Dropped — ' + t.title + '. It is under Done if you want it back.');
+    } catch (err) {
+      dropBtn.disabled = false;
+      say(String(err.message || err), 'bad');
+    }
+  });
+
   const reopenBtn = document.getElementById('tdReopen');
   if (reopenBtn) reopenBtn.addEventListener('click', async () => {
     reopenBtn.disabled = true;
@@ -5359,7 +6325,7 @@ function wireTaskDetail(t) {
     if (delBtn.getAttribute('data-armed') !== 'yes') {
       delBtn.setAttribute('data-armed', 'yes');
       delBtn.textContent = 'Really delete';
-      say('Deleting is permanent. To keep the record, set the status to Dropped instead.');
+      say('Deleting is permanent. To keep the record, use Drop instead.');
       return;
     }
     try {
@@ -5370,6 +6336,27 @@ function wireTaskDetail(t) {
       say(String(err.message || err), 'bad');
     }
   });
+
+  // A task's notes stay an editable box, so the links in them are listed
+  // underneath as buttons rather than rendered in place.
+  const notesEl = document.getElementById('tdNotes');
+  const noteLinksEl = document.getElementById('tdNoteLinks');
+  function renderNoteLinks() {
+    const seen = new Set();
+    const items = [...notesEl.value.matchAll(THOUGHT_LINK_RE)]
+      .filter(m => !seen.has(m[2]) && seen.add(m[2]))
+      .map(([, text, id]) => findThought(id)
+        ? '<button class="task-btn ghost" data-id="' + escapeAttr(id) + '" type="button">' + escapeHtml(text) + '</button>'
+        : '<span class="thought-link missing" title="This note is no longer in the archive">' + escapeHtml(text) + '</span>');
+    noteLinksEl.innerHTML = items.length ? '<span class="task-label">Linked</span>' + items.join('') : '';
+    noteLinksEl.querySelectorAll('button[data-id]').forEach(btn => btn.addEventListener('click', () => {
+      const found = findThought(btn.getAttribute('data-id'));
+      if (found) { setViewMode('notes'); selectThought(found); }
+    }));
+  }
+  notesEl.addEventListener('input', renderNoteLinks);
+  setupBodyLinkPicker(null, notesEl, renderNoteLinks);
+  renderNoteLinks();
 
   const noteBtn = document.getElementById('tdOpenNote');
   if (noteBtn) noteBtn.addEventListener('click', async () => {
@@ -5394,12 +6381,191 @@ function wireTaskDetail(t) {
   });
 }
 
-// ---------- switching between the two ----------
+/* ---------- journal ----------
+   An entry is an ordinary note tagged Journal, so search, links and editing all
+   work on it unchanged; this is only a way of reading that tag as a diary. One
+   entry a day: "Today's entry" opens the one that exists rather than filing a
+   second, so you can come back and add to it. Which day an entry belongs to is
+   its Published date, not its title, because the title can be edited. */
+
+const JOURNAL_TOPIC = 'Journal';
+const JOURNAL_TEMPLATE_TITLE = 'Journal template';
+
+// Used until a "Journal template" note exists. The template lives in the
+// archive rather than this browser so a heading added on the phone is there on
+// the laptop too. The body is plain text — the catalog does not render markdown.
+const DEFAULT_JOURNAL_TEMPLATE = [
+  'Exercise',
+  'What I did: ',
+  'How long: ',
+  'How it felt: ',
+  '',
+  'Meditation',
+  'How long: ',
+  'Notes: ',
+  '',
+  'Emotions',
+  'What came up: ',
+  'The situation: ',
+  'How I handled it: ',
+  'What I’d do differently: ',
+].join('\n');
+
+let journalLoaded = false;
+let journalReady = Promise.resolve();
+
+function journalDate(t) {
+  return t.published_date || (t.created_at || '').slice(0, 10);
+}
+
+function isJournalTemplate(t) {
+  return (t.title || '').trim().toLowerCase() === JOURNAL_TEMPLATE_TITLE.toLowerCase();
+}
+
+async function loadJournal() {
+  if (!journalLoaded) showStatus('Opening the journal…', false);
+  try {
+    const text = await callTool('list_thoughts', { topic: JOURNAL_TOPIC, limit: 1000, format: 'json' });
+    const notes = parseJsonThoughts(text);
+    journalTemplate = notes.find(isJournalTemplate) || null;
+    allJournal = notes.filter(t => !isJournalTemplate(t)).sort((a, b) =>
+      journalDate(b).localeCompare(journalDate(a)) ||
+      String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    journalLoaded = true;
+    if (viewMode === 'journal') renderJournalList();
+  } catch (err) {
+    if (viewMode === 'journal') {
+      showStatus('Could not reach the archive — ' + err.message, true,
+        () => { journalReady = loadJournal(); });
+    }
+  }
+}
+
+function renderJournalList() {
+  listScroll.innerHTML = '';
+  if (!journalLoaded) return;
+
+  if (!allJournal.length) {
+    const status = document.createElement('div');
+    status.className = 'list-status';
+    status.textContent = 'No entries yet. Start with today’s.';
+    listScroll.appendChild(status);
+    return;
+  }
+
+  const today = todayISO();
+  const months = [];
+  allJournal.forEach(t => {
+    const d = new Date(journalDate(t) + 'T00:00:00Z');
+    const label = isNaN(d.getTime()) ? 'Undated'
+      : d.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+    if (!months.length || months[months.length - 1].label !== label) months.push({ label, entries: [] });
+    months[months.length - 1].entries.push(t);
+  });
+
+  months.forEach(month => {
+    const head = document.createElement('div');
+    head.className = 'task-group';
+    head.innerHTML = `<span>${escapeHtml(month.label)}</span><span>${month.entries.length}</span>`;
+    listScroll.appendChild(head);
+
+    month.entries.forEach(t => {
+      const style = typeStyle(t.type);
+      const iso = journalDate(t);
+      const d = new Date(iso + 'T00:00:00Z');
+      const day = isNaN(d.getTime()) ? 'Undated'
+        : d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+      // The body often repeats the title as its first line; the preview is for
+      // what the day was, not the date again.
+      let snippet = t.content.replace(/\s+/g, ' ').trim();
+      const title = (t.title || '').replace(/\s+/g, ' ').trim();
+      if (title && snippet.toLowerCase().startsWith(title.toLowerCase())) snippet = snippet.slice(title.length).trim();
+
+      const row = document.createElement('button');
+      row.className = 'card-row'
+        + (selectedIndex === t.id ? ' selected' : '')
+        + (referenceId === t.id ? ' referencing' : '');
+      row.innerHTML = `
+        <div class="card-row-tab" style="background:${style.color}"></div>
+        <div class="card-row-body">
+          <div class="card-row-meta">
+            <span class="card-row-type" style="color:${style.color}">${escapeHtml(day)}</span>
+            ${iso === today ? '<span class="card-row-date">today</span>' : ''}
+          </div>
+          <div class="card-row-preview">${escapeHtml(title || 'Journal ' + formatDateInput(iso))}</div>
+          ${snippet ? `<div class="journal-row-sub">${escapeHtml(snippet.slice(0, 160))}</div>` : ''}
+        </div>
+      `;
+      row.addEventListener('click', () => {
+        if (editingId && t.id !== editingId) openReference(t);
+        else if (!editingId) selectThought(t);
+      });
+      listScroll.appendChild(row);
+    });
+  });
+}
+
+// Waits for the list rather than guessing: deciding "no entry today" from a
+// journal that has not loaded yet is exactly how a second one gets filed.
+async function journalWhenReady() {
+  await journalReady;
+  if (!journalLoaded) {
+    showStatus('The journal has not loaded, so today’s entry cannot be checked for yet.', true,
+      () => { journalReady = loadJournal(); });
+    return false;
+  }
+  return true;
+}
+
+async function openTodaysJournal() {
+  if (!confirmLeavingEdit()) return;
+  if (!(await journalWhenReady())) return;
+  const today = todayISO();
+  const existing = allJournal.find(t => journalDate(t) === today);
+  if (existing) {
+    selectThought(existing);
+    startEdit(existing, existing.content.length);
+    return;
+  }
+  showComposer(journalTemplate ? journalTemplate.content : DEFAULT_JOURNAL_TEMPLATE, null, {
+    label: 'Journal entry',
+    title: 'Journal ' + formatDateInput(today),
+    tags: [JOURNAL_TOPIC],
+    focusBody: true,
+    openAfter: true,
+  });
+}
+
+async function openJournalTemplate() {
+  if (!confirmLeavingEdit()) return;
+  if (!(await journalWhenReady())) return;
+  if (journalTemplate) { selectThought(journalTemplate); return; }
+  showComposer(DEFAULT_JOURNAL_TEMPLATE, null, {
+    label: 'Journal template',
+    title: JOURNAL_TEMPLATE_TITLE,
+    tags: [JOURNAL_TOPIC],
+    focusBody: true,
+    openAfter: true,
+    intro: 'Every new entry starts with this text. Add or change headings, then save.',
+  });
+}
+
+document.getElementById('journalToday').addEventListener('click', openTodaysJournal);
+document.getElementById('journalTemplateBtn').addEventListener('click', openJournalTemplate);
+
+// ---------- switching between the three ----------
+
+// The add box says whose list a new task lands in, since on the Claude chip it
+// is Claude's.
+function setTaskAddPlaceholder() {
+  document.getElementById('taskAddInput').placeholder = taskFilter === 'claude'
+    ? 'Give Claude a job…  #project  due:friday'
+    : 'Add a task…  #project  due:friday';
+}
 
 function renderTaskFilters() {
   chipRow.innerHTML = '';
-  [['open', 'To do'], ['inbox', 'Inbox'], ['next', 'Next'],
-   ['waiting', 'Waiting'], ['done', 'Done']].forEach(([key, label]) => {
+  TASK_FILTERS.forEach(([key, label]) => {
     const chip = document.createElement('button');
     chip.className = 'chip' + (taskFilter === key ? ' active' : '');
     chip.type = 'button';
@@ -5408,6 +6574,7 @@ function renderTaskFilters() {
     chip.addEventListener('click', () => {
       taskFilter = key;
       renderTaskFilters();
+      setTaskAddPlaceholder();
       loadTasks(false);
     });
     chipRow.appendChild(chip);
@@ -5416,19 +6583,25 @@ function renderTaskFilters() {
 
 function setViewMode(mode) {
   viewMode = mode;
+  const notes = mode === 'notes';
+  const journal = mode === 'journal';
   const tasks = mode === 'tasks';
 
-  document.getElementById('modeNotes').setAttribute('aria-pressed', String(!tasks));
+  document.getElementById('modeNotes').setAttribute('aria-pressed', String(notes));
+  document.getElementById('modeJournal').setAttribute('aria-pressed', String(journal));
   document.getElementById('modeTasks').setAttribute('aria-pressed', String(tasks));
-  document.getElementById('searchRow').hidden = tasks;
+  document.getElementById('searchRow').hidden = !notes;
   document.getElementById('taskAddRow').hidden = !tasks;
-  document.querySelector('.facet-bar').hidden = tasks;
-  if (tasks) document.getElementById('facetPanel').hidden = true;
+  document.getElementById('journalRow').hidden = !journal;
+  chipRow.hidden = journal;
+  document.querySelector('.facet-bar').hidden = !notes;
+  if (!notes) document.getElementById('facetPanel').hidden = true;
+  renderSideSwitch();
 
-  // The note-only header buttons have nothing to act on in task mode.
+  // The note-only header buttons have nothing to act on in the other two.
   ['newBtn', 'statsBtn', 'importBtn'].forEach(id => {
     const b = document.getElementById(id);
-    if (b) b.hidden = tasks;
+    if (b) b.hidden = !notes;
   });
 
   app.classList.remove('detail-open');
@@ -5438,19 +6611,29 @@ function setViewMode(mode) {
     renderTaskFilters();
     showTaskEmptyState();
     loadTasks(false);
+  } else if (journal) {
+    chipRow.innerHTML = '';
+    showEmptyState();
+    journalReady = loadJournal();
   } else {
     chipRow.innerHTML = '';
     renderChips();
     showEmptyState();
     renderFacets();
   }
+  recordNav();
 }
 
+// Switching to the task list mid-edit is the exact way notes were being lost —
+// go and look something up, come back, the writing is gone.
 document.getElementById('modeNotes').addEventListener('click', () => {
-  if (viewMode !== 'notes') setViewMode('notes');
+  if (viewMode !== 'notes' && confirmLeavingEdit()) setViewMode('notes');
+});
+document.getElementById('modeJournal').addEventListener('click', () => {
+  if (viewMode !== 'journal' && confirmLeavingEdit()) setViewMode('journal');
 });
 document.getElementById('modeTasks').addEventListener('click', () => {
-  if (viewMode !== 'tasks') setViewMode('tasks');
+  if (viewMode !== 'tasks' && confirmLeavingEdit()) setViewMode('tasks');
 });
 
 document.getElementById('taskAddInput').addEventListener('keydown', ev => {

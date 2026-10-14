@@ -1,0 +1,890 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>One Side</title>
+<meta name="description" content="Meeting prep: the words you want in front of you, one card at a time.">
+<meta name="robots" content="noindex, nofollow">
+<link rel="manifest" href="./oneside.webmanifest">
+<meta name="theme-color" content="#F2EDE3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0B2A30" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<link rel="icon" href="./oneside-192.png">
+<link rel="apple-touch-icon" href="./oneside-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700&family=Public+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
+<style>
+  /* One Side: the walkthrough card from the Tideline prep deck, made into its
+     own app. One face only, so the card is warm sand on a deep tide-water
+     ground: the words are the thing, everything else stays out of the way. */
+  :root {
+    --ground:    #F2EDE3;
+    --ground-2:  #FAF6EF;
+    --tide:      #0F4A55;
+    --tide-ink:  #F4EEE2;
+    --tide-dim:  #9CC3C8;
+    --card:      #FFFCF5;
+    --card-ink:  #1D2B30;
+    --card-dim:  #8A7E6A;
+    --ink:       #1D2B30;
+    --ink-dim:   #50636A;
+    --ink-faint: #8A989C;
+    --hairline:  #DDD5C7;
+    --accent:    #D9822B;
+    --on-accent: #FFF8EE;
+    --label:     #A35F12;
+    --bad:       #B83A32;
+    --good:      #237A62;
+    --shadow:    0 1px 2px rgba(15,74,85,.08), 0 10px 28px rgba(15,74,85,.14);
+
+    --f-display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+    --f-body:    "Public Sans", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    --f-mono:    "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --ground:    #0B2A30;
+      --ground-2:  #12363D;
+      --tide:      #1C5E6A;
+      --tide-ink:  #F1EADC;
+      --tide-dim:  #93C1C6;
+      --card:      #2B2A24;
+      --card-ink:  #F4EAD8;
+      --card-dim:  #B4A68C;
+      --ink:       #E6EEEF;
+      --ink-dim:   #A4BBBF;
+      --ink-faint: #6E8A8F;
+      --hairline:  #224850;
+      --accent:    #F0A24F;
+      --on-accent: #2A1504;
+      --label:     #F2B865;
+      --bad:       #F08A80;
+      --good:      #6ED2B1;
+      --shadow:    0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --ground:    #0B2A30;
+    --ground-2:  #12363D;
+    --tide:      #1C5E6A;
+    --tide-ink:  #F1EADC;
+    --tide-dim:  #93C1C6;
+    --card:      #2B2A24;
+    --card-ink:  #F4EAD8;
+    --card-dim:  #B4A68C;
+    --ink:       #E6EEEF;
+    --ink-dim:   #A4BBBF;
+    --ink-faint: #6E8A8F;
+    --hairline:  #224850;
+    --accent:    #F0A24F;
+    --on-accent: #2A1504;
+    --label:     #F2B865;
+    --bad:       #F08A80;
+    --good:      #6ED2B1;
+    --shadow:    0 1px 2px rgba(0,0,0,.4), 0 12px 32px rgba(0,0,0,.45);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--f-body); font-size: 16px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased; min-height: 100vh;
+  }
+  button, select, input, textarea { font-family: inherit; }
+  button { cursor: pointer; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+  [hidden] { display: none !important; }
+
+  .wrap {
+    max-width: 760px; margin: 0 auto; padding: 18px 16px 28px;
+    display: flex; flex-direction: column; gap: 14px; min-height: 100vh;
+  }
+
+  /* ---------- header ---------- */
+  .top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .brand { font-family: var(--f-display); font-size: 19px; font-weight: 700; margin: 0; letter-spacing: -0.015em; }
+  .brand small {
+    display: block; font-family: var(--f-mono); font-size: 10.5px; font-weight: 400;
+    letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); margin-top: 2px;
+  }
+  .top-actions { display: flex; gap: 6px; flex-shrink: 0; }
+  .btn {
+    background: var(--ground-2); border: 1px solid var(--hairline); color: var(--ink-dim);
+    border-radius: 8px; padding: 8px 11px; font-size: 13px; line-height: 1;
+    display: inline-flex; align-items: center; gap: 6px; text-decoration: none;
+  }
+  .btn:hover:not(:disabled) { color: var(--ink); border-color: var(--ink-faint); }
+  .btn:disabled { opacity: .4; cursor: default; }
+  .primary {
+    background: var(--accent); color: var(--on-accent); border: none;
+    border-radius: 10px; padding: 11px 20px; font-size: 14.5px; font-weight: 600;
+  }
+  .primary:disabled { opacity: .55; cursor: default; }
+
+  /* ---------- the day ---------- */
+  .day { display: flex; align-items: center; gap: 8px; }
+  .day-label {
+    flex: 1; background: none; border: none; color: var(--ink); text-align: center;
+    font-family: var(--f-display); font-size: 16px; font-weight: 600; padding: 6px 4px;
+  }
+  .day-label small { display: block; font-family: var(--f-mono); font-size: 10.5px; font-weight: 400; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-faint); }
+  .day .btn { padding: 9px 13px; font-size: 15px; }
+
+  /* ---------- the meetings that day ---------- */
+  .meetings { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: thin; }
+  .mtg {
+    flex: 0 0 auto; max-width: 230px; text-align: left;
+    background: var(--ground-2); border: 1px solid var(--hairline); color: var(--ink);
+    border-radius: 12px; padding: 9px 13px; display: flex; flex-direction: column; gap: 2px;
+  }
+  .mtg .when { font-family: var(--f-mono); font-size: 11px; color: var(--ink-faint); letter-spacing: .04em; }
+  .mtg .name { font-weight: 600; font-size: 14px; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mtg:hover { border-color: var(--ink-faint); }
+  .mtg[aria-pressed="true"] { background: var(--tide); border-color: var(--tide); color: var(--tide-ink); }
+  .mtg[aria-pressed="true"] .when { color: var(--tide-dim); }
+
+  /* ---------- the card ---------- */
+  .stage { display: flex; flex-direction: column; gap: 12px; flex: 1; }
+  .card {
+    position: relative; width: 100%; min-height: 56vh; max-height: 72vh;
+    background: var(--card); color: var(--card-ink); border: none; border-radius: 14px;
+    box-shadow: var(--shadow); padding: 58px 26px 46px; text-align: left;
+    display: flex; flex-direction: column; justify-content: flex-start; overflow-y: auto;
+  }
+  .card-label {
+    position: absolute; top: 18px; left: 26px; right: 26px;
+    font-family: var(--f-mono); font-size: 12.5px; font-weight: 500; letter-spacing: .06em;
+    text-transform: uppercase; color: var(--label);
+    display: flex; justify-content: space-between; gap: 12px;
+  }
+  .card-label .of { color: var(--card-dim); flex-shrink: 0; }
+  .card-head {
+    font-family: var(--f-display); font-size: clamp(19px, 4.4vw, 25px); font-weight: 600;
+    line-height: 1.25; letter-spacing: -0.015em; margin: 0 0 14px; text-wrap: balance;
+  }
+  .card-body { font-size: clamp(17px, 3.9vw, 21px); line-height: 1.5; margin: 0; white-space: pre-line; }
+  .card-body.long { font-size: clamp(15px, 3.4vw, 18px); }
+  .card-hint {
+    position: absolute; bottom: 14px; left: 26px; right: 26px; text-align: center;
+    font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--card-dim);
+  }
+
+  .dots { display: flex; gap: 6px; justify-content: center; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hairline); border: none; padding: 0; }
+  .dot[aria-current="true"] { background: var(--accent); }
+
+  .nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+  /* all the cards at once, for a scan before walking in */
+  .list { display: flex; flex-direction: column; gap: 10px; }
+  .list .card { min-height: 0; max-height: none; padding: 46px 22px 20px; }
+  .list .card-head { font-size: 18px; margin-bottom: 8px; }
+  .list .card-body { font-size: 16px; }
+
+  .empty { color: var(--ink-dim); font-size: 15px; text-align: center; padding: 34px 12px; }
+  .empty p { margin: 0 0 14px; }
+  .notice { font-size: 13.5px; color: var(--ink-dim); text-align: center; }
+  .notice.err { color: var(--bad); }
+
+  /* ---------- editor ---------- */
+  .sheet { position: fixed; inset: 0; background: var(--ground); z-index: 20; overflow-y: auto; padding: 18px 16px 0; }
+  .sheet-inner { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 12px; }
+  .sheet h2 { font-family: var(--f-display); font-size: 19px; margin: 0; letter-spacing: -0.01em; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 4px; font-size: 12.5px; color: var(--ink-dim); }
+  .field input, .field textarea, .row input, .row textarea {
+    width: 100%; background: var(--ground-2); color: var(--ink);
+    border: 1px solid var(--hairline); border-radius: 8px; padding: 9px 10px; font-size: 15px; line-height: 1.45;
+  }
+  .when-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row {
+    background: var(--ground-2); border: 1px solid var(--hairline); border-radius: 11px;
+    padding: 11px 12px; display: flex; flex-direction: column; gap: 8px;
+  }
+  .row input, .row textarea { background: var(--ground); }
+  .row input { font-family: var(--f-display); font-weight: 600; }
+  .row textarea { resize: vertical; min-height: 84px; }
+  .row-head { display: flex; justify-content: space-between; align-items: center; font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-faint); }
+  .row-tools { display: flex; gap: 2px; }
+  .mini { background: none; border: none; color: var(--ink-faint); font-size: 12px; padding: 2px 6px; }
+  .mini:hover:not(:disabled) { color: var(--ink); }
+  .mini:disabled { opacity: .35; cursor: default; }
+  .mini.del:hover { color: var(--bad); }
+  details.paste { background: var(--ground-2); border: 1px dashed var(--hairline); border-radius: 11px; padding: 10px 12px; }
+  details.paste summary { cursor: pointer; font-size: 14px; color: var(--ink-dim); }
+  details.paste[open] summary { margin-bottom: 8px; }
+  details.paste p { margin: 0 0 8px; font-size: 13px; color: var(--ink-faint); }
+  details.paste textarea { width: 100%; min-height: 150px; background: var(--ground); color: var(--ink); border: 1px solid var(--hairline); border-radius: 8px; padding: 9px 10px; font-size: 14px; }
+  .paste-actions { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .save-bar {
+    position: sticky; bottom: 0; background: var(--ground); margin-top: 4px;
+    padding: 12px 0 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    border-top: 1px solid var(--hairline);
+  }
+  .save-bar .grow { flex: 1; }
+  .status { font-size: 13px; color: var(--ink-dim); }
+  .status.err { color: var(--bad); }
+  .danger { background: none; border: 1px solid var(--hairline); color: var(--bad); border-radius: 8px; padding: 8px 11px; font-size: 13px; }
+
+  /* ---------- unlock ---------- */
+  .lock { max-width: 420px; margin: 12vh auto 0; padding: 0 16px; display: flex; flex-direction: column; gap: 12px; }
+  .lock h1 { font-family: var(--f-display); font-size: 24px; margin: 0; letter-spacing: -0.02em; }
+  .lock p { margin: 0; color: var(--ink-dim); font-size: 14.5px; }
+  .lock input { width: 100%; background: var(--ground-2); color: var(--ink); border: 1px solid var(--hairline); border-radius: 9px; padding: 11px 12px; font-size: 16px; }
+  .lock .err { color: var(--bad); font-size: 13.5px; min-height: 1.3em; }
+
+  .foot { margin-top: auto; padding-top: 10px; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--ink-faint); }
+  .foot a, .foot button { color: var(--ink-dim); background: none; border: none; padding: 0; font-size: 12.5px; text-decoration: underline; text-underline-offset: 2px; }
+
+  @media (min-width: 900px) {
+    .card { padding: 66px 40px 50px; }
+    .card-label { left: 40px; right: 40px; }
+  }
+</style>
+</head>
+<body>
+
+<form class="lock" id="lock" autocomplete="off" hidden>
+  <h1>One Side</h1>
+  <p>Enter your Open Brain access key. It’s kept in this browser only, shared with the catalog and AI Desk on this site.</p>
+  <input type="password" id="keyIn" aria-label="Access key" placeholder="Access key" autocomplete="off">
+  <button class="primary" type="submit" id="keyBtn">Open</button>
+  <span class="err" id="lockErr" role="alert"></span>
+</form>
+
+<div id="app" hidden>
+<div class="wrap">
+  <div class="top">
+    <h1 class="brand">One Side<small id="sub">Meeting prep</small></h1>
+    <div class="top-actions">
+      <button class="btn" id="viewBtn" type="button" hidden>All cards</button>
+      <button class="btn" id="editBtn" type="button" hidden>Edit</button>
+      <button class="btn" id="addBtn" type="button">+ Prep</button>
+    </div>
+  </div>
+
+  <div class="day">
+    <button class="btn" id="dayPrev" type="button" aria-label="Previous day">&larr;</button>
+    <button class="day-label" id="dayLabel" type="button" title="Back to today"></button>
+    <button class="btn" id="dayNext" type="button" aria-label="Next day">&rarr;</button>
+  </div>
+
+  <div class="meetings" id="meetings" role="group" aria-label="Meetings this day"></div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="foot">
+    <span id="loaded"></span>
+    <span><button type="button" id="refreshBtn">Refresh</button> · <button type="button" id="lockBtn">Lock</button> · <a href="./ai.html">AI Desk</a> · <a href="./index.html">Catalog</a></span>
+  </div>
+</div>
+
+<div class="sheet" id="sheet" hidden>
+  <div class="sheet-inner">
+    <div class="sheet-head">
+      <h2 id="sheetTitle">New meeting prep</h2>
+      <button class="btn" id="closeSheet" type="button">Cancel</button>
+    </div>
+    <label class="field">Meeting
+      <input id="mName" type="text" placeholder="e.g. Weekly with Doug" autocomplete="off">
+    </label>
+    <div class="when-row">
+      <label class="field">Day <input id="mDate" type="date"></label>
+      <label class="field">Time <input id="mTime" type="time"></label>
+    </div>
+
+    <details class="paste" id="pasteBox">
+      <summary>Paste a prep message</summary>
+      <p>Paste the meeting prep (from Telegram, an email, anywhere). Each numbered point, “## heading” or paragraph becomes a card. A “Meeting:”, “Date:” or “Time:” line fills those in.</p>
+      <textarea id="pasteIn" aria-label="Prep message to turn into cards"></textarea>
+      <div class="paste-actions">
+        <button class="btn" id="pasteReplace" type="button">Make cards</button>
+        <button class="btn" id="pasteAppend" type="button">Add to the cards below</button>
+      </div>
+    </details>
+
+    <div id="rows" class="list"></div>
+    <button class="btn" id="addCard" type="button">+ Add a card</button>
+
+    <div class="save-bar">
+      <button class="primary" id="saveBtn" type="button">Save</button>
+      <span class="status grow" id="saveStatus" role="status"></span>
+      <button class="danger" id="deleteBtn" type="button" hidden>Delete meeting</button>
+    </div>
+  </div>
+</div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+  // One Side (13 Oct 2026): meeting prep as one-sided cards. Pick a day, pick a
+  // meeting, and step through the few things you want to say, worded the way
+  // you want to say them. Grown out of the Tideline prep deck's walkthrough.
+  //
+  // The page holds no content. Each meeting is one Open Brain note tagged
+  // "Meeting prep", read and written live through the MCP server with the same
+  // access key as the catalog and AI Desk. Anything that can file a note in
+  // that shape (the Telegram prep messages, later) feeds the app:
+  //
+  //   # Weekly with Doug            <- the meeting (also the note's title)
+  //   Date: 2026-10-14              <- also the note's published_date
+  //   Time: 10:00                   <- optional
+  //
+  //   ## Tideline budget            <- one card per "##" section
+  //   The words to say, as many lines as you like.
+  //
+  // A note with no "##" sections is still read: numbered points, then
+  // paragraphs, become the cards.
+  const MCP_URL = "https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mcp";
+  const KEY_STORAGE = "openbrain.accessKey";
+  const TAG = "Meeting prep";
+  const LS_VIEW = "oneside.view";
+  const $ = (id) => document.getElementById(id);
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (_) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (_) {} },
+  };
+
+  let accessKey = store.get(KEY_STORAGE) || "";
+  let meetings = [];          // parsed, sorted by day then time
+  let loadedAt = null;
+  let loadErr = "";
+  let day = isoDay(new Date());
+  let meetingId = null;       // the one showing
+  let pos = 0;                // which card
+  let listView = false;
+
+  try {
+    const v = JSON.parse(sessionStorage.getItem(LS_VIEW) || "null");
+    if (v && /^\d{4}-\d{2}-\d{2}$/.test(v.day)) { day = v.day; meetingId = v.meetingId || null; pos = v.pos || 0; listView = !!v.listView; }
+  } catch (_) {}
+  const keepView = () => {
+    try { sessionStorage.setItem(LS_VIEW, JSON.stringify({ day, meetingId, pos, listView })); } catch (_) {}
+  };
+
+  // ---------- dates ----------
+  function isoDay(d) {
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+  function addDays(iso, n) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return isoDay(new Date(y, m - 1, d + n));
+  }
+  function dayName(iso) {
+    const [y, m, d] = iso.split("-").map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
+  }
+  function relative(iso) {
+    const today = isoDay(new Date());
+    if (iso === today) return "Today";
+    if (iso === addDays(today, 1)) return "Tomorrow";
+    if (iso === addDays(today, -1)) return "Yesterday";
+    return "";
+  }
+
+  // ---------- reading a note into a meeting ----------
+  const DATE_RE = /^\s*(?:\*\*)?(?:date|day|when)(?:\*\*)?\s*:\s*(?:\*\*)?\s*(.+?)\s*(?:\*\*)?\s*$/i;
+  const TIME_RE = /^\s*(?:\*\*)?time(?:\*\*)?\s*:\s*(?:\*\*)?\s*(\d{1,2})[:.](\d{2})\s*(am|pm)?/i;
+  const NAME_RE = /^\s*(?:\*\*)?meeting(?:\*\*)?\s*:\s*(?:\*\*)?\s*(.+?)\s*(?:\*\*)?\s*$/i;
+  const PREP_RE = /^\s*(?:\*\*)?(?:meeting )?prep(?:aration)?\b(?:\*\*)?\s*(?:for\b|[:–—-])\s*(.+)$/i;
+
+  // "2026-10-14", "14/10/2026", "14 Oct", "Wed 14 October 2026"
+  function readDate(s) {
+    s = String(s || "").trim();
+    let m = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (m) return m[1] + "-" + m[2] + "-" + m[3];
+    m = s.match(/\b(\d{1,2})\/(\d{1,2})\/(\d{2,4})\b/);
+    if (m) { const y = m[3].length === 2 ? "20" + m[3] : m[3]; return y + "-" + m[2].padStart(2, "0") + "-" + m[1].padStart(2, "0"); }
+    m = s.match(/\b(\d{1,2})(?:st|nd|rd|th)?\s+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?(?:\s+(\d{4}))?/i);
+    if (m) {
+      const mon = "janfebmaraprmayjunjulaugsepoctnovdec".indexOf(m[2].toLowerCase().slice(0, 3)) / 3 + 1;
+      const y = m[3] || String(new Date().getFullYear());
+      return y + "-" + String(mon).padStart(2, "0") + "-" + m[1].padStart(2, "0");
+    }
+    if (/\btoday\b/i.test(s)) return isoDay(new Date());
+    if (/\btomorrow\b/i.test(s)) return addDays(isoDay(new Date()), 1);
+    return "";
+  }
+  function readTime(line) {
+    const m = line.match(TIME_RE);
+    if (!m) return "";
+    let h = Number(m[1]);
+    const ap = (m[3] || "").toLowerCase();
+    if (ap === "pm" && h < 12) h += 12;
+    if (ap === "am" && h === 12) h = 0;
+    return String(h).padStart(2, "0") + ":" + m[2];
+  }
+  const unbold = (s) => String(s).replace(/\*\*([^*]+)\*\*/g, "$1").replace(/^[*_]+|[*_]+$/g, "").trim();
+
+  // Text (a note, or a pasted message) to { name, date, time, cards }.
+  function parsePrep(text) {
+    const lines = String(text || "").replace(/\r/g, "").split("\n");
+    let name = "", date = "", time = "";
+    const body = [];
+    let headerDone = false;
+    for (const line of lines) {
+      if (!headerDone) {
+        const h1 = line.match(/^#\s+(.+)$/);
+        if (h1 && !name) { name = unbold(h1[1]).replace(/^meeting prep\s*[:–—-]\s*/i, ""); continue; }
+        if (!date && DATE_RE.test(line) && readDate(line.match(DATE_RE)[1])) {
+          date = readDate(line.match(DATE_RE)[1]);
+          if (!time) { const t = line.match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/i); if (t) time = readTime("time: " + t[0]); }
+          continue;
+        }
+        if (!time && TIME_RE.test(line)) { time = readTime(line); continue; }
+        if (!name && NAME_RE.test(line)) { name = unbold(line.match(NAME_RE)[1]); continue; }
+        // "Meeting prep for Weekly with Doug (Wed 14 Oct, 10:00)"
+        const lead = !name && line.match(PREP_RE);
+        if (lead) {
+          if (!date) date = readDate(lead[1]);
+          if (!time) { const t = lead[1].match(/\b(\d{1,2})[:.](\d{2})\s*(am|pm)?\b/i); if (t) time = readTime("time: " + t[0]); }
+          name = unbold(lead[1].replace(/\s*\([^)]*\)\s*/g, " ").replace(/\s+(?:on|at)\s+.*$/i, "")).replace(/[:.]$/, "").trim();
+          continue;
+        }
+        if (!line.trim()) continue;
+        headerDone = true;
+      }
+      body.push(line);
+    }
+    return { name, date, time, cards: splitCards(body.join("\n")) };
+  }
+
+  // The cards: "##" sections if there are any, else numbered or bulleted
+  // points, else paragraphs.
+  function splitCards(text) {
+    const t = text.trim();
+    if (!t) return [];
+    const make = (head, words) => ({ head: unbold(head || ""), words: String(words || "").trim() });
+
+    if (/^#{2,3}\s+/m.test(t)) {
+      const out = [];
+      let cur = null, lead = [];
+      t.split("\n").forEach((line) => {
+        const h = line.match(/^#{2,3}\s+(.+)$/);
+        if (h) { if (cur) out.push(cur); cur = { head: h[1], lines: [] }; }
+        else if (cur) cur.lines.push(line);
+        else lead.push(line);
+      });
+      if (cur) out.push(cur);
+      const cards = out.map((c) => make(c.head, c.lines.join("\n")));
+      if (lead.join("").trim()) cards.unshift(make("", lead.join("\n")));
+      return cards.filter((c) => c.head || c.words);
+    }
+
+    const POINT = /^\s*(?:\d+[.)]|[-•*])\s+/;
+    const lines = t.split("\n");
+    if (lines.filter((l) => POINT.test(l)).length >= 2) {
+      const pts = [];
+      lines.forEach((line) => {
+        if (POINT.test(line)) pts.push([line.replace(POINT, "")]);
+        else if (pts.length) pts[pts.length - 1].push(line.trim());
+      });
+      return pts.map((p) => headAndWords(p.join("\n").trim()));
+    }
+
+    return t.split(/\n\s*\n/).map((p) => headAndWords(p.trim())).filter((c) => c.head || c.words);
+  }
+
+  // "**Budget**: we're on track…" or "Budget – we're on track…" or a short
+  // first line, to a heading and the words.
+  function headAndWords(p) {
+    let m = p.match(/^\*\*([^*]{1,80})\*\*\s*[:–—-]?\s*([\s\S]*)$/);
+    if (m) return { head: m[1].trim().replace(/[:.]$/, ""), words: m[2].trim() };
+    m = p.match(/^([^\n:–—]{2,60})\s*(?::|\s[–—-]\s)\s*([\s\S]+)$/);
+    if (m && !/[.?!]$/.test(m[1])) return { head: m[1].trim(), words: m[2].trim() };
+    const nl = p.indexOf("\n");
+    if (nl > 0 && nl <= 70 && !/[.,;]$/.test(p.slice(0, nl))) return { head: unbold(p.slice(0, nl)), words: p.slice(nl + 1).trim() };
+    return { head: "", words: p };
+  }
+
+  function toMeeting(r) {
+    const m = r.metadata || {};
+    const p = parsePrep(r.content || "");
+    return {
+      id: r.id,
+      content: r.content || "",
+      name: p.name || m.title || "Meeting",
+      date: p.date || m.published_date || (r.created_at || "").slice(0, 10),
+      time: p.time,
+      cards: p.cards,
+      created: r.created_at || "",
+    };
+  }
+  const byWhen = (a, b) => (a.date + (a.time || "99:99") + a.created).localeCompare(b.date + (b.time || "99:99") + b.created);
+
+  // Back to the note's text, in the shape described at the top.
+  function toContent(name, date, time, cards) {
+    let s = "# " + name.trim() + "\nDate: " + date + "\n";
+    if (time) s += "Time: " + time + "\n";
+    cards.forEach((c, i) => { s += "\n## " + (c.head.trim() || "Point " + (i + 1)) + "\n" + c.words.trim() + "\n"; });
+    return s;
+  }
+
+  // ---------- server ----------
+  async function callTool(name, args) {
+    let res;
+    try {
+      res = await fetch(MCP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "x-brain-key": accessKey },
+        body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name, arguments: args } }),
+      });
+    } catch (e) { throw new Error("Could not reach Open Brain. Check the connection."); }
+    const raw = await res.text();
+    let payload = {};
+    try {
+      if ((res.headers.get("Content-Type") || "").includes("text/event-stream")) {
+        const line = raw.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).reverse().find((l) => l.startsWith("{"));
+        payload = line ? JSON.parse(line) : {};
+      } else payload = raw.trim() ? JSON.parse(raw) : {};
+    } catch (_) { throw new Error("Open Brain sent back something unreadable (HTTP " + res.status + ")."); }
+    // An invalid key comes back as HTTP 200 with JSON-RPC error -32001.
+    if (!res.ok || payload.error) {
+      const msg = (payload.error && payload.error.message) || ("HTTP " + res.status);
+      if (res.status === 401 || res.status === 403 || (payload.error && (payload.error.code === -32001 || /unauthor/i.test(msg)))) {
+        const e = new Error("That key was rejected."); e.auth = true; throw e;
+      }
+      throw new Error(msg);
+    }
+    const result = payload.result || {};
+    const block = (result.content || []).find((b) => b.type === "text");
+    const text = block ? block.text : "";
+    if (result.isError) throw new Error(text || "Open Brain refused that.");
+    return text;
+  }
+
+  async function load() {
+    const text = await callTool("list_thoughts", { topic: TAG, limit: 300, format: "json", include_shelved: true });
+    let arr = [];
+    try { arr = JSON.parse(text); } catch (_) { arr = []; }
+    meetings = (Array.isArray(arr) ? arr : []).map(toMeeting).sort(byWhen);
+    loadedAt = new Date();
+    loadErr = "";
+  }
+
+  // ---------- drawing ----------
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // Escape first, then **bold** only: these are lines to say, not documents.
+  const words = (s) => esc(s).replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+
+  const onDay = () => meetings.filter((m) => m.date === day);
+  const current = () => meetings.find((m) => m.id === meetingId) || null;
+
+  function draw() {
+    const rel = relative(day);
+    $("dayLabel").innerHTML = esc(dayName(day)) + "<small>" + esc(rel || (day < isoDay(new Date()) ? "Past" : "Ahead")) + "</small>";
+
+    const list = onDay();
+    if (!list.some((m) => m.id === meetingId)) {
+      // Default to the next meeting still to come today, else the first.
+      const now = new Date().toTimeString().slice(0, 5);
+      const next = day === isoDay(new Date()) ? list.find((m) => !m.time || m.time >= now) : null;
+      meetingId = (next || list[0] || {}).id || null;
+      pos = 0;
+    }
+
+    $("meetings").innerHTML = list.map((m) =>
+      '<button type="button" class="mtg" data-id="' + esc(m.id) + '" aria-pressed="' + (m.id === meetingId) + '">' +
+      '<span class="when">' + esc(m.time || "Any time") + " · " + m.cards.length + (m.cards.length === 1 ? " card" : " cards") + "</span>" +
+      '<span class="name">' + esc(m.name) + "</span></button>").join("");
+    $("meetings").hidden = !list.length;
+    const on = $("meetings").querySelector('[aria-pressed="true"]');
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "nearest" });
+
+    const m = current();
+    $("editBtn").hidden = !m;
+    $("viewBtn").hidden = !m || m.cards.length < 2;
+    $("viewBtn").textContent = listView ? "One at a time" : "All cards";
+    $("loaded").textContent = loadedAt ? "Loaded " + loadedAt.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) + " · " + meetings.length + " meetings" : "";
+
+    const stage = $("stage");
+    if (loadErr) {
+      stage.innerHTML = '<p class="notice err">' + esc(loadErr) + '</p>';
+      keepView();
+      return;
+    }
+    if (!m) {
+      const ahead = meetings.find((x) => x.date > day);
+      stage.innerHTML = '<div class="empty"><p>Nothing prepped for ' + esc(rel ? rel.toLowerCase() : dayName(day)) + ".</p>" +
+        '<button class="primary" type="button" data-add>+ Prep a meeting</button>' +
+        (ahead ? '<p style="margin-top:16px"><button class="btn" type="button" data-jump="' + esc(ahead.date) + '">Next prep: ' + esc(dayName(ahead.date)) + " &rarr;</button></p>" : "") +
+        "</div>";
+      keepView();
+      return;
+    }
+    if (!m.cards.length) {
+      stage.innerHTML = '<div class="empty"><p>No cards for this meeting yet.</p><button class="primary" type="button" data-edit>Write them</button></div>';
+      keepView();
+      return;
+    }
+
+    if (listView) {
+      stage.innerHTML = '<div class="list">' + m.cards.map((c, i) => cardHtml(m, c, i, false)).join("") + "</div>";
+      keepView();
+      return;
+    }
+
+    pos = Math.max(0, Math.min(pos, m.cards.length - 1));
+    stage.innerHTML =
+      cardHtml(m, m.cards[pos], pos, true) +
+      '<div class="dots">' + m.cards.map((_, i) => '<button type="button" class="dot" data-pos="' + i + '" aria-label="Card ' + (i + 1) + '" aria-current="' + (i === pos) + '"></button>').join("") + "</div>" +
+      '<div class="nav"><button class="btn" type="button" id="prevBtn"' + (pos ? "" : " disabled") + '>&larr; Back</button>' +
+      '<button class="btn" type="button" id="nextBtn"' + (pos < m.cards.length - 1 ? "" : " disabled") + ">Next &rarr;</button></div>";
+    const card = $("card");
+    card.addEventListener("click", () => step(1));
+    let x0 = null;
+    card.addEventListener("touchstart", (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
+    card.addEventListener("touchend", (e) => {
+      if (x0 === null) return;
+      const dx = e.changedTouches[0].clientX - x0;
+      x0 = null;
+      if (Math.abs(dx) > 60) { e.preventDefault(); step(dx < 0 ? 1 : -1); }
+    });
+    $("prevBtn").addEventListener("click", () => step(-1));
+    $("nextBtn").addEventListener("click", () => step(1));
+    keepView();
+  }
+
+  function cardHtml(m, c, i, live) {
+    const long = c.words.length > 480;
+    return (live ? '<button type="button" class="card" id="card" aria-live="polite">' : '<div class="card">') +
+      '<span class="card-label"><span>' + esc(m.name) + '</span><span class="of">' + (i + 1) + " / " + m.cards.length + "</span></span>" +
+      (c.head ? '<p class="card-head">' + words(c.head) + "</p>" : "") +
+      '<p class="card-body' + (long ? " long" : "") + '">' + words(c.words) + "</p>" +
+      (live && i < m.cards.length - 1 ? '<span class="card-hint">Tap, space or &rarr; for the next card</span>' : "") +
+      (live && i === m.cards.length - 1 && m.cards.length > 1 ? '<span class="card-hint">That’s everything for this meeting</span>' : "") +
+      (live ? "</button>" : "</div>");
+  }
+
+  function step(d) {
+    const m = current();
+    if (!m || listView) return;
+    const n = pos + d;
+    if (n < 0 || n >= m.cards.length) return;
+    pos = n;
+    draw();
+  }
+
+  // ---------- controls ----------
+  $("meetings").addEventListener("click", (e) => {
+    const b = e.target.closest(".mtg");
+    if (!b) return;
+    meetingId = b.dataset.id; pos = 0; draw();
+  });
+  $("stage").addEventListener("click", (e) => {
+    const t = e.target.closest("[data-add],[data-edit],[data-jump],[data-pos]");
+    if (!t) return;
+    if (t.hasAttribute("data-add")) openSheet(null);
+    else if (t.hasAttribute("data-edit")) openSheet(current());
+    else if (t.hasAttribute("data-jump")) { day = t.dataset.jump; meetingId = null; draw(); }
+    else { pos = Number(t.dataset.pos); draw(); }
+  });
+  $("dayPrev").addEventListener("click", () => { day = addDays(day, -1); meetingId = null; draw(); });
+  $("dayNext").addEventListener("click", () => { day = addDays(day, 1); meetingId = null; draw(); });
+  $("dayLabel").addEventListener("click", () => { day = isoDay(new Date()); meetingId = null; draw(); });
+  $("viewBtn").addEventListener("click", () => { listView = !listView; draw(); });
+  $("editBtn").addEventListener("click", () => openSheet(current()));
+  $("addBtn").addEventListener("click", () => openSheet(null));
+  $("refreshBtn").addEventListener("click", refresh);
+  $("lockBtn").addEventListener("click", () => {
+    if (!confirm("Remove the access key from this browser? The catalog and AI Desk on this site will lock too.")) return;
+    store.del(KEY_STORAGE); accessKey = ""; meetings = []; showLock("");
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!$("sheet").hidden || $("app").hidden) return;
+    const t = e.target.tagName;
+    if (t === "TEXTAREA" || t === "INPUT" || t === "SELECT") return;
+    if (e.code === "ArrowRight" || (e.code === "Space" && (t !== "BUTTON" || e.target.id === "card"))) { e.preventDefault(); step(1); }
+    else if (e.code === "ArrowLeft") { e.preventDefault(); step(-1); }
+  });
+
+  // ---------- editor ----------
+  let editing = null;   // the meeting being edited, or null for a new one
+  let draft = [];       // [{ head, words }]
+  let saving = false;
+
+  function openSheet(m) {
+    editing = m;
+    draft = m ? m.cards.map((c) => ({ head: c.head, words: c.words })) : [{ head: "", words: "" }, { head: "", words: "" }, { head: "", words: "" }];
+    $("sheetTitle").textContent = m ? "Edit meeting prep" : "New meeting prep";
+    $("mName").value = m ? m.name : "";
+    $("mDate").value = m ? m.date : day;
+    $("mTime").value = m ? (m.time || "") : "";
+    $("pasteIn").value = "";
+    $("pasteBox").open = !m;
+    $("deleteBtn").hidden = !m;
+    $("saveBtn").disabled = false;
+    setStatus("");
+    drawRows();
+    $("sheet").hidden = false;
+    $("sheet").scrollTop = 0;
+    (m ? $("mName") : $("pasteIn")).focus();
+  }
+  function closeSheet() { $("sheet").hidden = true; editing = null; }
+  function setStatus(msg, err) { $("saveStatus").textContent = msg; $("saveStatus").classList.toggle("err", !!err); }
+
+  function drawRows() {
+    const box = $("rows");
+    box.innerHTML = "";
+    draft.forEach((c, i) => {
+      const row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML =
+        '<div class="row-head"><span>Card ' + (i + 1) + '</span><span class="row-tools">' +
+        '<button class="mini" type="button" data-up' + (i ? "" : " disabled") + ' aria-label="Move card ' + (i + 1) + ' up">&uarr;</button>' +
+        '<button class="mini" type="button" data-down' + (i < draft.length - 1 ? "" : " disabled") + ' aria-label="Move card ' + (i + 1) + ' down">&darr;</button>' +
+        '<button class="mini del" type="button" data-del>Remove</button></span></div>';
+      const head = document.createElement("input");
+      head.type = "text"; head.value = c.head; head.placeholder = "What it’s about (e.g. Tideline budget)";
+      head.setAttribute("aria-label", "Heading for card " + (i + 1));
+      const body = document.createElement("textarea");
+      body.value = c.words; body.rows = 4; body.placeholder = "The words you want in front of you";
+      body.setAttribute("aria-label", "Words for card " + (i + 1));
+      head.addEventListener("input", () => { c.head = head.value; });
+      body.addEventListener("input", () => { c.words = body.value; });
+      row.querySelector("[data-up]").addEventListener("click", () => { [draft[i - 1], draft[i]] = [draft[i], draft[i - 1]]; drawRows(); });
+      row.querySelector("[data-down]").addEventListener("click", () => { [draft[i + 1], draft[i]] = [draft[i], draft[i + 1]]; drawRows(); });
+      row.querySelector("[data-del]").addEventListener("click", () => { draft.splice(i, 1); drawRows(); });
+      row.append(head, body);
+      box.appendChild(row);
+    });
+  }
+
+  function usePaste(replace) {
+    const p = parsePrep($("pasteIn").value);
+    if (!p.cards.length) { setStatus("Nothing in the message to make cards from.", true); return; }
+    if (p.name && !$("mName").value.trim()) $("mName").value = p.name;
+    if (p.date) $("mDate").value = p.date;
+    if (p.time) $("mTime").value = p.time;
+    const filled = draft.filter((c) => c.head.trim() || c.words.trim());
+    draft = (replace ? [] : filled).concat(p.cards);
+    drawRows();
+    $("pasteBox").open = false;
+    setStatus(p.cards.length + (p.cards.length === 1 ? " card" : " cards") + " made. Check the wording, then Save.");
+  }
+  $("pasteReplace").addEventListener("click", () => usePaste(true));
+  $("pasteAppend").addEventListener("click", () => usePaste(false));
+  $("addCard").addEventListener("click", () => {
+    draft.push({ head: "", words: "" }); drawRows();
+    const heads = $("rows").querySelectorAll("input");
+    if (heads.length) heads[heads.length - 1].focus();
+  });
+  $("closeSheet").addEventListener("click", closeSheet);
+
+  $("saveBtn").addEventListener("click", async () => {
+    if (saving) return;
+    const name = $("mName").value.trim();
+    const date = $("mDate").value;
+    const time = $("mTime").value;
+    const cards = draft.filter((c) => c.head.trim() || c.words.trim());
+    if (!name) { setStatus("Give the meeting a name.", true); $("mName").focus(); return; }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) { setStatus("Pick the day of the meeting.", true); $("mDate").focus(); return; }
+    if (!cards.length) { setStatus("Write at least one card.", true); return; }
+    const content = toContent(name, date, time, cards);
+
+    saving = true;
+    $("saveBtn").disabled = true;
+    setStatus("Saving to Open Brain…");
+    let savedId = editing ? editing.id : null;
+    try {
+      if (editing) {
+        await callTool("update_thought", { id: editing.id, content, title: name, published_date: date, updated_date: isoDay(new Date()) });
+      } else {
+        const res = await callTool("capture_thought", { content, published_date: date });
+        const got = /id: ([0-9a-f-]{36})/.exec(res);
+        savedId = got && got[1];
+        // From here the note exists: never re-enable Save, or a retry files it twice.
+        // capture_thought takes no title or tags, so those follow as an edit.
+        if (!savedId) throw new Error("Saved, but the new note’s id did not come back, so it isn’t tagged “" + TAG + "” yet. Tag it in the catalog.");
+        await callTool("update_thought", { id: savedId, title: name, topics: [TAG], type: "reference" });
+      }
+    } catch (err) {
+      saving = false;
+      if (err.auth) { showLock(err.message); return; }
+      setStatus("Could not save: " + err.message, true);
+      if (editing) $("saveBtn").disabled = false;
+      return;
+    }
+    saving = false;
+    day = date; meetingId = savedId; pos = 0; listView = false;
+    closeSheet();
+    await refresh();
+  });
+
+  $("deleteBtn").addEventListener("click", async () => {
+    if (!editing || saving) return;
+    if (!confirm("Delete the prep for “" + editing.name + "”? This removes the note from Open Brain and can’t be undone.")) return;
+    saving = true;
+    setStatus("Deleting…");
+    try {
+      await callTool("delete_thought", { id: editing.id });
+    } catch (err) {
+      saving = false;
+      setStatus("Could not delete: " + err.message, true);
+      return;
+    }
+    saving = false;
+    meetingId = null;
+    closeSheet();
+    await refresh();
+  });
+
+  // ---------- unlock and go ----------
+  function showLock(msg) {
+    // A rejected key is no use to any app on this site; a blank lock keeps it.
+    if (msg) { store.del(KEY_STORAGE); accessKey = ""; }
+    $("app").hidden = true;
+    $("lock").hidden = false;
+    $("lockErr").textContent = msg || "";
+    $("keyBtn").disabled = false;
+    $("keyIn").focus();
+  }
+
+  async function refresh() {
+    $("loaded").textContent = "Loading…";
+    try { await load(); }
+    catch (err) {
+      if (err.auth) { showLock(err.message); return; }
+      loadErr = "Could not load the meeting prep: " + err.message;
+    }
+    draw();
+  }
+
+  async function start() {
+    $("lock").hidden = true;
+    $("app").hidden = false;
+    $("stage").innerHTML = '<p class="notice">Loading meeting prep…</p>';
+    await refresh();
+  }
+
+  $("lock").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const k = $("keyIn").value.trim();
+    if (!k) return;
+    accessKey = k;
+    store.set(KEY_STORAGE, k);
+    $("keyIn").value = "";
+    start();
+  });
+
+  if (accessKey) start(); else showLock("");
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(() => {});
+  });
+}
+</script>
+</body>
+</html>

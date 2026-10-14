@@ -12,7 +12,21 @@
       "mcp__Supabase__get_edge_function",
       "mcp__Supabase__generate_typescript_types",
       "mcp__Supabase__get_project",
-      "mcp__Supabase__get_project_url"
+      "mcp__Supabase__get_project_url",
+      "mcp__Supabase__search_docs",
+      "mcp__Open_Brain__search",
+      "mcp__Open_Brain__search_thoughts",
+      "mcp__Open_Brain__list_thoughts",
+      "mcp__Open_Brain__fetch",
+      "mcp__Open_Brain__thought_stats",
+      "mcp__Open_Brain__capture_thought",
+      "mcp__Open_Brain__update_thought",
+      "mcp__Open_Brain__link_thoughts",
+      "mcp__Open_Brain__unlink_thoughts",
+      "mcp__Open_Brain__list_tasks",
+      "mcp__Open_Brain__create_task",
+      "mcp__Open_Brain__update_task",
+      "mcp__Open_Brain__complete_task"
     ]
   }
 }

@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#1B1638">
+<title>AI Desk</title>
+<link rel="manifest" href="./ai.webmanifest">
+<link rel="icon" href="ai-192.png">
+<link rel="apple-touch-icon" href="ai-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --paper:#1B1638; --panel:#241D47; --panel-raised:#2E2657;
+    --ruled:rgba(246,238,227,0.07); --hairline:rgba(246,238,227,0.13);
+    --ink:#F7EFE4; --ink-dim:#BDB3D6; --ink-faint:#8A80AD;
+    --brass:#F5C96B; --moss:#7FD1AE; --rust:#F7848F; --blue:#8EC7EC; --plum:#B3A4F5;
+    --ok:#7FD1AE; --warn:#F2B347; --fail:#FF6B7A; --idle:#8A80AD;
+    --font-display:'Fraunces',Georgia,serif;
+    --font-body:'Source Serif 4','Iowan Old Style',Georgia,serif;
+    --font-mono:'IBM Plex Mono',ui-monospace,'SF Mono',monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
+  a{color:var(--brass)}
+  button{font:inherit;color:inherit}
+  .shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+  /* ---- sidebar ---- */
+  nav{background:var(--panel);border-right:1px solid var(--hairline);padding:20px 12px;position:sticky;top:0;height:100vh;overflow:auto}
+  .brand{font-family:var(--font-display);font-size:22px;font-weight:600;padding:0 8px 2px}
+  .brand-sub{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);padding:0 8px 16px;letter-spacing:.04em}
+  .search{width:100%;background:var(--paper);border:1px solid var(--hairline);border-radius:8px;padding:8px 10px;color:var(--ink);font-family:var(--font-mono);font-size:13px;margin-bottom:14px}
+  .search:focus{outline:2px solid var(--brass);outline-offset:1px}
+  .sec{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:0;border-radius:8px;padding:9px 10px;cursor:pointer;color:var(--ink-dim);font-size:15px}
+  .sec:hover{background:var(--panel-raised);color:var(--ink)}
+  .sec.on{background:var(--panel-raised);color:var(--ink);box-shadow:inset 3px 0 0 var(--sec-colour,var(--brass))}
+  .sec .dot{width:8px;height:8px;border-radius:50%;background:var(--sec-colour,var(--brass));flex:none}
+  .sec .n{margin-left:auto;font-family:var(--font-mono);font-size:11px;color:var(--ink-faint)}
+  .navfoot{margin-top:18px;padding:12px 8px 0;border-top:1px solid var(--ruled);font-family:var(--font-mono);font-size:11px;color:var(--ink-faint)}
+  .navfoot .apps{margin-top:10px}
+  .navfoot .apps a{color:var(--ink-dim)}
+  .navfoot button{background:none;border:1px solid var(--hairline);border-radius:6px;padding:4px 8px;cursor:pointer;color:var(--ink-dim);font-family:var(--font-mono);font-size:11px;margin-top:6px}
+  /* ---- main ---- */
+  main{display:grid;grid-template-columns:minmax(220px,320px) 1fr;min-width:0}
+  .list{border-right:1px solid var(--hairline);padding:20px 14px;overflow:auto;height:100vh;position:sticky;top:0}
+  .list h2{font-family:var(--font-display);font-weight:600;font-size:20px;margin:0 6px 4px}
+  .list .blurb{color:var(--ink-faint);font-size:13px;margin:0 6px 14px}
+  .item{display:block;width:100%;text-align:left;background:none;border:1px solid transparent;border-radius:10px;padding:10px 12px;cursor:pointer;margin-bottom:4px}
+  .item:hover{background:var(--panel)}
+  .item.on{background:var(--panel);border-color:var(--hairline)}
+  .item .t{font-size:15px;line-height:1.3}
+  .item .m{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);margin-top:3px}
+  .detail{padding:28px 36px 60px;min-width:0;max-width:880px}
+  .detail.wide{max-width:1240px}
+  .detail.wide .body{max-width:808px}
+  .detail.wide .body.has-table{max-width:none}
+  .detail.wide .body.has-table > :not(.rg){max-width:808px}
+  .crumb{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sec-colour,var(--brass))}
+  .detail h1{font-family:var(--font-display);font-weight:600;font-size:30px;line-height:1.15;margin:6px 0 4px}
+  .meta{font-family:var(--font-mono);font-size:12px;color:var(--ink-faint);margin-bottom:18px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 18px}
+  .chip{background:var(--panel);border:1px solid var(--hairline);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;color:var(--ink-dim)}
+  .chip:hover{color:var(--ink);border-color:var(--brass)}
+  .body h2{font-family:var(--font-display);font-weight:600;font-size:21px;margin:26px 0 6px;padding-top:6px;border-top:1px solid var(--ruled);scroll-margin-top:16px}
+  .body h3{font-size:17px;margin:18px 0 4px}
+  .body ul{padding-left:22px;margin:6px 0}
+  .body li{margin:3px 0}
+  .body p{margin:8px 0}
+  .body blockquote{margin:12px 0;padding:12px 16px;background:var(--panel);border-left:3px solid var(--brass);border-radius:6px;position:relative}
+  .body blockquote .copy{position:absolute;top:8px;right:8px;background:var(--panel-raised);border:1px solid var(--hairline);border-radius:6px;font-family:var(--font-mono);font-size:11px;padding:3px 8px;cursor:pointer;color:var(--ink-dim)}
+  .body code{font-family:var(--font-mono);font-size:.9em;background:var(--panel);padding:1px 5px;border-radius:4px}
+  .tbl{overflow-x:auto;margin:12px 0}
+  .body table{border-collapse:collapse;font-size:14px;min-width:520px}
+  .body th,.body td{border-bottom:1px solid var(--hairline);padding:7px 10px;text-align:left;vertical-align:top}
+  .body th{font-family:var(--font-mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-dim)}
+  .empty{color:var(--ink-faint);padding:40px 0}
+  /* ---- system health ---- */
+  .hdot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--st);flex:none;margin-right:7px;vertical-align:1px}
+  .hdot.paused{background:none;box-shadow:inset 0 0 0 1.5px var(--ink-faint)}
+  .item.paused{opacity:.55}
+  .cloud{display:inline-block;font-family:var(--font-mono);font-size:10px;letter-spacing:.03em;color:var(--blue);border:1px solid var(--blue);border-radius:999px;padding:0 6px;margin-left:6px;vertical-align:1px}
+  .hbar{font-family:var(--font-mono);font-size:11px;color:var(--ink-faint);margin:0 6px 12px}
+  .hbar button{background:none;border:1px solid var(--hairline);border-radius:6px;padding:3px 8px;cursor:pointer;color:var(--ink-dim);font-family:var(--font-mono);font-size:11px;margin-top:6px}
+  .key{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;font-size:14px;margin:12px 0}
+  .key .hdot{margin-top:6px}
+  .item .t{overflow-wrap:anywhere}
+  .htbl table{min-width:0;width:100%}
+  .htbl th{white-space:nowrap;width:1%}
+  .backbtn{display:none}
+  .navgroup{font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint);padding:14px 10px 4px;border-top:1px solid var(--ruled);margin-top:10px}
+  /* ---- model scores ---- */
+  .sc-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 12px}
+  .sc-bar button{background:var(--panel);border:1px solid var(--hairline);border-radius:999px;padding:4px 12px;font-size:13px;cursor:pointer;color:var(--ink-dim)}
+  .sc-bar button.on{color:var(--paper);background:var(--brass);border-color:var(--brass)}
+  .sc-bar label{font-size:13px;color:var(--ink-dim);display:flex;gap:6px;align-items:center;margin-left:auto;cursor:pointer}
+  .sc .tbl{margin:0 0 8px}
+  .sc table{border-collapse:separate;border-spacing:2px;font-size:13px;min-width:0}
+  .sc th,.sc td{border:0;padding:6px 5px;text-align:center;white-space:nowrap}
+  .sc th{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);cursor:pointer;vertical-align:bottom;white-space:normal;min-width:48px;line-height:1.25}
+  .sc th.on{color:var(--brass)}
+  .sc th.m,.sc td.m{text-align:left;position:sticky;left:0;background:var(--paper);z-index:1;min-width:132px}
+  .sc td.m .lab{display:block;font-family:var(--font-mono);font-size:10px;color:var(--ink-faint)}
+  .sc td.v{font-family:var(--font-mono);border-radius:5px;background:color-mix(in srgb,var(--moss) var(--h),transparent)}
+  .sc td.v.best{box-shadow:inset 0 0 0 1.5px var(--brass);font-weight:600}
+  .sc td.v.na{color:var(--ink-faint);background:none}
+  .sc tr.ours td.m{box-shadow:inset 3px 0 0 var(--ok)}
+  .route{display:inline-block;font-family:var(--font-mono);font-size:10px;border-radius:999px;padding:0 6px;margin-top:2px;border:1px solid currentColor}
+  .route.inuse{color:var(--ok)} .route.possible{color:var(--brass)} .route.selfhost{color:var(--blue)} .route.eu{color:var(--plum)}
+  .bars{display:grid;grid-template-columns:minmax(120px,170px) 1fr auto;gap:5px 10px;align-items:center;font-size:14px;margin:6px 0 10px}
+  .bars .track{height:16px;background:var(--panel);border-radius:4px;overflow:hidden}
+  .bars .fill{height:100%;background:var(--moss);border-radius:4px}
+  .bars .ours .fill{background:var(--ok)}
+  .bars .val{font-family:var(--font-mono);font-size:12px;color:var(--ink-dim);text-align:right;min-width:42px}
+  .bars .nm.ours{color:var(--ok)}
+  .sc-key{font-size:13px;color:var(--ink-faint);margin:0 0 6px}
+  .body pre{background:var(--panel);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:12px}
+  /* ---- page tools (Download PDF) and editable tables ---- */
+  .tools{float:right;display:flex;gap:6px;margin:2px 0 8px 12px}
+  .tools button,.rg-bar button,.rg-bar label,.rgform button{background:var(--panel);border:1px solid var(--hairline);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--ink-dim);font-family:var(--font-mono);font-size:12px}
+  .tools button:hover,.rg-bar button:hover,.rg-bar label:hover,.rgform button:hover{color:var(--ink);border-color:var(--brass)}
+  .rg-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
+  .rg-bar .note{font-size:13px;color:var(--ink-faint);margin-left:4px}
+  .rg-view{display:inline-flex;border:1px solid var(--hairline);border-radius:999px;overflow:hidden;margin-right:6px}
+  .rg-view button{background:none;border:0;border-radius:0;padding:4px 12px;font-family:var(--font-mono);font-size:12px;color:var(--ink-dim);cursor:pointer}
+  .rg-view button.on{background:var(--brass);color:var(--paper)}
+  /* Table view: the box is at most a screen tall, so its header row stays put
+     and its sideways scrollbar is always in sight; a second one sits on top. */
+  .rg .tbl{margin:0 0 12px;max-height:78vh;overflow:auto;border:1px solid var(--hairline);border-radius:8px}
+  .rg thead th{position:sticky;top:0;background:var(--panel);z-index:2}
+  .rg thead th:first-child{z-index:3;background:var(--panel)}
+  .rg-top{overflow-x:auto;overflow-y:hidden;height:14px;margin:0 0 4px}
+  .rg-top div{height:1px}
+  /* Card view: one project per card, every field labelled. */
+  .rg-cards{display:grid;gap:12px;margin:0 0 14px}
+  .rg-card{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;padding:14px 18px}
+  .rg-card.edit{cursor:pointer}
+  .rg-card.edit:hover{border-color:var(--brass)}
+  .rg-card h3{font-family:var(--font-display);font-weight:600;font-size:19px;line-height:1.25;margin:0 0 10px}
+  .rg-card dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 22px;margin:0}
+  .rg-card dl > div.long{grid-column:1/-1}
+  .rg-card dt{font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint)}
+  .rg-card dd{margin:2px 0 0;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere}
+  .totop{position:fixed;right:18px;bottom:18px;z-index:20;background:var(--panel-raised);border:1px solid var(--hairline);border-radius:999px;padding:8px 14px;font-family:var(--font-mono);font-size:12px;color:var(--ink);cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s}
+  .totop.show{opacity:1;pointer-events:auto}
+  .rg table{border-collapse:collapse;font-size:13px;min-width:0}
+  .rg th,.rg td{border-bottom:1px solid var(--hairline);padding:7px 8px;text-align:left;vertical-align:top}
+  .rg th{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);line-height:1.3;min-width:100px;max-width:190px}
+  .rg{margin-top:14px}
+  .rg td{min-width:100px;max-width:190px;overflow-wrap:anywhere}
+  .rg th.long,.rg td.long{min-width:320px;max-width:400px}
+  .rg th:first-child,.rg td:first-child{position:sticky;left:0;background:var(--paper);z-index:1;min-width:150px;font-weight:600}
+  .rg tr.edit{cursor:pointer}
+  .rg tr.edit:hover td{background:var(--panel)}
+  .rg td.empty-cell{color:var(--ink-faint)}
+  .rgform{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;margin:0 0 14px}
+  .rgform h3{margin:0 0 10px;font-family:var(--font-display);font-weight:600;font-size:18px}
+  .rgform .f{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 14px}
+  .rgform label{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim)}
+  .rgform label.long{grid-column:1/-1}
+  .rgform textarea,.rgform input{display:block;width:100%;margin-top:4px;background:var(--paper);border:1px solid var(--hairline);border-radius:6px;padding:7px 9px;color:var(--ink);font-family:var(--font-body);font-size:14px;text-transform:none;letter-spacing:0;resize:vertical}
+  .rgform .acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .rgform .acts .save{background:var(--brass);color:#1B1638;border-color:var(--brass);font-weight:600}
+  .rgform .acts .del{margin-left:auto;color:var(--rust)}
+  .rgform .err{margin-top:8px}
+  /* ---- unlock ---- */
+  .unlock{max-width:420px;margin:12vh auto;padding:28px;background:var(--panel);border:1px solid var(--hairline);border-radius:14px}
+  .unlock h1{font-family:var(--font-display);margin:0 0 8px}
+  .unlock p{color:var(--ink-dim);font-size:14px}
+  .unlock input{width:100%;padding:10px;border-radius:8px;border:1px solid var(--hairline);background:var(--paper);color:var(--ink);font-family:var(--font-mono)}
+  .unlock button{margin-top:12px;padding:9px 16px;border-radius:8px;border:0;background:var(--brass);color:#1B1638;font-weight:600;cursor:pointer}
+  .err{color:var(--rust);font-size:14px;min-height:1.4em}
+  /* ---- phone ---- */
+  @media (max-width:860px){
+    .shell{grid-template-columns:1fr;grid-template-rows:auto 1fr;align-content:start}
+    .navlist{scrollbar-width:none}
+    .navlist::-webkit-scrollbar{display:none}
+    main{align-content:start}
+    nav{position:static;height:auto;border-right:0;border-bottom:1px solid var(--hairline);padding:14px 16px}
+    .navlist{display:flex;gap:6px;overflow-x:auto;padding-bottom:4px}
+    .sec{white-space:nowrap;width:auto;padding:7px 10px}
+    .sec .n{display:none}
+    .navgroup{border-top:0;border-left:1px solid var(--hairline);margin:0 0 0 6px;padding:9px 4px 0 12px;white-space:nowrap}
+    .bars{grid-template-columns:minmax(90px,120px) 1fr auto}
+    .navfoot{display:none}
+    main{grid-template-columns:1fr}
+    .list{height:auto;position:static;border-right:0;padding:14px 16px}
+    .detail{padding:18px 16px 60px}
+    main.reading .list{display:none}
+    main:not(.reading) .detail{display:none}
+    .backbtn{display:inline-block;background:none;border:1px solid var(--hairline);border-radius:6px;padding:4px 10px;font-family:var(--font-mono);font-size:12px;color:var(--ink-dim);margin-bottom:10px;cursor:pointer}
+  }
+  /* ---- Download PDF: the browser's print dialog, saved as PDF ----
+     Only the open page prints, dark ink on white. A4 paper is narrower than
+     the phone breakpoint, so the phone rules above apply while printing and
+     are undone here. Wide pages (scores, tables) switch to landscape. */
+  @media print{
+    :root{--paper:#fff;--panel:#F3F1F7;--panel-raised:#E9E6F0;--ruled:#DDD9E6;--hairline:#CCC6DA;--ink:#15122A;--ink-dim:#3B3557;--ink-faint:#6B6488;--brass:#8A5A00;--moss:#3FA57A;--ok:#2F8C63;--rust:#B23A48;--blue:#2C6E9B;--plum:#5B47B8}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    html,body{background:#fff;color:var(--ink);font-size:11pt}
+    nav,.list,.backbtn,.tools,.chips,.copy,.sc-bar,.rg-bar,.rgform,.rg-top,.totop{display:none!important}
+    .rg .tbl{max-height:none;overflow:visible;border:0}
+    .rg thead th{position:static}
+    .rg-cards{display:block}
+    .rg-card{break-inside:avoid;background:#fff;padding:7px 11px;margin:0 0 7px}
+    .rg-card h3{font-size:12pt;margin:0 0 4px}
+    .rg-card dl{grid-template-columns:repeat(4,1fr);gap:3px 12px}
+    .rg-card dt{font-size:6pt}
+    .rg-card dd{font-size:8pt;line-height:1.3;margin:0}
+    .shell,main{display:block!important;min-height:0}
+    main .detail{display:block!important;padding:0;max-width:none}
+    .detail.wide .body{max-width:none}
+    .tbl{overflow:visible}
+    .body table,.sc table,.rg table{min-width:0!important;width:100%}
+    .sc th.m,.sc td.m,.rg th:first-child,.rg td:first-child{position:static}
+    .rg table{font-size:7.5pt;table-layout:fixed}
+    .rg th,.rg td{padding:4px 5px}
+    .rg td{overflow-wrap:break-word;hyphens:auto}
+    .rg th{font-size:6.5pt;letter-spacing:0;text-transform:none;font-weight:600}
+    .rg th,.rg td,.rg th.long,.rg td.long,.rg th:first-child,.rg td:first-child{min-width:0;max-width:none}
+    .rg th{width:var(--w)}
+    tr{break-inside:avoid}
+    h1,h2,h3{break-after:avoid}
+    a{color:inherit}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+// <owner>
+// AI Desk: a meeting-friendly view of the Open Brain notes tagged "AI Dashboard".
+// The page holds no content. It reads the notes live from the Open Brain MCP
+// server with the same access key as the catalog (same origin, same
+// localStorage entry), so updating a note updates the dashboard. Never put the
+// key or any note content in this file.
+//
+// The same file also builds the SHARED view for colleagues (7 Oct 2026):
+// ~/Documents/Claude Code/AI Desk Share/build.js takes this file, deletes every
+// region between "// <owner>" and "// </owner>" and every line ending
+// "// owner", fills in SNAPSHOT with the shared sections' notes, and encrypts
+// the lot under a passphrase. So: anything personal (keys, URLs, health,
+// private sections, other apps) must sit inside an owner marker, and the code
+// left after stripping must still run. The build refuses to publish if
+// owner-only words survive.
+const MCP_URL = "https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mcp";
+const KEY_STORAGE = 'openbrain.accessKey';
+const DASH_TAG = 'AI Dashboard';
+// </owner>
+const SNAPSHOT = null; // the share build replaces this line with the shared notes
+
+// Sections in display order. `tag` is the second tag on each note.
+// Private sections are owner-only: never in the shared view, and the share
+// build drops any note carrying one of their tags, whatever else it carries.
+const SECTIONS = [
+  { tag: 'AI weekly update',          name: 'Last week',             colour: 'var(--brass)', blurb: 'Each Monday’s round-up of the week before, newest first.' },
+  { tag: 'AI tools and data location',name: 'Models & data location',colour: 'var(--rust)',  blurb: 'How the leading AI models score, and which ones the no-US rule lets us use.' },
+  { tag: 'Copilot and automation',    name: 'Copilot & automation',  colour: 'var(--blue)',  blurb: 'What Copilot can do for us, and what it can’t yet.' },
+  { tag: 'Prompt library',            name: 'Prompt library',        colour: 'var(--plum)',  blurb: 'Prompts worth sharing. Tap Copy on any prompt.' },
+  { tag: 'AI build options',          name: 'Build options',         colour: 'var(--moss)',  blurb: 'Building our own agents within the rules.' },
+  { tag: 'Microsoft watch',           name: 'Microsoft',             colour: 'var(--blue)',  blurb: 'Our platform: Copilot, Autopilot, Power Automate, Copilot Studio and Dataverse, and how they fit together.' },
+  { tag: 'AI vendor watch',           name: 'Vendor watch',          colour: 'var(--blue)',  blurb: 'What our suppliers and the big AI labs are shipping: Harvey, iManage, Quantios, Aderant, Litera, Intapp, OpenAI, Anthropic, Apple, Meta.' },
+  { tag: 'AI impact',                 name: 'AI impact',             colour: 'var(--moss)',  blurb: 'Energy, water, environment and the social side of AI: who pays, and who is fixing it.' },
+  // <owner>
+  { tag: 'AI Forum',                  name: 'AI Forum',              colour: 'var(--moss)',  blurb: 'Round-table agenda and notes. Use the chips to jump between items.', private: true },
+  { tag: 'Project status',            name: 'Projects – work',       colour: 'var(--brass)', blurb: 'Where each work project is up to, and the next step.', private: true },
+  { tag: 'Personal project status',   name: 'Projects – personal',   colour: 'var(--plum)',  blurb: 'Where each personal project is up to, and the next step.', private: true },
+  { tag: 'Project register',          name: 'Project register',      colour: 'var(--moss)',  blurb: 'Every project in one table, and what rebuilding it in Microsoft would take. Tap a row to edit it.', private: true },
+  { tag: 'Skills',                    name: 'Skills',                colour: 'var(--blue)',  blurb: 'Every skill I have: what it does, when to use it, what it can reach.', private: true },
+  { tag: 'Security review',           name: 'Security',              colour: 'var(--rust)',  blurb: 'Keys, access, hooks and risks. The latest results refresh daily with the health check.', private: true },
+  // </owner>
+];
+
+// Model scores (7 Oct 2026): a note tagged "AI model scores" carries its data
+// in a ```scores JSON block, drawn as a heat-map grid or ranked bars above the
+// note's text. The ai-desk-weekly-update task refreshes the block on Mondays.
+const SCORE_TAG = 'AI model scores';
+const SCORE_COLS = [
+  { k: 'overall',  label: 'Overall',        tip: 'Artificial Analysis Intelligence Index, 0–100' },
+  { k: 'work',     label: 'Office work',    tip: 'GDPval-AA: real professional tasks, 0–100' },
+  { k: 'hle',      label: 'Hard questions', tip: 'Humanity’s Last Exam, %' },
+  { k: 'coding',   label: 'Agentic coding', tip: 'Terminal-Bench, %' },
+  { k: 'banking',  label: 'Banking agent',  tip: 'τ³-Banking, %' },
+  { k: 'longdocs', label: 'Long docs',      tip: 'AA-LCR long-context reasoning, %' },
+  { k: 'accuracy', label: 'Accuracy',       tip: 'AA-Omniscience: right minus wrong, −100 to 100' },
+  { k: 'science',  label: 'Science',        tip: 'GPQA Diamond, %' },
+  { k: 'arena',    label: 'People’s pick',  tip: 'LMArena text rating (blind votes)' },
+  { k: 'price',    label: '$ per M tokens', tip: 'Blended price, lower is better', low: true },
+  { k: 'speed',    label: 'Speed',          tip: 'Output tokens per second' },
+];
+const ROUTES = { inuse: 'In use', possible: 'Possible', selfhost: 'Self-host', eu: 'EU lab' };
+let scoreView = { mode: 'grid', sort: 'overall', metric: 'overall', usable: false };
+
+const HEALTH = '__health';
+// <owner>
+// System health (added 5 Oct 2026): not notes, but the current state of the
+// health check, read from the system-health function with the same key. One
+// dot per check; the nav dot takes the worst colour. See the system-health
+// skill for what each status means.
+const HEALTH_URL = MCP_URL.replace('open-brain-mcp', 'system-health');
+const STATUS = {
+  fail:    { label: 'Failing', colour: 'var(--fail)' },
+  warn:    { label: 'Needs a look', colour: 'var(--warn)' },
+  waiting: { label: 'Waiting for the Mac', colour: 'var(--idle)' },
+  unknown: { label: 'Not checked', colour: 'var(--idle)' },
+  late:    { label: 'Ran late: Mac was off', colour: 'var(--ok)' },
+  ok:      { label: 'Working', colour: 'var(--ok)' },
+  paused:  { label: 'Paused', colour: 'var(--ink-faint)' },
+};
+const RANK = { fail: 6, warn: 5, waiting: 4, unknown: 3, late: 2, ok: 1, paused: 0 };
+let health = null, healthErr = '';
+
+let accessKey = '';
+try { accessKey = localStorage.getItem(KEY_STORAGE) || ''; } catch (_) {}
+// </owner>
+let notes = [];
+let loadedAt = null;
+let state = { section: SECTIONS[0].tag, noteId: null, query: '' };
+try { const s = JSON.parse(sessionStorage.getItem('aidesk.view') || 'null'); if (s && s.section) state = { ...state, ...s, query: '' }; } catch (_) {}
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// One raw note row (as list_thoughts json returns it) to what the views use.
+function toNote(r) {
+  const m = r.metadata || {};
+  const topics = Array.isArray(m.topics) ? m.topics : [];
+  const content = r.content || '';
+  const firstHeading = (content.match(/^#\s+(.+)$/m) || [])[1];
+  return {
+    id: r.id, content, topics,
+    title: m.title || firstHeading || content.slice(0, 70),
+    date: m.updated_date || m.published_date || (r.created_at || '').slice(0, 10),
+    created: r.created_at || '',
+    section: (SECTIONS.find(s => topics.includes(s.tag)) || {}).tag || null,
+  };
+}
+// Newest first, except the model scores note, which leads its section.
+const noteOrder = (a, b) => (b.topics.includes(SCORE_TAG) - a.topics.includes(SCORE_TAG)) || (b.date + b.created).localeCompare(a.date + a.created);
+
+// <owner>
+/* ---------- server ---------- */
+async function callTool(name, args) {
+  let res;
+  try {
+    res = await fetch(MCP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json, text/event-stream', 'x-brain-key': accessKey },
+      body: JSON.stringify({ jsonrpc: '2.0', id: Date.now(), method: 'tools/call', params: { name, arguments: args } }),
+    });
+  } catch (e) { throw new Error('Could not reach Open Brain. Check the connection.'); }
+  const raw = await res.text();
+  let payload;
+  if ((res.headers.get('Content-Type') || '').includes('text/event-stream')) {
+    const line = raw.split('\n').filter(l => l.startsWith('data:')).map(l => l.slice(5).trim()).reverse().find(l => l.startsWith('{'));
+    payload = line ? JSON.parse(line) : {};
+  } else payload = raw.trim() ? JSON.parse(raw) : {};
+  // An invalid key comes back as HTTP 200 with JSON-RPC error -32001.
+  if (!res.ok || payload.error) {
+    const msg = (payload.error && payload.error.message) || ('HTTP ' + res.status);
+    if (res.status === 401 || res.status === 403 || (payload.error && (payload.error.code === -32001 || /unauthor/i.test(msg)))) {
+      const e = new Error('That key was rejected.'); e.auth = true; throw e;
+    }
+    throw new Error(msg);
+  }
+  const block = ((payload.result && payload.result.content) || []).find(b => b.type === 'text');
+  return block ? block.text : '';
+}
+
+// Never throws: a broken health check must not stop the notes loading.
+async function loadHealth(runFirst) {
+  try {
+    if (runFirst) {
+      const r = await fetch(HEALTH_URL + '/run', { method: 'POST', headers: { 'x-brain-key': accessKey } });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+    }
+    const res = await fetch(HEALTH_URL, { headers: { 'x-brain-key': accessKey } });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    health = await res.json(); healthErr = '';
+  } catch (e) { healthErr = 'Could not load the health check (' + e.message + ').'; }
+}
+
+async function load() {
+  const healthLoaded = loadHealth(false);
+  const text = await callTool('list_thoughts', { topic: DASH_TAG, limit: 300, format: 'json', include_shelved: true });
+  await healthLoaded;
+  let arr = [];
+  try { arr = JSON.parse(text); } catch (_) { arr = []; }
+  notes = (Array.isArray(arr) ? arr : []).map(toNote).sort(noteOrder);
+  loadedAt = new Date();
+}
+// </owner>
+
+/* ---------- markdown (small, escape-first) ---------- */
+function inline(s) {
+  s = esc(s);
+  s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+  s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, '$1<em>$2</em>');
+  s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  s = s.replace(/(^|[\s(·])(https?:\/\/[^\s<)]+)/g, (m, pre, url) => pre + '<a href="' + url + '" target="_blank" rel="noopener">' + url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 48) + (url.length > 60 ? '…' : '') + '</a>');
+  return s;
+}
+const slug = (s) => 'h-' + String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+function md(src, dropTitle) {
+  const lines = src.replace(/\r/g, '').split('\n');
+  let out = [], list = null, quote = [], table = [], headings = [];
+  const flushList = () => { if (list) { out.push('<ul>' + list.map(li => '<li>' + inline(li) + '</li>').join('') + '</ul>'); list = null; } };
+  const flushQuote = () => { if (quote.length) { const txt = quote.join('\n'); out.push('<blockquote data-copy="' + esc(txt) + '"><button class="copy">Copy</button>' + quote.map(inline).join('<br>') + '</blockquote>'); quote = []; } };
+  const flushTable = () => {
+    if (!table.length) return;
+    const rows = table.filter(r => !/^\|?\s*:?-{2,}/.test(r)).map(r => r.replace(/^\||\|$/g, '').split('|').map(c => c.trim()));
+    const [head, ...body] = rows;
+    out.push('<div class="tbl"><table><thead><tr>' + head.map(c => '<th>' + inline(c) + '</th>').join('') + '</tr></thead><tbody>' +
+      body.map(r => '<tr>' + r.map(c => '<td>' + inline(c) + '</td>').join('') + '</tr>').join('') + '</tbody></table></div>');
+    table = [];
+  };
+  const flushAll = () => { flushList(); flushQuote(); flushTable(); };
+  let titleDropped = !dropTitle, fence = null;
+  for (const line of lines) {
+    const t = line.trim();
+    if (t.startsWith('```')) { flushAll(); if (fence) { out.push('<pre>' + esc(fence.join('\n')) + '</pre>'); fence = null; } else fence = []; continue; }
+    if (fence) { fence.push(line); continue; }
+    if (!titleDropped && /^#\s+/.test(t)) { titleDropped = true; continue; }
+    if (t.startsWith('|')) { flushList(); flushQuote(); table.push(t); continue; }
+    if (t.startsWith('>')) { flushList(); flushTable(); quote.push(t.replace(/^>\s?/, '')); continue; }
+    const li = t.match(/^[-*•]\s+(.*)$/);
+    if (li) { flushQuote(); flushTable(); (list = list || []).push(li[1]); continue; }
+    flushAll();
+    if (!t) continue;
+    const h = t.match(/^(#{1,3})\s+(.*)$/);
+    if (h) {
+      const level = Math.max(2, h[1].length);
+      if (level === 2) headings.push(h[2]);
+      out.push('<h' + level + ' id="' + slug(h[2]) + '">' + inline(h[2]) + '</h' + level + '>');
+    } else if (/^[A-Z0-9][A-Z0-9 ,'&()\-–—]{3,}$/.test(t) && t.length < 80) {
+      // Notes written with SHOUTED headings (e.g. "2. WHAT'S RULED IN AND OUT")
+      headings.push(t); out.push('<h2 id="' + slug(t) + '">' + inline(t.charAt(0) + t.slice(1).toLowerCase()) + '</h2>');
+    } else out.push('<p>' + inline(t) + '</p>');
+  }
+  flushAll();
+  if (fence) out.push('<pre>' + esc(fence.join('\n')) + '</pre>');
+  return { html: out.join('\n'), headings };
+}
+
+/* ---------- model scores ---------- */
+// Splits the ```scores block out of a note: { rows, rest } (rows null if none).
+function extractScores(content) {
+  const m = content.match(/```scores\s*\n([\s\S]*?)\n```/);
+  if (!m) return { rows: null, rest: content };
+  let rows = null;
+  try { rows = JSON.parse(m[1]); } catch (_) {}
+  return { rows: Array.isArray(rows) ? rows : null, rest: content.replace(m[0], '') };
+}
+
+function scoresHtml(all) {
+  const rows = scoreView.usable ? all.filter(r => r.route && r.route !== 'none') : all.slice();
+  const col = (k) => SCORE_COLS.find(c => c.k === k);
+  const range = {};
+  for (const c of SCORE_COLS) {
+    const vs = all.map(r => r[c.k]).filter(v => typeof v === 'number');
+    range[c.k] = vs.length ? [Math.min(...vs), Math.max(...vs)] : [0, 1];
+  }
+  // 0 = worst in the column, 1 = best (price inverted).
+  const rel = (c, v) => { const [lo, hi] = range[c.k]; const t = hi === lo ? 1 : (v - lo) / (hi - lo); return c.low ? 1 - t : t; };
+  const fmt = (c, v) => typeof v !== 'number' ? '–' : c.k === 'price' ? '$' + (v < 1 ? v.toFixed(2) : v.toFixed(v % 1 ? 2 : 0)) : String(v);
+  const byKey = (k) => (a, b) => {
+    const c = col(k), av = a[k], bv = b[k];
+    if (typeof av !== 'number') return 1; if (typeof bv !== 'number') return -1;
+    return c.low ? av - bv : bv - av;
+  };
+  const routeTag = (r) => ROUTES[r.route] ? '<span class="route ' + esc(r.route) + '">' + esc(ROUTES[r.route]) + '</span>' : '';
+  const name = (r) => esc(r.model) + '<span class="lab">' + esc(r.lab) + (r.setting ? ' · ' + esc(r.setting) : '') + '</span>' + routeTag(r);
+
+  let view;
+  if (scoreView.mode === 'grid') {
+    rows.sort(byKey(scoreView.sort));
+    view = '<p class="sc-key">Deeper green is better within each column; the gold outline marks the leader. Tap a column to rank by it.</p>' +
+      '<div class="tbl"><table><thead><tr><th class="m">Model</th>' +
+      SCORE_COLS.map(c => '<th title="' + esc(c.tip) + '" data-ssort="' + c.k + '"' + (c.k === scoreView.sort ? ' class="on"' : '') + '>' + esc(c.label) + (c.k === scoreView.sort ? ' ▾' : '') + '</th>').join('') +
+      '</tr></thead><tbody>' +
+      rows.map(r => '<tr' + (r.route === 'inuse' ? ' class="ours"' : '') + '><td class="m">' + name(r) + '</td>' +
+        SCORE_COLS.map(c => {
+          const v = r[c.k];
+          if (typeof v !== 'number') return '<td class="v na" title="Not tested yet">–</td>';
+          const t = rel(c, v);
+          const best = all.every(o => typeof o[c.k] !== 'number' || rel(c, o[c.k]) <= t);
+          return '<td class="v' + (best ? ' best' : '') + '" style="--h:' + Math.round(8 + t * 62) + '%" title="' + esc(c.tip) + '">' + fmt(c, v) + '</td>';
+        }).join('') + '</tr>').join('') +
+      '</tbody></table></div>';
+  } else {
+    const c = col(scoreView.metric);
+    const ranked = rows.filter(r => typeof r[c.k] === 'number').sort(byKey(c.k));
+    const missing = rows.length - ranked.length;
+    view = '<div class="sc-bar">' + SCORE_COLS.map(o => '<button data-smetric="' + o.k + '"' + (o.k === c.k ? ' class="on"' : '') + '>' + esc(o.label) + '</button>').join('') + '</div>' +
+      '<p class="sc-key">' + esc(c.tip) + (missing ? ' · ' + missing + ' not tested yet' : '') + '</p>' +
+      '<div class="bars">' + ranked.map(r => {
+        const ours = r.route === 'inuse' ? ' ours' : '';
+        return '<div class="nm' + ours + '">' + esc(r.model) + '</div><div class="track' + ours + '"><div class="fill" style="width:' + Math.max(3, Math.round(rel(c, r[c.k]) * 100)) + '%"></div></div><div class="val">' + fmt(c, r[c.k]) + '</div>';
+      }).join('') + '</div>';
+  }
+  return '<div class="sc"><div class="sc-bar">' +
+    '<button data-smode="grid"' + (scoreView.mode === 'grid' ? ' class="on"' : '') + '>Grid</button>' +
+    '<button data-smode="bars"' + (scoreView.mode === 'bars' ? ' class="on"' : '') + '>Ranked bars</button>' +
+    '<label><input type="checkbox" data-susable' + (scoreView.usable ? ' checked' : '') + '> Only models we could use</label></div>' +
+    view + '</div>';
+}
+
+/* ---------- tables ---------- */
+// Tables (14 Oct 2026): a note can carry a ```table JSON block,
+// {"columns":[{"k","label","long"?}],"rows":[{k: text}]}, drawn as a table
+// above the note's text. On the owner's desk rows are added and edited in the
+// page and saved back to the note; the table also goes out and comes back in
+// as CSV (for Excel), and out as PDF like any page.
+const TABLE_RE = /```table\s*\n([\s\S]*?)\n```/;
+function extractTable(content) {
+  const m = content.match(TABLE_RE);
+  if (!m) return { table: null, rest: content };
+  let t = null;
+  try { t = JSON.parse(m[1]); } catch (_) {}
+  if (!t || !Array.isArray(t.columns) || !Array.isArray(t.rows)) return { table: null, rest: content };
+  // The table is drawn where the block sits, so text before it reads as an intro.
+  return { table: t, rest: content.replace(m[0], ''), before: content.slice(0, m.index), after: content.slice(m.index + m[0].length) };
+}
+
+let EDITABLE = false;
+EDITABLE = true; // owner
+let tableEdit = null; // { noteId, index }: the row open in the form; index -1 is a new row
+// Cards or table, remembered per browser. Cards read better on screen; the
+// table is for comparing across projects.
+let tableView = 'cards';
+try { if (localStorage.getItem('aidesk.tableView') === 'table') tableView = 'table'; } catch (_) {}
+
+function tableHtml(note, t) {
+  const cols = t.columns;
+  const cell = (c, r) => {
+    const v = String(r[c.k] ?? '').trim();
+    return '<td class="' + (c.long ? 'long' : '') + (v ? '' : ' empty-cell') + '">' + (v ? inline(v).replace(/\n/g, '<br>') : '–') + '</td>';
+  };
+  const edit = (i) => EDITABLE ? ' edit" data-trow="' + i : '';
+  let h = '<div class="rg">';
+  h += '<div class="rg-bar"><span class="rg-view"><button data-tview="cards"' + (tableView === 'cards' ? ' class="on"' : '') + '>Cards</button><button data-tview="table"' + (tableView === 'table' ? ' class="on"' : '') + '>Table</button></span></div>';
+  h += '<div class="rg-bar"><button data-tadd>Add a row</button><button data-tcsv>Download CSV</button><label>Upload CSV<input type="file" accept=".csv,text/csv" data-tupload hidden></label><span class="note">' + t.rows.length + ' rows · tap a row to edit it</span></div>'; // owner
+  if (tableEdit && tableEdit.noteId === note.id) h += rowForm(t); // owner
+  if (tableView === 'cards') {
+    const [head, ...rest] = cols;
+    return h + '<div class="rg-cards">' + (t.rows.length ? t.rows.map((r, i) =>
+      '<div class="rg-card' + edit(i) + '"><h3>' + inline(String(r[head.k] ?? '').trim() || 'Row ' + (i + 1)) + '</h3><dl>' +
+      rest.filter(c => String(r[c.k] ?? '').trim()).map(c => '<div' + (c.long ? ' class="long"' : '') + '><dt>' + esc(c.label) + '</dt><dd>' + inline(String(r[c.k]).trim()).replace(/\n/g, '<br>') + '</dd></div>').join('') +
+      '</dl></div>').join('') : '<div class="empty">No rows yet.</div>') + '</div></div>';
+  }
+  // Printed, the columns share the page width, long ones getting double.
+  const units = cols.reduce((n, c) => n + (c.long ? 2 : 1), 0);
+  return h + '<div class="rg-top"><div></div></div><div class="tbl"><table><thead><tr>' + cols.map(c => '<th' + (c.long ? ' class="long"' : '') + ' style="--w:' + ((c.long ? 2 : 1) * 100 / units).toFixed(2) + '%">' + esc(c.label) + '</th>').join('') + '</tr></thead><tbody>' +
+    (t.rows.length
+      ? t.rows.map((r, i) => '<tr class="' + edit(i) + '">' + cols.map(c => cell(c, r)).join('') + '</tr>').join('')
+      : '<tr><td colspan="' + cols.length + '" class="empty-cell">No rows yet.</td></tr>') +
+    '</tbody></table></div></div>';
+}
+
+// <owner>
+// Tall enough to show the whole value without scrolling, within reason.
+const rowsFor = (c, v) => Math.min(8, Math.max(c.long ? 3 : 1, Math.ceil(String(v ?? '').length / (c.long ? 100 : 38)) + (String(v ?? '').match(/\n/g) || []).length));
+function rowForm(t) {
+  const i = tableEdit.index, r = t.rows[i] || {};
+  return '<form class="rgform" data-tform><h3>' + (i >= 0 ? esc(r[t.columns[0].k] || 'Row ' + (i + 1)) : 'New row') + '</h3><div class="f">' +
+    t.columns.map(c => '<label' + (c.long ? ' class="long"' : '') + '>' + esc(c.label) +
+      '<textarea name="' + esc(c.k) + '" rows="' + rowsFor(c, r[c.k]) + '">' + esc(r[c.k] ?? '') + '</textarea></label>').join('') +
+    '</div><div class="acts"><button type="submit" class="save">Save to Open Brain</button><button type="button" data-tcancel>Cancel</button>' +
+    (i >= 0 ? '<button type="button" class="del" data-tdel>Delete row</button>' : '') + '</div><div class="err" id="terr"></div></form>';
+}
+
+const currentNote = () => notes.find(n => n.id === state.noteId) || null;
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+// One row per line, so the note stays readable in the catalog. A backtick in a
+// cell is written as ` so it can't close the ``` fence.
+function tableBlock(t) {
+  const j = (v) => JSON.stringify(v).replace(/`/g, '\\u0060');
+  return '```table\n{"columns":[\n' + t.columns.map(j).join(',\n') + '\n],"rows":[\n' + t.rows.map(j).join(',\n') + '\n]}\n```';
+}
+
+// Writes the table back into its note. Throws on failure, leaving the note as it was.
+async function saveTable(note, t) {
+  const block = tableBlock(t);
+  const m = note.content.match(TABLE_RE);
+  const content = m ? note.content.replace(m[0], () => block) : block + '\n\n' + note.content;
+  const date = todayISO();
+  await callTool('update_thought', { id: note.id, content, updated_date: date });
+  note.content = content; note.date = date;
+}
+
+function tableCsv(t) {
+  const q = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return [t.columns.map(c => q(c.label)), ...t.rows.map(r => t.columns.map(c => q(r[c.k])))].map(l => l.join(',')).join('\r\n');
+}
+
+function parseCsv(text) {
+  text = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const rows = []; let row = [], f = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) { if (ch !== '"') f += ch; else if (text[i + 1] === '"') { f += '"'; i++; } else quoted = false; }
+    else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(f); f = ''; }
+    else if (ch === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
+
+const fileName = (s) => String(s).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) || 'AI Desk';
+
+function downloadCsv(note, t) {
+  const a = document.createElement('a');
+  // The byte-order mark makes Excel read the file as UTF-8 (accents, dashes).
+  a.href = URL.createObjectURL(new Blob(['﻿' + tableCsv(t)], { type: 'text/csv;charset=utf-8' }));
+  a.download = fileName(note.title) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// Upload replaces every row with the file's rows. Columns are matched by
+// heading (or key), so a CSV downloaded here, edited in Excel and uploaded
+// comes straight back; columns the table doesn't have are reported and skipped.
+async function uploadCsv(file) {
+  const note = currentNote(); if (!note) return;
+  const { table: t } = extractTable(note.content); if (!t) return;
+  const [head, ...body] = parseCsv(await file.text());
+  if (!head) { alert('That file is empty.'); return; }
+  const norm = (s) => String(s).trim().toLowerCase();
+  const map = head.map(h => (t.columns.find(c => norm(c.label) === norm(h) || norm(c.k) === norm(h)) || {}).k || null);
+  if (!map.some(Boolean)) { alert('None of the file’s column headings match this table. Download the CSV first and edit that.'); return; }
+  const skipped = head.filter((h, i) => !map[i] && h.trim());
+  const rows = body.map(r => { const o = {}; map.forEach((k, i) => { if (k) o[k] = (r[i] || '').trim(); }); return o; });
+  if (!confirm('Replace the ' + t.rows.length + ' rows in “' + note.title + '” with the ' + rows.length + ' rows in this file?' + (skipped.length ? '\n\nThese columns aren’t in the table and will be skipped: ' + skipped.join(', ') : ''))) return;
+  t.rows = rows;
+  try { await saveTable(note, t); tableEdit = null; render(); }
+  catch (e) { alert('Could not save: ' + e.message); }
+}
+
+// Download PDF: the browser's print dialog, where "Save as PDF" is the
+// destination. The page title becomes the file name; wide pages go landscape.
+const PDF_TOOLS = '<div class="tools"><button data-pdf title="Opens the print dialog: choose Save as PDF">Download PDF</button></div>';
+function printPage() {
+  const h1 = $('.detail h1'), old = document.title;
+  document.title = fileName('AI Desk - ' + (h1 ? h1.textContent : 'page'));
+  let page = null;
+  if ($('.detail.wide') && !$('.rg-cards')) { page = document.createElement('style'); page.textContent = '@page{size:A4 landscape;margin:10mm}'; document.head.appendChild(page); }
+  const done = () => { document.title = old; if (page) page.remove(); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
+// </owner>
+
+// The scrollbar above a wide table mirrors the table's own, so it can be
+// scrolled sideways from the top. Hidden when the table fits.
+function setupTableScroll() {
+  for (const top of document.querySelectorAll('.rg-top')) {
+    const box = top.nextElementSibling;
+    top.firstChild.style.width = box.scrollWidth + 'px';
+    top.style.display = box.scrollWidth > box.clientWidth + 1 ? '' : 'none';
+    // Copying an equal value fires no event, so the two can't loop.
+    const mirror = (from, to) => () => { if (to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft; };
+    top.onscroll = mirror(top, box); box.onscroll = mirror(box, top);
+  }
+}
+window.addEventListener('resize', setupTableScroll);
+
+// A "Top" button once the page is scrolled down a screen or so.
+const toTop = document.createElement('button');
+toTop.className = 'totop'; toTop.setAttribute('data-top', ''); toTop.textContent = '↑ Top';
+document.body.appendChild(toTop);
+window.addEventListener('scroll', () => toTop.classList.toggle('show', window.scrollY > 700), { passive: true });
+
+/* ---------- views ---------- */
+function saveView() { try { sessionStorage.setItem('aidesk.view', JSON.stringify({ section: state.section, noteId: state.noteId })); } catch (_) {} }
+
+function visibleNotes() {
+  const q = state.query.trim().toLowerCase();
+  if (q) return notes.filter(n => (n.title + '\n' + n.content).toLowerCase().includes(q));
+  return notes.filter(n => n.section === state.section);
+}
+
+let BRAND_SUB = 'SHARED VIEW';
+BRAND_SUB = 'FROM OPEN BRAIN · LIVE'; // owner
+const secBtn = (counts) => (s) =>
+  '<button class="sec' + (!state.query && s.tag === state.section ? ' on' : '') + '" data-sec="' + esc(s.tag) + '" style="--sec-colour:' + s.colour + '"><span class="dot"></span>' + esc(s.name) + '<span class="n">' + counts[s.tag] + '</span></button>';
+
+function navHtml(counts) {
+  // The shared view hides sections with nothing shared in them.
+  let h = '<div class="navlist">' + SECTIONS.filter(s => !s.private && !(SNAPSHOT && !counts[s.tag])).map(secBtn(counts)).join('');
+  h += '<div class="navgroup">Private · not shared</div>' + healthBtn() + SECTIONS.filter(s => s.private).map(secBtn(counts)).join(''); // owner
+  return h + '</div>';
+}
+
+function navFoot() {
+  let f = '<div class="navfoot">';
+  if (SNAPSHOT) f += 'Updated ' + new Date(SNAPSHOT.built).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' · ' + notes.length + ' notes<br><button data-forget>Lock</button>';
+  f += 'Loaded ' + (loadedAt ? loadedAt.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : '–') + ' · ' + notes.length + ' notes<br><button data-refresh>Refresh</button> <button data-lock>Lock</button>' + '<div class="apps">Other apps: <a href="/index.html">Catalog</a> · <a href="/trip.html">Trips</a> · <a href="/cards.html">Cards</a> · <a href="/oneside.html">One Side</a> · <a href="https://ba.thewishingstream.com" target="_blank" rel="noopener">BA Toolkit</a> · <a href="https://owner.thewishingstream.com" target="_blank" rel="noopener">Wishing Stream</a> · <a href="https://aidesk.thewishingstream.com" target="_blank" rel="noopener">Shared desk</a></div>'; // owner
+  return f + '</div>';
+}
+
+// <owner>
+function healthWorst() {
+  const cs = (health && health.checks) || [];
+  return cs.reduce((w, c) => (RANK[c.status] > RANK[w] ? c.status : w), 'paused');
+}
+// A task that ran late or is waiting for the Mac, and could run without it.
+const cloudable = (c) => c.check_id.startsWith('task:') && c.needs_mac === null && (c.status === 'late' || c.status === 'waiting');
+const when = (iso, withDay) => iso ? new Date(iso).toLocaleString('en-GB', withDay ? { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' } : { hour: '2-digit', minute: '2-digit' }) : '–';
+
+function healthBtn() {
+  const cs = (health && health.checks) || [];
+  const problems = cs.filter(c => c.status === 'fail' || c.status === 'warn').length;
+  const w = healthErr ? 'unknown' : healthWorst();
+  const hcolour = healthErr ? 'var(--idle)' : (w === 'paused' ? 'var(--ok)' : STATUS[w].colour);
+  return '<button class="sec' + (!state.query && state.section === HEALTH ? ' on' : '') + '" data-sec="' + HEALTH + '" style="--sec-colour:' + hcolour + '"><span class="dot"></span>System health<span class="n">' + (healthErr ? '?' : problems || '✓') + '</span></button>';
+}
+
+function healthDetail(c) {
+  if (!c) {
+    const cs = (health && health.checks) || [];
+    const n = (s) => cs.filter(c => c.status === s).length;
+    const cloud = cs.filter(cloudable);
+    return PDF_TOOLS + '<div class="crumb" style="--sec-colour:var(--ok)">System health</div><h1>Is everything working?</h1>' +
+      '<div class="meta">' + cs.length + ' checks · ' + n('fail') + ' failing · ' + n('warn') + ' to look at · ' + (n('waiting') + n('late')) + ' affected by the Mac being off</div>' +
+      '<div class="body"><p>One check covers the Mac’s scheduled tasks, the Supabase jobs and functions, the websites and GitHub. The cloud half runs every hour, Mac or no Mac. The Mac half runs once a day when the Claude app is open.</p>' +
+      '<div class="key">' + ['fail', 'warn', 'waiting', 'late', 'ok', 'paused'].map(s => '<span class="hdot' + (s === 'paused' ? ' paused' : '') + '" style="--st:' + STATUS[s].colour + '"></span><span><strong>' + STATUS[s].label + '.</strong> ' + ({
+        fail: 'Broken: it failed, ran empty, or missed its time while the Mac was on.',
+        warn: 'Working, but something is off: running late on GitHub, stuck, or noisy.',
+        waiting: 'Hasn’t run since its time because the Mac or the Claude app has been off. It catches up when the app opens.',
+        late: 'Ran, but late, because the Mac was off at its time.',
+        ok: 'Working.',
+        paused: 'Switched off on purpose.',
+      })[s] + '</span>').join('') + '</div>' +
+      (cloud.length ? '<p><span class="cloud">could run in the cloud</span> marks a task held up by the Mac being off that doesn’t need the Mac: ' + cloud.map(c => esc(c.name)).join(', ') + '.</p>' : '') +
+      '<p>Pick a check on the left for its detail.</p></div>';
+  }
+  const st = STATUS[c.status] || STATUS.unknown;
+  const isTask = c.check_id.startsWith('task:');
+  const rows = [
+    ['Status', st.label + ' since ' + when(c.status_since, true)],
+    ['Last worked', when(c.last_ok_at, true)],
+    ['Checked', when(c.checked_at, true) + (c.half === 'mac' ? ' (Mac check)' : ' (cloud check)')],
+  ];
+  if (isTask) rows.push(['Needs the Mac?', c.needs_mac === null ? 'No: it could run in the cloud without the Mac.' : 'Yes: ' + c.needs_mac]);
+  return '<button class="backbtn" data-back>← System health</button>' + PDF_TOOLS +
+    '<div class="crumb" style="--sec-colour:' + st.colour + '">' + esc(c.app) + '</div>' +
+    '<h1><span class="hdot' + (c.status === 'paused' ? ' paused' : '') + '" style="--st:' + st.colour + '"></span>' + esc(c.name) + '</h1>' +
+    '<div class="meta">' + esc(st.label) + (cloudable(c) ? ' <span class="cloud">could run in the cloud</span>' : '') + '</div>' +
+    '<div class="body"><p>' + esc(c.detail) + '</p><div class="tbl htbl"><table><tbody>' +
+    rows.map(r => '<tr><th>' + esc(r[0]) + '</th><td>' + esc(r[1]) + '</td></tr>').join('') + '</tbody></table></div></div>';
+}
+
+function renderHealth(counts) {
+  const cs = ((health && health.checks) || []).slice()
+    .sort((a, b) => RANK[b.status] - RANK[a.status] || a.app.localeCompare(b.app) || a.name.localeCompare(b.name));
+  const current = cs.find(c => c.check_id === state.noteId) || null;
+  const bar = healthErr ? '<div class="hbar err">' + esc(healthErr) + '</div>' :
+    '<div class="hbar">Cloud checked ' + when(health && health.cloud && health.cloud.ran_at, true) + '<br>Mac reported ' + when(health && health.mac && health.mac.ran_at, true) + '<br><button data-healthrun>Check now</button></div>';
+  const list = cs.map(c => {
+    const st = STATUS[c.status] || STATUS.unknown;
+    return '<button class="item' + (c.check_id === state.noteId ? ' on' : '') + (c.status === 'paused' ? ' paused' : '') + '" data-check="' + esc(c.check_id) + '">' +
+      '<div class="t"><span class="hdot' + (c.status === 'paused' ? ' paused' : '') + '" style="--st:' + st.colour + '"></span>' + esc(c.name) + (cloudable(c) ? '<span class="cloud">cloud?</span>' : '') + '</div>' +
+      '<div class="m">' + esc(st.label) + ' · ' + esc(c.app) + '</div></button>';
+  }).join('');
+  $('#app').innerHTML =
+    '<div class="shell">' +
+      '<nav><div class="brand">AI Desk</div><div class="brand-sub">' + esc(BRAND_SUB) + '</div>' +
+        '<input class="search" id="q" type="search" placeholder="Search everything" value="" autocomplete="off">' +
+        navHtml(counts) + navFoot() +
+      '</nav>' +
+      '<main class="' + (state.reading ? 'reading' : '') + '">' +
+        '<section class="list"><h2>System health</h2><p class="blurb">Every check, problems first.</p>' + bar + (list || '<div class="empty">No checks yet.</div>') + '</section>' +
+        '<article class="detail">' + healthDetail(current) + '</article>' +
+      '</main>' +
+    '</div>';
+  saveView();
+}
+// </owner>
+
+function render() {
+  const counts = Object.fromEntries(SECTIONS.map(s => [s.tag, notes.filter(n => n.section === s.tag).length]));
+  if (!state.query && state.section === HEALTH) return renderHealth(counts); // owner
+  const sec = SECTIONS.find(s => s.tag === state.section) || SECTIONS[0];
+  const list = visibleNotes();
+  if (!state.query && (!state.noteId || !list.some(n => n.id === state.noteId))) state.noteId = list[0] ? list[0].id : null;
+  const current = notes.find(n => n.id === state.noteId) || null;
+  const curSec = current ? (SECTIONS.find(s => s.tag === current.section) || sec) : sec;
+
+  let detail = '<div class="empty">Nothing here yet.</div>', wide = false;
+  let tools = '';
+  tools = PDF_TOOLS; // owner
+  if (current) {
+    const { rows, rest: afterScores } = extractScores(current.content);
+    const { table, rest, before, after } = extractTable(afterScores);
+    wide = !!rows || !!table;
+    let html, headings;
+    if (table) {
+      const a = md(before, true), b = md(after, false);
+      html = a.html + tableHtml(current, table) + b.html; headings = a.headings.concat(b.headings);
+    } else ({ html, headings } = md(rest, true));
+    detail = '<button class="backbtn" data-back>← ' + esc(state.query ? 'Results' : curSec.name) + '</button>' + tools +
+      '<div class="crumb" style="--sec-colour:' + curSec.colour + '">' + esc(curSec.name) + '</div>' +
+      '<h1>' + esc(current.title) + '</h1>' +
+      '<div class="meta">' + esc(current.date || '') + '</div>' +
+      (headings.length > 2 ? '<div class="chips">' + headings.map(h => '<button class="chip" data-jump="' + slug(h) + '">' + esc(h.replace(/^\d+\.\s*/, '')) + '</button>').join('') + '</div>' : '') +
+      (rows ? scoresHtml(rows) : '') +
+      '<div class="body' + (table ? ' has-table' : '') + '">' + html + '</div>';
+  }
+
+  $('#app').innerHTML =
+    '<div class="shell">' +
+      '<nav><div class="brand">AI Desk</div><div class="brand-sub">' + esc(BRAND_SUB) + '</div>' +
+        '<input class="search" id="q" type="search" placeholder="Search everything" value="' + esc(state.query) + '" autocomplete="off">' +
+        navHtml(counts) + navFoot() +
+      '</nav>' +
+      '<main class="' + (state.reading ? 'reading' : '') + '">' +
+        '<section class="list"><h2>' + esc(state.query ? 'Search' : sec.name) + '</h2><p class="blurb">' + esc(state.query ? list.length + ' match' + (list.length === 1 ? '' : 'es') + ' for “' + state.query + '”' : sec.blurb) + '</p>' +
+          (list.length ? list.map(n => '<button class="item' + (n.id === state.noteId ? ' on' : '') + '" data-note="' + n.id + '"><div class="t">' + esc(n.title) + '</div><div class="m">' + esc(n.date || '') + (state.query && n.section ? ' · ' + esc((SECTIONS.find(s => s.tag === n.section) || {}).name || '') : '') + '</div></button>').join('') : '<div class="empty">No notes.</div>') +
+        '</section>' +
+        '<article class="detail' + (wide ? ' wide' : '') + '">' + detail + '</article>' +
+      '</main>' +
+    '</div>';
+  setupTableScroll();
+  saveView();
+}
+
+// <owner>
+function showUnlock(msg) {
+  $('#app').innerHTML = '<div class="unlock"><h1>AI Desk</h1><p>Enter your Open Brain access key. It’s kept in this browser only, shared with the catalog on this site.</p>' +
+    '<input id="key" type="password" autocomplete="off" placeholder="Access key"><div class="err">' + esc(msg || '') + '</div><button id="go">Unlock</button></div>';
+  const go = async () => {
+    accessKey = $('#key').value.trim();
+    if (!accessKey) return;
+    try { localStorage.setItem(KEY_STORAGE, accessKey); } catch (_) {}
+    start();
+  };
+  $('#go').onclick = go;
+  $('#key').onkeydown = (e) => { if (e.key === 'Enter') go(); };
+  $('#key').focus();
+}
+
+// </owner>
+
+async function start() {
+  // The shared view: notes come baked in (decrypted by the share page's lock screen).
+  if (SNAPSHOT) { notes = SNAPSHOT.notes.map(toNote).sort(noteOrder); loadedAt = new Date(SNAPSHOT.built); render(); return; }
+  // <owner>
+  if (!accessKey) return showUnlock();
+  $('#app').innerHTML = '<div class="unlock"><p>Loading from Open Brain…</p></div>';
+  try { await load(); render(); }
+  catch (e) {
+    if (e.auth) { try { localStorage.removeItem(KEY_STORAGE); } catch (_) {} accessKey = ''; return showUnlock(e.message); }
+    $('#app').innerHTML = '<div class="unlock"><h1>AI Desk</h1><div class="err">' + esc(e.message) + '</div><button onclick="start()">Try again</button></div>';
+  }
+  // </owner>
+}
+
+/* ---------- events ---------- */
+let CLICKABLE = '[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-forget],[data-back],[data-ssort],[data-smode],[data-smetric],[data-susable],[data-tview],[data-top],.copy';
+CLICKABLE += ',[data-pdf],[data-tadd],[data-tcsv],[data-trow],[data-tcancel],[data-tdel]'; // owner
+document.addEventListener('click', async (e) => {
+  const t = e.target.closest(CLICKABLE);
+  if (!t) return;
+  // <owner>
+  if (t.hasAttribute('data-pdf')) { printPage(); return; }
+  if (t.hasAttribute('data-trow')) {
+    if (e.target.closest('a')) return; // a link in a cell opens the link, not the form
+    tableEdit = { noteId: state.noteId, index: +t.dataset.trow }; render();
+    const f = $('[data-tform]'); if (f) { f.scrollIntoView({ block: 'start' }); f.querySelector('textarea').focus(); }
+    return;
+  }
+  if (t.hasAttribute('data-tadd')) { tableEdit = { noteId: state.noteId, index: -1 }; render(); const f = $('[data-tform] textarea'); if (f) f.focus(); return; }
+  if (t.hasAttribute('data-tcancel')) { tableEdit = null; render(); return; }
+  if (t.hasAttribute('data-tcsv')) { const n = currentNote(), tb = n && extractTable(n.content).table; if (tb) downloadCsv(n, tb); return; }
+  if (t.hasAttribute('data-tdel')) {
+    const n = currentNote(), tb = n && extractTable(n.content).table;
+    if (!tb || !tableEdit || !tb.rows[tableEdit.index]) return;
+    if (!confirm('Delete “' + (tb.rows[tableEdit.index][tb.columns[0].k] || 'this row') + '”?')) return;
+    tb.rows.splice(tableEdit.index, 1);
+    t.disabled = true;
+    try { await saveTable(n, tb); tableEdit = null; render(); }
+    catch (err) { t.disabled = false; $('#terr').textContent = 'Could not save: ' + err.message; }
+    return;
+  }
+  // </owner>
+  if (t.dataset.check) { state.noteId = t.dataset.check; state.reading = true; render(); window.scrollTo(0, 0); return; } // owner
+  if (t.hasAttribute('data-healthrun')) { t.textContent = 'Checking…'; t.disabled = true; await loadHealth(true); render(); return; } // owner
+  if (t.dataset.tview) { tableView = t.dataset.tview; try { localStorage.setItem('aidesk.tableView', tableView); } catch (_) {} render(); return; }
+  if (t.hasAttribute('data-top')) { window.scrollTo({ top: 0, behavior: 'smooth' }); const d = $('.detail'); if (d) d.scrollTop = 0; return; }
+  if (t.dataset.ssort) { scoreView.sort = t.dataset.ssort; render(); return; }
+  if (t.dataset.smode) { scoreView.mode = t.dataset.smode; render(); return; }
+  if (t.dataset.smetric) { scoreView.metric = t.dataset.smetric; render(); return; }
+  if (t.hasAttribute('data-susable')) { scoreView.usable = t.checked; render(); return; }
+  if (t.hasAttribute('data-forget')) { try { localStorage.removeItem('aidesk-pass'); } catch (_) {} location.reload(); return; }
+  if (t.matches('.copy')) {
+    const txt = t.parentElement.getAttribute('data-copy');
+    try { await navigator.clipboard.writeText(txt); t.textContent = 'Copied'; setTimeout(() => (t.textContent = 'Copy'), 1500); } catch (_) { t.textContent = 'Select & copy'; }
+    return;
+  }
+  if (t.dataset.sec) { state = { ...state, section: t.dataset.sec, noteId: null, query: '', reading: false }; render(); return; }
+  if (t.dataset.note) { state.noteId = t.dataset.note; state.reading = true; render(); window.scrollTo(0, 0); return; }
+  if (t.dataset.jump) { const el = document.getElementById(t.dataset.jump); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
+  if (t.hasAttribute('data-back')) { state.reading = false; render(); return; }
+  if (t.hasAttribute('data-refresh')) { t.textContent = 'Loading…'; try { await load(); } catch (_) {} render(); return; } // owner
+  if (t.hasAttribute('data-lock')) { if (confirm('Remove the access key from this browser? The catalog on this site will lock too.')) { try { localStorage.removeItem(KEY_STORAGE); } catch (_) {} accessKey = ''; notes = []; showUnlock(); } } // owner
+});
+// <owner>
+document.addEventListener('submit', async (e) => {
+  const f = e.target.closest('[data-tform]');
+  if (!f) return;
+  e.preventDefault();
+  const n = currentNote(), tb = n && extractTable(n.content).table;
+  if (!tb || !tableEdit) return;
+  const row = {};
+  for (const c of tb.columns) row[c.k] = (f.elements[c.k] ? f.elements[c.k].value : '').trim();
+  if (!Object.values(row).some(Boolean)) { $('#terr').textContent = 'Fill in at least one field.'; return; }
+  if (tableEdit.index >= 0 && tb.rows[tableEdit.index]) tb.rows[tableEdit.index] = { ...tb.rows[tableEdit.index], ...row };
+  else tb.rows.push(row);
+  const btn = f.querySelector('.save'); btn.disabled = true; btn.textContent = 'Saving…';
+  try { await saveTable(n, tb); tableEdit = null; render(); }
+  catch (err) { btn.disabled = false; btn.textContent = 'Save to Open Brain'; $('#terr').textContent = 'Could not save: ' + err.message; }
+});
+document.addEventListener('change', (e) => {
+  if (!e.target.matches('[data-tupload]') || !e.target.files[0]) return;
+  uploadCsv(e.target.files[0]); e.target.value = '';
+});
+// </owner>
+let qTimer;
+document.addEventListener('input', (e) => {
+  if (e.target.id !== 'q') return;
+  clearTimeout(qTimer);
+  qTimer = setTimeout(() => {
+    state.query = e.target.value; state.noteId = null; state.reading = false;
+    const pos = e.target.selectionStart; render();
+    const q = $('#q'); q.focus(); q.setSelectionRange(pos, pos);
+    if (state.query) { const first = visibleNotes()[0]; if (first) { state.noteId = first.id; render(); const q2 = $('#q'); q2.focus(); q2.setSelectionRange(pos, pos); } }
+  }, 180);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement && document.activeElement.id !== 'q' && document.activeElement.tagName !== 'INPUT') { e.preventDefault(); const q = $('#q'); if (q) q.focus(); }
+});
+start();
+</script>
+</body>
+</html>
