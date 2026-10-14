@@ -217,7 +217,16 @@ function handle(body) {
   check('save sent new title', upd && upd.args.title === 'Renamed task', upd && upd.args.title);
   check('save turned "friday" into a date', upd && /^\d{4}-\d{2}-\d{2}$/.test(upd.args.due_date || ''), upd && upd.args.due_date);
 
+  // Saving is the end of editing, so the pane closes on the way out and a toast
+  // carries the confirmation the status line used to: the form does not stay
+  // open on the saved copy.
+  check('save closes the detail pane', !(await page.$('.task-detail')));
+  const toast = await page.$$eval('.list-status', els => els.map(e => e.textContent).join(' '));
+  check('save says what it saved', /Saved/.test(toast) && /Renamed task/.test(toast), toast);
+
   // a date it cannot read must stop the save, not drop the value
+  await page.click('.task-open:has-text("Renamed task")');
+  await page.waitForTimeout(300);
   await page.fill('#tdDue', 'whenever');
   const updCountBefore = calls.filter(c => c.name === 'update_task').length;
   await page.click('#tdSave');
@@ -258,10 +267,14 @@ function handle(body) {
   // --- the done filter asks the server for done tasks ---
   await page.click('#modeTasks');
   await page.waitForTimeout(400);
-  await page.click('.chip >> nth=4');
+  // By label, not by position: the filter row has been reordered before.
+  await page.click('#chipRow .chip:has-text("Done")');
   await page.waitForTimeout(500);
   const doneCall = calls.filter(c => c.name === 'list_tasks').pop();
-  check('done filter queries done', doneCall && JSON.stringify(doneCall.args.status) === '["done"]', doneCall && doneCall.args);
+  // Dropped tasks are finished with too, so the Done view asks for both.
+  check('done filter queries done and dropped',
+    doneCall && JSON.stringify(doneCall.args.status) === '["done","dropped"]',
+    doneCall && doneCall.args);
 
   await browser.close();
 
