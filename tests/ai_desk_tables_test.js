@@ -123,6 +123,7 @@ function shareBuild(src, snapshot) {
   check('a scrollbar sits above a wide table, as wide as the table', tops.shown && Math.abs(tops.inner - tops.table) < 2, tops);
   check('scrolling the top bar scrolls the table', tops.moved === 120, tops);
   await page.setViewportSize({ width: 1280, height: 900 });
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('.rg-top')).display === 'none', null, { timeout: 3000 }).catch(() => {});
   const fits = await page.evaluate(() => getComputedStyle(document.querySelector('.rg-top')).display);
   check('the top bar hides when the table fits', fits === 'none', fits);
   await page.setViewportSize({ width: 1280, height: 900 });
