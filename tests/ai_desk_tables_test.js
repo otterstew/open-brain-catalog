@@ -95,11 +95,43 @@ function shareBuild(src, snapshot) {
     };
   });
   await page.goto('file://' + FILE);
-  await page.waitForSelector('.rg table');
+  await page.waitForSelector('.rg-cards');
 
   const results = [];
   const check = (label, ok, extra) => results.push({ label, ok, extra });
   const cellTexts = () => page.locator('.rg tbody tr').evaluateAll(trs => trs.map(tr => [...tr.cells].map(td => td.innerText)));
+
+  // --- card view, the default ---
+  check('the register opens as cards, one per row', await page.locator('.rg-card').count() === 2);
+  check('a card is headed by its first column', (await page.locator('.rg-card h3').first().innerText()) === 'Tideline');
+  check('a card labels each filled field and skips empty ones', JSON.stringify(await page.locator('.rg-card').first().locator('dt').allTextContents()) === '["What it is"]',
+    await page.locator('.rg-card').first().locator('dt').allTextContents());
+  await page.click('[data-pdf]');
+  let cardPrint = await page.evaluate(() => window.__prints.pop());
+  check('cards print portrait', cardPrint && !cardPrint.landscape, cardPrint);
+  await page.click('.rg-card >> nth=1');
+  check('tapping a card opens its form', (await page.locator('[data-tform] h3').innerText()) === 'Trips');
+  await page.click('[data-tcancel]');
+  await page.click('[data-tview="table"]');
+  await page.waitForSelector('.rg table');
+  check('Table switches to the table', await page.locator('.rg-cards').count() === 0);
+  check('the choice is remembered', await page.evaluate(() => localStorage.getItem('aidesk.tableView')) === 'table');
+  check('the header row stays put while the table scrolls', (await page.locator('.rg thead th').first().evaluate(el => getComputedStyle(el).position)) === 'sticky');
+  await page.setViewportSize({ width: 420, height: 900 });
+  await page.evaluate(() => { state.reading = true; render(); }); // the phone layout shows the open note
+  const tops = await page.evaluate(() => { const top = document.querySelector('.rg-top'), box = top.nextElementSibling; top.scrollLeft = 120; top.dispatchEvent(new Event('scroll')); return { shown: getComputedStyle(top).display !== 'none', inner: top.firstChild.offsetWidth, table: box.scrollWidth, moved: box.scrollLeft }; });
+  check('a scrollbar sits above a wide table, as wide as the table', tops.shown && Math.abs(tops.inner - tops.table) < 2, tops);
+  check('scrolling the top bar scrolls the table', tops.moved === 120, tops);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  const fits = await page.evaluate(() => getComputedStyle(document.querySelector('.rg-top')).display);
+  check('the top bar hides when the table fits', fits === 'none', fits);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await page.evaluate(() => { document.body.style.minHeight = '4000px'; window.scrollTo(0, 2000); });
+  await page.waitForFunction(() => document.querySelector('.totop').classList.contains('show'));
+  await page.click('.totop');
+  await page.waitForFunction(() => window.scrollY === 0);
+  check('the Top button goes back to the top', await page.evaluate(() => window.scrollY) === 0);
+  await page.evaluate(() => { document.body.style.minHeight = ''; });
 
   // --- the table ---
   check('the register is in the private section', /Project register/.test(await page.locator('nav').innerText()));
@@ -237,7 +269,7 @@ function shareBuild(src, snapshot) {
   check('the colleague copy has no private sections', !/Project register/.test(await p2.locator('nav').innerText()));
   // Even if a table note were shared, it would be read-only there.
   await p2.evaluate(() => { notes[0].section = 'AI weekly update'; state.section = 'AI weekly update'; state.noteId = notes[0].id; render(); });
-  check('a shared table is read-only', await p2.locator('.rg table').count() === 1 && await p2.locator('[data-trow], .rg-bar').count() === 0);
+  check('a shared table is read-only', await p2.locator('.rg table, .rg-cards').count() === 1 && await p2.locator('[data-trow], [data-tadd], [data-tcsv]').count() === 0);
 
   await browser.close();
   let failed = 0;
