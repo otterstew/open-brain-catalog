@@ -55,6 +55,8 @@
   .detail{padding:28px 36px 60px;min-width:0;max-width:880px}
   .detail.wide{max-width:1240px}
   .detail.wide .body{max-width:808px}
+  .detail.wide .body.has-table{max-width:none}
+  .detail.wide .body.has-table > :not(.rg){max-width:808px}
   .crumb{font-family:var(--font-mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--sec-colour,var(--brass))}
   .detail h1{font-family:var(--font-display);font-weight:600;font-size:30px;line-height:1.15;margin:6px 0 4px}
   .meta{font-family:var(--font-mono);font-size:12px;color:var(--ink-faint);margin-bottom:18px}
@@ -114,6 +116,33 @@
   .bars .nm.ours{color:var(--ok)}
   .sc-key{font-size:13px;color:var(--ink-faint);margin:0 0 6px}
   .body pre{background:var(--panel);padding:10px 12px;border-radius:6px;overflow-x:auto;font-size:12px}
+  /* ---- page tools (Download PDF) and editable tables ---- */
+  .tools{float:right;display:flex;gap:6px;margin:2px 0 8px 12px}
+  .tools button,.rg-bar button,.rg-bar label,.rgform button{background:var(--panel);border:1px solid var(--hairline);border-radius:6px;padding:4px 10px;cursor:pointer;color:var(--ink-dim);font-family:var(--font-mono);font-size:12px}
+  .tools button:hover,.rg-bar button:hover,.rg-bar label:hover,.rgform button:hover{color:var(--ink);border-color:var(--brass)}
+  .rg-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
+  .rg-bar .note{font-size:13px;color:var(--ink-faint);margin-left:4px}
+  .rg .tbl{margin:0 0 12px}
+  .rg table{border-collapse:collapse;font-size:13px;min-width:0}
+  .rg th,.rg td{border-bottom:1px solid var(--hairline);padding:7px 8px;text-align:left;vertical-align:top}
+  .rg th{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);line-height:1.3;min-width:100px;max-width:190px}
+  .rg{margin-top:14px}
+  .rg td{min-width:100px;max-width:190px;overflow-wrap:anywhere}
+  .rg th.long,.rg td.long{min-width:320px;max-width:400px}
+  .rg th:first-child,.rg td:first-child{position:sticky;left:0;background:var(--paper);z-index:1;min-width:150px;font-weight:600}
+  .rg tr.edit{cursor:pointer}
+  .rg tr.edit:hover td{background:var(--panel)}
+  .rg td.empty-cell{color:var(--ink-faint)}
+  .rgform{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;padding:14px 16px;margin:0 0 14px}
+  .rgform h3{margin:0 0 10px;font-family:var(--font-display);font-weight:600;font-size:18px}
+  .rgform .f{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 14px}
+  .rgform label{display:block;font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim)}
+  .rgform label.long{grid-column:1/-1}
+  .rgform textarea,.rgform input{display:block;width:100%;margin-top:4px;background:var(--paper);border:1px solid var(--hairline);border-radius:6px;padding:7px 9px;color:var(--ink);font-family:var(--font-body);font-size:14px;text-transform:none;letter-spacing:0;resize:vertical}
+  .rgform .acts{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+  .rgform .acts .save{background:var(--brass);color:#1B1638;border-color:var(--brass);font-weight:600}
+  .rgform .acts .del{margin-left:auto;color:var(--rust)}
+  .rgform .err{margin-top:8px}
   /* ---- unlock ---- */
   .unlock{max-width:420px;margin:12vh auto;padding:28px;background:var(--panel);border:1px solid var(--hairline);border-radius:14px}
   .unlock h1{font-family:var(--font-display);margin:0 0 8px}
@@ -140,6 +169,31 @@
     main.reading .list{display:none}
     main:not(.reading) .detail{display:none}
     .backbtn{display:inline-block;background:none;border:1px solid var(--hairline);border-radius:6px;padding:4px 10px;font-family:var(--font-mono);font-size:12px;color:var(--ink-dim);margin-bottom:10px;cursor:pointer}
+  }
+  /* ---- Download PDF: the browser's print dialog, saved as PDF ----
+     Only the open page prints, dark ink on white. A4 paper is narrower than
+     the phone breakpoint, so the phone rules above apply while printing and
+     are undone here. Wide pages (scores, tables) switch to landscape. */
+  @media print{
+    :root{--paper:#fff;--panel:#F3F1F7;--panel-raised:#E9E6F0;--ruled:#DDD9E6;--hairline:#CCC6DA;--ink:#15122A;--ink-dim:#3B3557;--ink-faint:#6B6488;--brass:#8A5A00;--moss:#3FA57A;--ok:#2F8C63;--rust:#B23A48;--blue:#2C6E9B;--plum:#5B47B8}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    html,body{background:#fff;color:var(--ink);font-size:11pt}
+    nav,.list,.backbtn,.tools,.chips,.copy,.sc-bar,.rg-bar,.rgform{display:none!important}
+    .shell,main{display:block!important;min-height:0}
+    main .detail{display:block!important;padding:0;max-width:none}
+    .detail.wide .body{max-width:none}
+    .tbl{overflow:visible}
+    .body table,.sc table,.rg table{min-width:0!important;width:100%}
+    .sc th.m,.sc td.m,.rg th:first-child,.rg td:first-child{position:static}
+    .rg table{font-size:7.5pt;table-layout:fixed}
+    .rg th,.rg td{padding:4px 5px}
+    .rg td{overflow-wrap:break-word;hyphens:auto}
+    .rg th{font-size:6.5pt;letter-spacing:0;text-transform:none;font-weight:600}
+    .rg th,.rg td,.rg th.long,.rg td.long,.rg th:first-child,.rg td:first-child{min-width:0;max-width:none}
+    .rg th{width:var(--w)}
+    tr{break-inside:avoid}
+    h1,h2,h3{break-after:avoid}
+    a{color:inherit}
   }
 </style>
 </head>
@@ -183,6 +237,7 @@ const SECTIONS = [
   { tag: 'AI Forum',                  name: 'AI Forum',              colour: 'var(--moss)',  blurb: 'Round-table agenda and notes. Use the chips to jump between items.', private: true },
   { tag: 'Project status',            name: 'Projects – work',       colour: 'var(--brass)', blurb: 'Where each work project is up to, and the next step.', private: true },
   { tag: 'Personal project status',   name: 'Projects – personal',   colour: 'var(--plum)',  blurb: 'Where each personal project is up to, and the next step.', private: true },
+  { tag: 'Project register',          name: 'Project register',      colour: 'var(--moss)',  blurb: 'Every project in one table, and what rebuilding it in Microsoft would take. Tap a row to edit it.', private: true },
   { tag: 'Skills',                    name: 'Skills',                colour: 'var(--blue)',  blurb: 'Every skill I have: what it does, when to use it, what it can reach.', private: true },
   { tag: 'Security review',           name: 'Security',              colour: 'var(--rust)',  blurb: 'Keys, access, hooks and risks. The latest results refresh daily with the health check.', private: true },
   // </owner>
@@ -424,6 +479,141 @@ function scoresHtml(all) {
     view + '</div>';
 }
 
+/* ---------- tables ---------- */
+// Tables (14 Oct 2026): a note can carry a ```table JSON block,
+// {"columns":[{"k","label","long"?}],"rows":[{k: text}]}, drawn as a table
+// above the note's text. On the owner's desk rows are added and edited in the
+// page and saved back to the note; the table also goes out and comes back in
+// as CSV (for Excel), and out as PDF like any page.
+const TABLE_RE = /```table\s*\n([\s\S]*?)\n```/;
+function extractTable(content) {
+  const m = content.match(TABLE_RE);
+  if (!m) return { table: null, rest: content };
+  let t = null;
+  try { t = JSON.parse(m[1]); } catch (_) {}
+  if (!t || !Array.isArray(t.columns) || !Array.isArray(t.rows)) return { table: null, rest: content };
+  // The table is drawn where the block sits, so text before it reads as an intro.
+  return { table: t, rest: content.replace(m[0], ''), before: content.slice(0, m.index), after: content.slice(m.index + m[0].length) };
+}
+
+let EDITABLE = false;
+EDITABLE = true; // owner
+let tableEdit = null; // { noteId, index }: the row open in the form; index -1 is a new row
+
+function tableHtml(note, t) {
+  const cols = t.columns;
+  const cell = (c, r) => {
+    const v = String(r[c.k] ?? '').trim();
+    return '<td class="' + (c.long ? 'long' : '') + (v ? '' : ' empty-cell') + '">' + (v ? inline(v).replace(/\n/g, '<br>') : '–') + '</td>';
+  };
+  let h = '<div class="rg">';
+  h += '<div class="rg-bar"><button data-tadd>Add a row</button><button data-tcsv>Download CSV</button><label>Upload CSV<input type="file" accept=".csv,text/csv" data-tupload hidden></label><span class="note">' + t.rows.length + ' rows · tap a row to edit it</span></div>'; // owner
+  if (tableEdit && tableEdit.noteId === note.id) h += rowForm(t); // owner
+  // Printed, the columns share the page width, long ones getting double.
+  const units = cols.reduce((n, c) => n + (c.long ? 2 : 1), 0);
+  return h + '<div class="tbl"><table><thead><tr>' + cols.map(c => '<th' + (c.long ? ' class="long"' : '') + ' style="--w:' + ((c.long ? 2 : 1) * 100 / units).toFixed(2) + '%">' + esc(c.label) + '</th>').join('') + '</tr></thead><tbody>' +
+    (t.rows.length
+      ? t.rows.map((r, i) => '<tr' + (EDITABLE ? ' class="edit" data-trow="' + i + '"' : '') + '>' + cols.map(c => cell(c, r)).join('') + '</tr>').join('')
+      : '<tr><td colspan="' + cols.length + '" class="empty-cell">No rows yet.</td></tr>') +
+    '</tbody></table></div></div>';
+}
+
+// <owner>
+// Tall enough to show the whole value without scrolling, within reason.
+const rowsFor = (c, v) => Math.min(8, Math.max(c.long ? 3 : 1, Math.ceil(String(v ?? '').length / (c.long ? 100 : 38)) + (String(v ?? '').match(/\n/g) || []).length));
+function rowForm(t) {
+  const i = tableEdit.index, r = t.rows[i] || {};
+  return '<form class="rgform" data-tform><h3>' + (i >= 0 ? esc(r[t.columns[0].k] || 'Row ' + (i + 1)) : 'New row') + '</h3><div class="f">' +
+    t.columns.map(c => '<label' + (c.long ? ' class="long"' : '') + '>' + esc(c.label) +
+      '<textarea name="' + esc(c.k) + '" rows="' + rowsFor(c, r[c.k]) + '">' + esc(r[c.k] ?? '') + '</textarea></label>').join('') +
+    '</div><div class="acts"><button type="submit" class="save">Save to Open Brain</button><button type="button" data-tcancel>Cancel</button>' +
+    (i >= 0 ? '<button type="button" class="del" data-tdel>Delete row</button>' : '') + '</div><div class="err" id="terr"></div></form>';
+}
+
+const currentNote = () => notes.find(n => n.id === state.noteId) || null;
+const todayISO = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
+
+// One row per line, so the note stays readable in the catalog. A backtick in a
+// cell is written as ` so it can't close the ``` fence.
+function tableBlock(t) {
+  const j = (v) => JSON.stringify(v).replace(/`/g, '\\u0060');
+  return '```table\n{"columns":[\n' + t.columns.map(j).join(',\n') + '\n],"rows":[\n' + t.rows.map(j).join(',\n') + '\n]}\n```';
+}
+
+// Writes the table back into its note. Throws on failure, leaving the note as it was.
+async function saveTable(note, t) {
+  const block = tableBlock(t);
+  const m = note.content.match(TABLE_RE);
+  const content = m ? note.content.replace(m[0], () => block) : block + '\n\n' + note.content;
+  const date = todayISO();
+  await callTool('update_thought', { id: note.id, content, updated_date: date });
+  note.content = content; note.date = date;
+}
+
+function tableCsv(t) {
+  const q = (v) => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  return [t.columns.map(c => q(c.label)), ...t.rows.map(r => t.columns.map(c => q(r[c.k])))].map(l => l.join(',')).join('\r\n');
+}
+
+function parseCsv(text) {
+  text = text.replace(/^﻿/, '').replace(/\r\n?/g, '\n');
+  const rows = []; let row = [], f = '', quoted = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) { if (ch !== '"') f += ch; else if (text[i + 1] === '"') { f += '"'; i++; } else quoted = false; }
+    else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(f); f = ''; }
+    else if (ch === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else f += ch;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim()));
+}
+
+const fileName = (s) => String(s).replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 100) || 'AI Desk';
+
+function downloadCsv(note, t) {
+  const a = document.createElement('a');
+  // The byte-order mark makes Excel read the file as UTF-8 (accents, dashes).
+  a.href = URL.createObjectURL(new Blob(['﻿' + tableCsv(t)], { type: 'text/csv;charset=utf-8' }));
+  a.download = fileName(note.title) + '.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+// Upload replaces every row with the file's rows. Columns are matched by
+// heading (or key), so a CSV downloaded here, edited in Excel and uploaded
+// comes straight back; columns the table doesn't have are reported and skipped.
+async function uploadCsv(file) {
+  const note = currentNote(); if (!note) return;
+  const { table: t } = extractTable(note.content); if (!t) return;
+  const [head, ...body] = parseCsv(await file.text());
+  if (!head) { alert('That file is empty.'); return; }
+  const norm = (s) => String(s).trim().toLowerCase();
+  const map = head.map(h => (t.columns.find(c => norm(c.label) === norm(h) || norm(c.k) === norm(h)) || {}).k || null);
+  if (!map.some(Boolean)) { alert('None of the file’s column headings match this table. Download the CSV first and edit that.'); return; }
+  const skipped = head.filter((h, i) => !map[i] && h.trim());
+  const rows = body.map(r => { const o = {}; map.forEach((k, i) => { if (k) o[k] = (r[i] || '').trim(); }); return o; });
+  if (!confirm('Replace the ' + t.rows.length + ' rows in “' + note.title + '” with the ' + rows.length + ' rows in this file?' + (skipped.length ? '\n\nThese columns aren’t in the table and will be skipped: ' + skipped.join(', ') : ''))) return;
+  t.rows = rows;
+  try { await saveTable(note, t); tableEdit = null; render(); }
+  catch (e) { alert('Could not save: ' + e.message); }
+}
+
+// Download PDF: the browser's print dialog, where "Save as PDF" is the
+// destination. The page title becomes the file name; wide pages go landscape.
+const PDF_TOOLS = '<div class="tools"><button data-pdf title="Opens the print dialog: choose Save as PDF">Download PDF</button></div>';
+function printPage() {
+  const h1 = $('.detail h1'), old = document.title;
+  document.title = fileName('AI Desk - ' + (h1 ? h1.textContent : 'page'));
+  let page = null;
+  if ($('.detail.wide')) { page = document.createElement('style'); page.textContent = '@page{size:A4 landscape;margin:10mm}'; document.head.appendChild(page); }
+  const done = () => { document.title = old; if (page) page.remove(); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  window.print();
+}
+// </owner>
+
 /* ---------- views ---------- */
 function saveView() { try { sessionStorage.setItem('aidesk.view', JSON.stringify({ section: state.section, noteId: state.noteId })); } catch (_) {} }
 
@@ -474,7 +664,7 @@ function healthDetail(c) {
     const cs = (health && health.checks) || [];
     const n = (s) => cs.filter(c => c.status === s).length;
     const cloud = cs.filter(cloudable);
-    return '<div class="crumb" style="--sec-colour:var(--ok)">System health</div><h1>Is everything working?</h1>' +
+    return PDF_TOOLS + '<div class="crumb" style="--sec-colour:var(--ok)">System health</div><h1>Is everything working?</h1>' +
       '<div class="meta">' + cs.length + ' checks · ' + n('fail') + ' failing · ' + n('warn') + ' to look at · ' + (n('waiting') + n('late')) + ' affected by the Mac being off</div>' +
       '<div class="body"><p>One check covers the Mac’s scheduled tasks, the Supabase jobs and functions, the websites and GitHub. The cloud half runs every hour, Mac or no Mac. The Mac half runs once a day when the Claude app is open.</p>' +
       '<div class="key">' + ['fail', 'warn', 'waiting', 'late', 'ok', 'paused'].map(s => '<span class="hdot' + (s === 'paused' ? ' paused' : '') + '" style="--st:' + STATUS[s].colour + '"></span><span><strong>' + STATUS[s].label + '.</strong> ' + ({
@@ -496,7 +686,7 @@ function healthDetail(c) {
     ['Checked', when(c.checked_at, true) + (c.half === 'mac' ? ' (Mac check)' : ' (cloud check)')],
   ];
   if (isTask) rows.push(['Needs the Mac?', c.needs_mac === null ? 'No: it could run in the cloud without the Mac.' : 'Yes: ' + c.needs_mac]);
-  return '<button class="backbtn" data-back>← System health</button>' +
+  return '<button class="backbtn" data-back>← System health</button>' + PDF_TOOLS +
     '<div class="crumb" style="--sec-colour:' + st.colour + '">' + esc(c.app) + '</div>' +
     '<h1><span class="hdot' + (c.status === 'paused' ? ' paused' : '') + '" style="--st:' + st.colour + '"></span>' + esc(c.name) + '</h1>' +
     '<div class="meta">' + esc(st.label) + (cloudable(c) ? ' <span class="cloud">could run in the cloud</span>' : '') + '</div>' +
@@ -541,17 +731,24 @@ function render() {
   const curSec = current ? (SECTIONS.find(s => s.tag === current.section) || sec) : sec;
 
   let detail = '<div class="empty">Nothing here yet.</div>', wide = false;
+  let tools = '';
+  tools = PDF_TOOLS; // owner
   if (current) {
-    const { rows, rest } = extractScores(current.content);
-    wide = !!rows;
-    const { html, headings } = md(rest, true);
-    detail = '<button class="backbtn" data-back>← ' + esc(state.query ? 'Results' : curSec.name) + '</button>' +
+    const { rows, rest: afterScores } = extractScores(current.content);
+    const { table, rest, before, after } = extractTable(afterScores);
+    wide = !!rows || !!table;
+    let html, headings;
+    if (table) {
+      const a = md(before, true), b = md(after, false);
+      html = a.html + tableHtml(current, table) + b.html; headings = a.headings.concat(b.headings);
+    } else ({ html, headings } = md(rest, true));
+    detail = '<button class="backbtn" data-back>← ' + esc(state.query ? 'Results' : curSec.name) + '</button>' + tools +
       '<div class="crumb" style="--sec-colour:' + curSec.colour + '">' + esc(curSec.name) + '</div>' +
       '<h1>' + esc(current.title) + '</h1>' +
       '<div class="meta">' + esc(current.date || '') + '</div>' +
       (headings.length > 2 ? '<div class="chips">' + headings.map(h => '<button class="chip" data-jump="' + slug(h) + '">' + esc(h.replace(/^\d+\.\s*/, '')) + '</button>').join('') + '</div>' : '') +
       (rows ? scoresHtml(rows) : '') +
-      '<div class="body">' + html + '</div>';
+      '<div class="body' + (table ? ' has-table' : '') + '">' + html + '</div>';
   }
 
   $('#app').innerHTML =
@@ -602,9 +799,33 @@ async function start() {
 }
 
 /* ---------- events ---------- */
+let CLICKABLE = '[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-forget],[data-back],[data-ssort],[data-smode],[data-smetric],[data-susable],.copy';
+CLICKABLE += ',[data-pdf],[data-tadd],[data-tcsv],[data-trow],[data-tcancel],[data-tdel]'; // owner
 document.addEventListener('click', async (e) => {
-  const t = e.target.closest('[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-forget],[data-back],[data-ssort],[data-smode],[data-smetric],[data-susable],.copy');
+  const t = e.target.closest(CLICKABLE);
   if (!t) return;
+  // <owner>
+  if (t.hasAttribute('data-pdf')) { printPage(); return; }
+  if (t.hasAttribute('data-trow')) {
+    if (e.target.closest('a')) return; // a link in a cell opens the link, not the form
+    tableEdit = { noteId: state.noteId, index: +t.dataset.trow }; render();
+    const f = $('[data-tform]'); if (f) { f.scrollIntoView({ block: 'start' }); f.querySelector('textarea').focus(); }
+    return;
+  }
+  if (t.hasAttribute('data-tadd')) { tableEdit = { noteId: state.noteId, index: -1 }; render(); const f = $('[data-tform] textarea'); if (f) f.focus(); return; }
+  if (t.hasAttribute('data-tcancel')) { tableEdit = null; render(); return; }
+  if (t.hasAttribute('data-tcsv')) { const n = currentNote(), tb = n && extractTable(n.content).table; if (tb) downloadCsv(n, tb); return; }
+  if (t.hasAttribute('data-tdel')) {
+    const n = currentNote(), tb = n && extractTable(n.content).table;
+    if (!tb || !tableEdit || !tb.rows[tableEdit.index]) return;
+    if (!confirm('Delete “' + (tb.rows[tableEdit.index][tb.columns[0].k] || 'this row') + '”?')) return;
+    tb.rows.splice(tableEdit.index, 1);
+    t.disabled = true;
+    try { await saveTable(n, tb); tableEdit = null; render(); }
+    catch (err) { t.disabled = false; $('#terr').textContent = 'Could not save: ' + err.message; }
+    return;
+  }
+  // </owner>
   if (t.dataset.check) { state.noteId = t.dataset.check; state.reading = true; render(); window.scrollTo(0, 0); return; } // owner
   if (t.hasAttribute('data-healthrun')) { t.textContent = 'Checking…'; t.disabled = true; await loadHealth(true); render(); return; } // owner
   if (t.dataset.ssort) { scoreView.sort = t.dataset.ssort; render(); return; }
@@ -624,6 +845,27 @@ document.addEventListener('click', async (e) => {
   if (t.hasAttribute('data-refresh')) { t.textContent = 'Loading…'; try { await load(); } catch (_) {} render(); return; } // owner
   if (t.hasAttribute('data-lock')) { if (confirm('Remove the access key from this browser? The catalog on this site will lock too.')) { try { localStorage.removeItem(KEY_STORAGE); } catch (_) {} accessKey = ''; notes = []; showUnlock(); } } // owner
 });
+// <owner>
+document.addEventListener('submit', async (e) => {
+  const f = e.target.closest('[data-tform]');
+  if (!f) return;
+  e.preventDefault();
+  const n = currentNote(), tb = n && extractTable(n.content).table;
+  if (!tb || !tableEdit) return;
+  const row = {};
+  for (const c of tb.columns) row[c.k] = (f.elements[c.k] ? f.elements[c.k].value : '').trim();
+  if (!Object.values(row).some(Boolean)) { $('#terr').textContent = 'Fill in at least one field.'; return; }
+  if (tableEdit.index >= 0 && tb.rows[tableEdit.index]) tb.rows[tableEdit.index] = { ...tb.rows[tableEdit.index], ...row };
+  else tb.rows.push(row);
+  const btn = f.querySelector('.save'); btn.disabled = true; btn.textContent = 'Saving…';
+  try { await saveTable(n, tb); tableEdit = null; render(); }
+  catch (err) { btn.disabled = false; btn.textContent = 'Save to Open Brain'; $('#terr').textContent = 'Could not save: ' + err.message; }
+});
+document.addEventListener('change', (e) => {
+  if (!e.target.matches('[data-tupload]') || !e.target.files[0]) return;
+  uploadCsv(e.target.files[0]); e.target.value = '';
+});
+// </owner>
 let qTimer;
 document.addEventListener('input', (e) => {
   if (e.target.id !== 'q') return;
