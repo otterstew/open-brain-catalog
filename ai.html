@@ -122,7 +122,28 @@
   .tools button:hover,.rg-bar button:hover,.rg-bar label:hover,.rgform button:hover{color:var(--ink);border-color:var(--brass)}
   .rg-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
   .rg-bar .note{font-size:13px;color:var(--ink-faint);margin-left:4px}
-  .rg .tbl{margin:0 0 12px}
+  .rg-view{display:inline-flex;border:1px solid var(--hairline);border-radius:999px;overflow:hidden;margin-right:6px}
+  .rg-view button{background:none;border:0;border-radius:0;padding:4px 12px;font-family:var(--font-mono);font-size:12px;color:var(--ink-dim);cursor:pointer}
+  .rg-view button.on{background:var(--brass);color:var(--paper)}
+  /* Table view: the box is at most a screen tall, so its header row stays put
+     and its sideways scrollbar is always in sight; a second one sits on top. */
+  .rg .tbl{margin:0 0 12px;max-height:78vh;overflow:auto;border:1px solid var(--hairline);border-radius:8px}
+  .rg thead th{position:sticky;top:0;background:var(--panel);z-index:2}
+  .rg thead th:first-child{z-index:3;background:var(--panel)}
+  .rg-top{overflow-x:auto;overflow-y:hidden;height:14px;margin:0 0 4px}
+  .rg-top div{height:1px}
+  /* Card view: one project per card, every field labelled. */
+  .rg-cards{display:grid;gap:12px;margin:0 0 14px}
+  .rg-card{background:var(--panel);border:1px solid var(--hairline);border-radius:10px;padding:14px 18px}
+  .rg-card.edit{cursor:pointer}
+  .rg-card.edit:hover{border-color:var(--brass)}
+  .rg-card h3{font-family:var(--font-display);font-weight:600;font-size:19px;line-height:1.25;margin:0 0 10px}
+  .rg-card dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 22px;margin:0}
+  .rg-card dl > div.long{grid-column:1/-1}
+  .rg-card dt{font-family:var(--font-mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink-faint)}
+  .rg-card dd{margin:2px 0 0;font-size:14.5px;line-height:1.45;overflow-wrap:anywhere}
+  .totop{position:fixed;right:18px;bottom:18px;z-index:20;background:var(--panel-raised);border:1px solid var(--hairline);border-radius:999px;padding:8px 14px;font-family:var(--font-mono);font-size:12px;color:var(--ink);cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:0;pointer-events:none;transition:opacity .2s}
+  .totop.show{opacity:1;pointer-events:auto}
   .rg table{border-collapse:collapse;font-size:13px;min-width:0}
   .rg th,.rg td{border-bottom:1px solid var(--hairline);padding:7px 8px;text-align:left;vertical-align:top}
   .rg th{font-family:var(--font-mono);font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-dim);line-height:1.3;min-width:100px;max-width:190px}
@@ -178,7 +199,15 @@
     :root{--paper:#fff;--panel:#F3F1F7;--panel-raised:#E9E6F0;--ruled:#DDD9E6;--hairline:#CCC6DA;--ink:#15122A;--ink-dim:#3B3557;--ink-faint:#6B6488;--brass:#8A5A00;--moss:#3FA57A;--ok:#2F8C63;--rust:#B23A48;--blue:#2C6E9B;--plum:#5B47B8}
     *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
     html,body{background:#fff;color:var(--ink);font-size:11pt}
-    nav,.list,.backbtn,.tools,.chips,.copy,.sc-bar,.rg-bar,.rgform{display:none!important}
+    nav,.list,.backbtn,.tools,.chips,.copy,.sc-bar,.rg-bar,.rgform,.rg-top,.totop{display:none!important}
+    .rg .tbl{max-height:none;overflow:visible;border:0}
+    .rg thead th{position:static}
+    .rg-cards{display:block}
+    .rg-card{break-inside:avoid;background:#fff;padding:7px 11px;margin:0 0 7px}
+    .rg-card h3{font-size:12pt;margin:0 0 4px}
+    .rg-card dl{grid-template-columns:repeat(4,1fr);gap:3px 12px}
+    .rg-card dt{font-size:6pt}
+    .rg-card dd{font-size:8pt;line-height:1.3;margin:0}
     .shell,main{display:block!important;min-height:0}
     main .detail{display:block!important;padding:0;max-width:none}
     .detail.wide .body{max-width:none}
@@ -499,6 +528,10 @@ function extractTable(content) {
 let EDITABLE = false;
 EDITABLE = true; // owner
 let tableEdit = null; // { noteId, index }: the row open in the form; index -1 is a new row
+// Cards or table, remembered per browser. Cards read better on screen; the
+// table is for comparing across projects.
+let tableView = 'cards';
+try { if (localStorage.getItem('aidesk.tableView') === 'table') tableView = 'table'; } catch (_) {}
 
 function tableHtml(note, t) {
   const cols = t.columns;
@@ -506,14 +539,23 @@ function tableHtml(note, t) {
     const v = String(r[c.k] ?? '').trim();
     return '<td class="' + (c.long ? 'long' : '') + (v ? '' : ' empty-cell') + '">' + (v ? inline(v).replace(/\n/g, '<br>') : '–') + '</td>';
   };
+  const edit = (i) => EDITABLE ? ' edit" data-trow="' + i : '';
   let h = '<div class="rg">';
+  h += '<div class="rg-bar"><span class="rg-view"><button data-tview="cards"' + (tableView === 'cards' ? ' class="on"' : '') + '>Cards</button><button data-tview="table"' + (tableView === 'table' ? ' class="on"' : '') + '>Table</button></span></div>';
   h += '<div class="rg-bar"><button data-tadd>Add a row</button><button data-tcsv>Download CSV</button><label>Upload CSV<input type="file" accept=".csv,text/csv" data-tupload hidden></label><span class="note">' + t.rows.length + ' rows · tap a row to edit it</span></div>'; // owner
   if (tableEdit && tableEdit.noteId === note.id) h += rowForm(t); // owner
+  if (tableView === 'cards') {
+    const [head, ...rest] = cols;
+    return h + '<div class="rg-cards">' + (t.rows.length ? t.rows.map((r, i) =>
+      '<div class="rg-card' + edit(i) + '"><h3>' + inline(String(r[head.k] ?? '').trim() || 'Row ' + (i + 1)) + '</h3><dl>' +
+      rest.filter(c => String(r[c.k] ?? '').trim()).map(c => '<div' + (c.long ? ' class="long"' : '') + '><dt>' + esc(c.label) + '</dt><dd>' + inline(String(r[c.k]).trim()).replace(/\n/g, '<br>') + '</dd></div>').join('') +
+      '</dl></div>').join('') : '<div class="empty">No rows yet.</div>') + '</div></div>';
+  }
   // Printed, the columns share the page width, long ones getting double.
   const units = cols.reduce((n, c) => n + (c.long ? 2 : 1), 0);
-  return h + '<div class="tbl"><table><thead><tr>' + cols.map(c => '<th' + (c.long ? ' class="long"' : '') + ' style="--w:' + ((c.long ? 2 : 1) * 100 / units).toFixed(2) + '%">' + esc(c.label) + '</th>').join('') + '</tr></thead><tbody>' +
+  return h + '<div class="rg-top"><div></div></div><div class="tbl"><table><thead><tr>' + cols.map(c => '<th' + (c.long ? ' class="long"' : '') + ' style="--w:' + ((c.long ? 2 : 1) * 100 / units).toFixed(2) + '%">' + esc(c.label) + '</th>').join('') + '</tr></thead><tbody>' +
     (t.rows.length
-      ? t.rows.map((r, i) => '<tr' + (EDITABLE ? ' class="edit" data-trow="' + i + '"' : '') + '>' + cols.map(c => cell(c, r)).join('') + '</tr>').join('')
+      ? t.rows.map((r, i) => '<tr class="' + edit(i) + '">' + cols.map(c => cell(c, r)).join('') + '</tr>').join('')
       : '<tr><td colspan="' + cols.length + '" class="empty-cell">No rows yet.</td></tr>') +
     '</tbody></table></div></div>';
 }
@@ -607,12 +649,32 @@ function printPage() {
   const h1 = $('.detail h1'), old = document.title;
   document.title = fileName('AI Desk - ' + (h1 ? h1.textContent : 'page'));
   let page = null;
-  if ($('.detail.wide')) { page = document.createElement('style'); page.textContent = '@page{size:A4 landscape;margin:10mm}'; document.head.appendChild(page); }
+  if ($('.detail.wide') && !$('.rg-cards')) { page = document.createElement('style'); page.textContent = '@page{size:A4 landscape;margin:10mm}'; document.head.appendChild(page); }
   const done = () => { document.title = old; if (page) page.remove(); window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);
   window.print();
 }
 // </owner>
+
+// The scrollbar above a wide table mirrors the table's own, so it can be
+// scrolled sideways from the top. Hidden when the table fits.
+function setupTableScroll() {
+  for (const top of document.querySelectorAll('.rg-top')) {
+    const box = top.nextElementSibling;
+    top.firstChild.style.width = box.scrollWidth + 'px';
+    top.style.display = box.scrollWidth > box.clientWidth + 1 ? '' : 'none';
+    // Copying an equal value fires no event, so the two can't loop.
+    const mirror = (from, to) => () => { if (to.scrollLeft !== from.scrollLeft) to.scrollLeft = from.scrollLeft; };
+    top.onscroll = mirror(top, box); box.onscroll = mirror(box, top);
+  }
+}
+window.addEventListener('resize', setupTableScroll);
+
+// A "Top" button once the page is scrolled down a screen or so.
+const toTop = document.createElement('button');
+toTop.className = 'totop'; toTop.setAttribute('data-top', ''); toTop.textContent = '↑ Top';
+document.body.appendChild(toTop);
+window.addEventListener('scroll', () => toTop.classList.toggle('show', window.scrollY > 700), { passive: true });
 
 /* ---------- views ---------- */
 function saveView() { try { sessionStorage.setItem('aidesk.view', JSON.stringify({ section: state.section, noteId: state.noteId })); } catch (_) {} }
@@ -764,6 +826,7 @@ function render() {
         '<article class="detail' + (wide ? ' wide' : '') + '">' + detail + '</article>' +
       '</main>' +
     '</div>';
+  setupTableScroll();
   saveView();
 }
 
@@ -799,7 +862,7 @@ async function start() {
 }
 
 /* ---------- events ---------- */
-let CLICKABLE = '[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-forget],[data-back],[data-ssort],[data-smode],[data-smetric],[data-susable],.copy';
+let CLICKABLE = '[data-sec],[data-note],[data-check],[data-healthrun],[data-jump],[data-refresh],[data-lock],[data-forget],[data-back],[data-ssort],[data-smode],[data-smetric],[data-susable],[data-tview],[data-top],.copy';
 CLICKABLE += ',[data-pdf],[data-tadd],[data-tcsv],[data-trow],[data-tcancel],[data-tdel]'; // owner
 document.addEventListener('click', async (e) => {
   const t = e.target.closest(CLICKABLE);
@@ -828,6 +891,8 @@ document.addEventListener('click', async (e) => {
   // </owner>
   if (t.dataset.check) { state.noteId = t.dataset.check; state.reading = true; render(); window.scrollTo(0, 0); return; } // owner
   if (t.hasAttribute('data-healthrun')) { t.textContent = 'Checking…'; t.disabled = true; await loadHealth(true); render(); return; } // owner
+  if (t.dataset.tview) { tableView = t.dataset.tview; try { localStorage.setItem('aidesk.tableView', tableView); } catch (_) {} render(); return; }
+  if (t.hasAttribute('data-top')) { window.scrollTo({ top: 0, behavior: 'smooth' }); const d = $('.detail'); if (d) d.scrollTop = 0; return; }
   if (t.dataset.ssort) { scoreView.sort = t.dataset.ssort; render(); return; }
   if (t.dataset.smode) { scoreView.mode = t.dataset.smode; render(); return; }
   if (t.dataset.smetric) { scoreView.metric = t.dataset.smetric; render(); return; }
