@@ -531,7 +531,10 @@
   .list-return:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
   /* Keyed on the link itself, not a class on .main: every other view that
      fills .main (editor, journal, tasks) would otherwise inherit the column. */
-  .main:has(> .list-return) { flex-direction: column; align-items: center; }
+  /* flex-start: the base rule's centring, turned into a column, centres the card
+     vertically, and a card taller than the window then spills off the top
+     where it cannot be scrolled to (head, edit and delete buttons included). */
+  .main:has(> .list-return) { flex-direction: column; align-items: center; justify-content: flex-start; }
   .main > .list-return { width: 100%; max-width: 1040px; }
 
   .back-btn {
@@ -3251,6 +3254,11 @@ function openReference(t) {
 // mark: where the reader was when they left the editor, so that saving does not
 // dump them back at the top of a long article.
 function selectThought(t, mark) {
+  // Opening a different note starts at its top. The pane kept the old scroll
+  // position, so a note opened from far down the list or the graph came up
+  // part-way in, its head and buttons hidden above the sticky reading bar.
+  // Redrawing the same note (after an unlink, say) stays where it was.
+  const sameNote = selectedIndex === t.id;
   selectedIndex = t.id;
   editingId = null;
   closeReference();
@@ -3329,6 +3337,8 @@ function selectThought(t, mark) {
       </div>
     </div>
   `;
+
+  if (!sameNote) main.scrollTop = 0;
 
   const cardMetaToggle = document.getElementById('cardMetaToggle');
   const cardMeta = document.getElementById('cardMeta');
