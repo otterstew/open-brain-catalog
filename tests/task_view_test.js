@@ -276,6 +276,23 @@ function handle(body) {
     doneCall && JSON.stringify(doneCall.args.status) === '["done","dropped"]',
     doneCall && doneCall.args);
 
+  // --- a #tasks link (the morning briefing's overdue link) opens the task list ---
+  // The overdue task above was completed earlier in this run, so add another.
+  tasks.push({ id: 't9', title: 'Still overdue', status: 'next', due_date: day(-2), project: null,
+    notes: '', defer_until: null, recur: null, recur_from: 'completion', thought_id: null,
+    created_at: '2026-08-05T00:00:00Z', completed_at: null });
+  // Same page, so the stubbed server still answers. Setting the hash alone is
+  // an in-page jump, so reload to make it a real page load.
+  const linked = page;
+  await linked.goto(PAGE + '#tasks');
+  await linked.reload();
+  await linked.waitForTimeout(800);
+  check('#tasks link opens the task view',
+    await linked.getAttribute('#modeTasks', 'aria-pressed') === 'true');
+  check('#tasks link shows the Overdue group first',
+    (await linked.textContent('.task-group')).includes('Overdue'));
+  check('#tasks link drops the hash once used', !(await linked.evaluate(() => location.hash)));
+
   await browser.close();
 
   let fails = 0;

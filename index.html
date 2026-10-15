@@ -4525,7 +4525,7 @@ unlockForm.addEventListener('submit', (e) => {
   if (!key) { showUnlock('Enter the key to continue.'); return; }
   setAccessKey(key);
   hideUnlock();
-  loadAll();
+  loadAll().then(openFromLink);
 });
 
 // Forget the key on this device — useful on a shared or borrowed phone.
@@ -7565,7 +7565,17 @@ document.getElementById('taskAddInput').addEventListener('keydown', ev => {
   quickAddTask(text);
 });
 
-if (mcpAccessKey) loadAll();
+// A link ending #tasks opens straight on the task list, Overdue at the top —
+// the morning Telegram briefing links here instead of listing every late task
+// (15 Oct 2026). The hash is dropped once used, so a refresh opens as normal.
+// Run after loadAll, whose notes list would otherwise be drawn over the tasks.
+function openFromLink() {
+  if (location.hash !== '#tasks') return;
+  history.replaceState(history.state, '', location.pathname + location.search);
+  setViewMode('tasks');
+}
+
+if (mcpAccessKey) loadAll().then(openFromLink);
 
 else showUnlock();
 
