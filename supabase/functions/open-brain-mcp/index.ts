@@ -2,7 +2,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPTransport } from "@hono/mcp";
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
@@ -494,6 +494,75 @@ Only extract what's explicitly there.`,
   } catch {
     return { topics: ["uncategorized"], type: "observation" };
   }
+}
+
+// --- Reading text from a photo (the catalog's camera button) ---
+//
+// A plain route, not an MCP tool: only the catalog sends photos, and a tool
+// taking a base64 image would sit in every AI client's tool list for nothing.
+// The photo is passed straight to the model and never stored; only the text
+// comes back, and it becomes a note only when Stewart saves it.
+
+const PHOTO_MODEL = "google/gemini-3.5-flash-lite";
+const PHOTO_MAX_CHARS = 12_000_000; // ~9 MB of image; the catalog sends well under 1 MB
+
+const PHOTO_PROMPT = `Transcribe the text in this photo so it can be saved as a note.
+- Copy the words exactly as printed or written. Do not summarise, translate, correct or add anything.
+- Prose (a book page, an article, a sign): give it as paragraphs. Join lines that were only broken by the width of the page, and rejoin words hyphenated across a line break.
+- Leave out page furniture such as running headers, page numbers and footers, unless they are the only text.
+- If the page shows text the reader has marked (underlined, highlighted, bracketed), give only that text.
+- A list, table or receipt: keep one item per line, in the order shown, with its amounts.
+- If a word cannot be read, write [?] in its place.
+- If there is no readable text, reply with nothing at all.
+Reply with the text only: no introduction, no comments, no Markdown code fences.`;
+
+async function readPhoto(c: Context): Promise<Response> {
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { "Content-Type": "application/json", ...corsHeaders },
+    });
+
+  let image = "";
+  try {
+    image = String((await c.req.json()).image || "");
+  } catch {
+    return json({ error: "Send JSON: { image: <data URL> }." }, 400);
+  }
+  if (!/^data:image\/(jpeg|png|webp|gif);base64,[A-Za-z0-9+/=]+$/.test(image)) {
+    return json({ error: "That is not a JPEG, PNG or WebP image." }, 400);
+  }
+  if (image.length > PHOTO_MAX_CHARS) {
+    return json({ error: "That photo is too large." }, 413);
+  }
+
+  const r = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: PHOTO_MODEL,
+      temperature: 0,
+      messages: [{
+        role: "user",
+        content: [
+          { type: "text", text: PHOTO_PROMPT },
+          { type: "image_url", image_url: { url: image } },
+        ],
+      }],
+    }),
+  });
+  if (!r.ok) {
+    const detail = (await r.text()).slice(0, 200);
+    return json({ error: `The reading service failed (HTTP ${r.status}): ${detail}` }, 502);
+  }
+  const d = await r.json();
+  const text = String(d?.choices?.[0]?.message?.content ?? "")
+    .replace(/^```[a-z]*\n?|\n?```$/g, "")
+    .trim();
+  return json({ text });
 }
 
 // --- MCP Server Setup ---
@@ -2485,6 +2554,10 @@ app.all("*", async (c) => {
     const bodyText = await readBodyText(c.req.raw);
     const id = extractJsonRpcId(bodyText);
     return unauthorizedResponse(id);
+  }
+
+  if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/read-photo")) {
+    return readPhoto(c);
   }
 
   // Fix: Claude Desktop connectors don't send the Accept header that
