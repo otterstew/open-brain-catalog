@@ -19,8 +19,8 @@ const TODAY = day(0);
 
 let notes = [
   { id: '11111111-1111-1111-1111-111111111111', created_at: '2026-10-01T09:00:00Z',
-    metadata: { title: 'Weekly with Doug', topics: ['Meeting prep'], published_date: TODAY },
-    content: '# Weekly with Doug\nDate: ' + TODAY + '\nTime: 23:58\n\n' +
+    metadata: { title: 'Weekly team catch-up', topics: ['Meeting prep'], published_date: TODAY },
+    content: '# Weekly team catch-up\nDate: ' + TODAY + '\nTime: 23:58\n\n' +
       '## Tideline budget\nWe are **on track**: spend is at 62% with a third of the year left.\n\n' +
       '## Hiring\nTwo offers out, one accepted.\n\n' +
       '## <script>alert(1)</script>\nEscaped, not run.\n' },
@@ -94,9 +94,9 @@ function handle(body) {
 
   // --- today's meetings, in time order ---
   const chips = await page.locator('.mtg .name').allInnerTexts();
-  check('today shows its two meetings, earliest first', JSON.stringify(chips) === '["Board prep","Weekly with Doug"]', chips);
+  check('today shows its two meetings, earliest first', JSON.stringify(chips) === '["Board prep","Weekly team catch-up"]', chips);
   check('the label says Today', /Today/i.test(await text('#dayLabel')));
-  check('the meeting still to come today is open by default', /Weekly with Doug/i.test(await text('.card-label')), await text('.card-label'));
+  check('the meeting still to come today is open by default', /Weekly team catch-up/i.test(await text('.card-label')), await text('.card-label'));
 
   // --- one card at a time ---
   check('first card heading', (await text('.card-head')) === 'Tideline budget');

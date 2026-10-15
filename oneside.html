@@ -291,7 +291,7 @@
       <button class="btn" id="closeSheet" type="button">Cancel</button>
     </div>
     <label class="field">Meeting
-      <input id="mName" type="text" placeholder="e.g. Weekly with Doug" autocomplete="off">
+      <input id="mName" type="text" placeholder="e.g. Weekly team catch-up" autocomplete="off">
     </label>
     <div class="when-row">
       <label class="field">Day <input id="mDate" type="date"></label>
@@ -332,7 +332,7 @@
   // access key as the catalog and AI Desk. Anything that can file a note in
   // that shape (the Telegram prep messages, later) feeds the app:
   //
-  //   # Weekly with Doug            <- the meeting (also the note's title)
+  //   # Weekly team catch-up            <- the meeting (also the note's title)
   //   Date: 2026-10-14              <- also the note's published_date
   //   Time: 10:00                   <- optional
   //
@@ -440,7 +440,7 @@
         }
         if (!time && TIME_RE.test(line)) { time = readTime(line); continue; }
         if (!name && NAME_RE.test(line)) { name = unbold(line.match(NAME_RE)[1]); continue; }
-        // "Meeting prep for Weekly with Doug (Wed 14 Oct, 10:00)"
+        // "Meeting prep for Weekly team catch-up (Wed 14 Oct, 10:00)"
         const lead = !name && line.match(PREP_RE);
         if (lead) {
           if (!date) date = readDate(lead[1]);
