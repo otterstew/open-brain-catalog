@@ -5933,6 +5933,10 @@ const MAP_SIDES = {
 };
 const MAP_WORDS = { topics: ['tag', 'tags'], people: ['person', 'people'], sources: ['source', 'sources'] };
 const UNGROUPED = 'Not grouped yet';
+// Headings that are the root itself rather than a branch of it: "Work &
+// career" and "Work & AI" say the same thing, so its tags hang straight off
+// the Work & AI root (Stewart, 15 Oct 2026).
+const MAP_ROOT_HEADINGS = new Set(['Work & career']);
 
 function mapFigures(mode) {
   const notes = allThoughts.filter(t => !t.shelved && t.type !== 'task');
@@ -6004,15 +6008,16 @@ function drawMap(canvas, mode) {
   if (sidesUsed.size === 2) edges.push([at.get('side:personal'), at.get('side:work')]);
   leaves.forEach(l => {
     const hub = at.get('side:' + l.side);
+    const leaf = node('leaf:' + l.key, { kind: 'leaf', side: l.side, label: l.label, notes: l.notes, count: l.notes.length });
+    nodes[hub].leaves.push(nodes[leaf]);
+    if (MAP_ROOT_HEADINGS.has(l.heading)) { edges.push([hub, leaf]); nodes[leaf].groupOf = null; return; }
     const gid = 'group:' + l.side + ':' + l.heading;
     const fresh = !at.has(gid);
     const g = node(gid, { kind: 'group', side: l.side, label: l.heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [] });
     if (fresh) { edges.push([hub, g]); nodes[hub].groups.add(l.heading); }
-    const leaf = node('leaf:' + l.key, { kind: 'leaf', side: l.side, label: l.label, notes: l.notes, count: l.notes.length });
     edges.push([g, leaf]);
     nodes[leaf].groupOf = nodes[g];
     nodes[g].leaves.push(nodes[leaf]);
-    nodes[hub].leaves.push(nodes[leaf]);
   });
   nodes.forEach(n => {
     if (n.kind !== 'leaf') n.count = new Set(n.leaves.flatMap(l => l.notes.map(t => t.id))).size;
@@ -6051,15 +6056,19 @@ function openMapSheet(n, mode) {
     return;
   }
   if (n.kind === 'side') {
-    const groups = new Map();
+    // Its groups, then anything hanging straight off the root.
+    const groups = new Map(), direct = [];
     n.leaves.forEach(l => {
-      const h = l.groupOf;
-      if (!groups.has(h.id)) groups.set(h.id, h);
+      if (!l.groupOf) { direct.push(l); return; }
+      if (!groups.has(l.groupOf.id)) groups.set(l.groupOf.id, l.groupOf);
     });
     const rows = [...groups.values()].sort(byCount).map(g => ({
       label: g.label, meta: g.leaves.length + ' ' + (g.leaves.length === 1 ? one : many) + ' · ' + g.count + ' notes',
-      then: () => openMapSheet(g, mode) }));
-    openListSheet(n.label, rows.length + ' group' + (rows.length === 1 ? '' : 's'), rows);
+      then: () => openMapSheet(g, mode) }))
+      .concat(direct.sort(byCount).map(l => ({
+        label: l.label, meta: l.count + ' note' + (l.count === 1 ? '' : 's'), then: () => openMapSheet(l, mode) })));
+    openListSheet(n.label, groups.size + ' group' + (groups.size === 1 ? '' : 's') +
+      (direct.length ? ' and ' + direct.length + ' ' + (direct.length === 1 ? one : many) : ''), rows);
     return;
   }
   const rows = [...n.leaves].sort(byCount).map(l => ({
