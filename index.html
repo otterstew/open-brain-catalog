@@ -5933,6 +5933,9 @@ const MAP_SIDES = {
 };
 const MAP_WORDS = { topics: ['tag', 'tags'], people: ['person', 'people'], sources: ['source', 'sources'] };
 const UNGROUPED = 'Not grouped yet';
+// Without the roots (People, Sources), groups are gold and their members a
+// neutral lavender: side no longer matters there, so neither does green/blue.
+const MAP_GROUP_COLOR = '#F5C96B';
 const BOOKS_HEADING = 'Books & Writing';
 // Headings that are the root itself rather than a branch of it: "Work &
 // career" and "Work & AI" say the same thing, so its tags hang straight off
@@ -6000,12 +6003,13 @@ function mapFigures(mode) {
     // noise; drawn, it would bury the curated ones.
     if (mode === 'topics' && !heading && l.notes.length < 2) { skipped++; return; }
     const side = (heading && headingSides.get(heading)) || (heading ? 'personal' : sideOfNotes(l.notes));
-    // A person also hangs off every other heading holding two or more of
-    // their notes, and an author off Books & Writing once they have a book
-    // note: Burbea under Traditions and Books & Writing, not one or the other.
+    // A person or source also hangs off every other heading holding two or
+    // more of their notes, and an author off Books & Writing once they have a
+    // book note: Burbea under Traditions and Books & Writing, not one or the
+    // other. Sources got the same rule so their groups join up (15 Oct 2026).
     const also = new Set();
+    if (mode !== 'topics') votes.forEach((n, h) => { if (h !== heading && n >= 2) also.add(h); });
     if (mode === 'people') {
-      votes.forEach((n, h) => { if (h !== heading && n >= 2) also.add(h); });
       if (heading !== BOOKS_HEADING &&
           l.notes.some(t => (t.topics || []).some(x => x.trim().toLowerCase() === 'book'))) also.add(BOOKS_HEADING);
     }
@@ -6022,7 +6026,12 @@ function drawMap(canvas, mode) {
     if (!at.has(id)) { at.set(id, nodes.length); nodes.push(Object.assign({ id, idx: nodes.length, x: 0, y: 0 }, props)); }
     return at.get(id);
   };
-  const sidesUsed = new Set(leaves.map(l => l.side));
+  // Topics hang off the two roots, because there the side is the structure.
+  // People and sources do not: many span both, and the roots only added a
+  // layer to click through (Stewart, 15 Oct 2026). There the tag groups are
+  // the hubs, free to settle near the groups they share people with.
+  const rooted = mode === 'topics';
+  const sidesUsed = new Set(rooted ? leaves.map(l => l.side) : []);
   ['personal', 'work'].forEach(side => {
     if (!sidesUsed.has(side)) return;
     node('side:' + side, { kind: 'side', side, label: MAP_SIDES[side].label, fx: side === 'personal' ? 0.24 : 0.76, fy: 0.5,
@@ -6032,6 +6041,10 @@ function drawMap(canvas, mode) {
   // The group node for a heading, made (and hung off its root) on first use.
   // A heading whose side has no root yet gets one.
   const groupFor = (heading, side) => {
+    if (!rooted) {
+      const g = node('group:' + heading, { kind: 'group', side, label: heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [] });
+      return g;
+    }
     if (!at.has('side:' + side)) {
       node('side:' + side, { kind: 'side', side, label: MAP_SIDES[side].label, fx: side === 'personal' ? 0.24 : 0.76, fy: 0.5,
                              labelPx: 13, labelWeight: '600', labelRank: 1, leaves: [], groups: new Set(), groupNodes: [] });
@@ -6045,10 +6058,10 @@ function drawMap(canvas, mode) {
     return g;
   };
   leaves.forEach(l => {
-    const hub = at.get('side:' + l.side);
+    const hub = rooted ? at.get('side:' + l.side) : null;
     const leaf = node('leaf:' + l.key, { kind: 'leaf', side: l.side, label: l.label, notes: l.notes, count: l.notes.length });
-    nodes[hub].leaves.push(nodes[leaf]);
-    if (MAP_ROOT_HEADINGS.has(l.heading)) { edges.push([hub, leaf]); nodes[leaf].groupOf = null; }
+    if (rooted) nodes[hub].leaves.push(nodes[leaf]);
+    if (rooted && MAP_ROOT_HEADINGS.has(l.heading)) { edges.push([hub, leaf]); nodes[leaf].groupOf = null; }
     else {
       const g = groupFor(l.heading, l.side);
       edges.push([g, leaf]);
@@ -6057,7 +6070,7 @@ function drawMap(canvas, mode) {
     }
     (l.also || []).forEach(h => {
       const side = headingSides.get(h) || 'personal';
-      if (MAP_ROOT_HEADINGS.has(h)) { const r = at.get('side:' + side); if (r != null && r !== hub) edges.push([r, leaf]); return; }
+      if (rooted && MAP_ROOT_HEADINGS.has(h)) { const r = at.get('side:' + side); if (r != null && r !== hub) edges.push([r, leaf]); return; }
       const g = groupFor(h, side);
       edges.push([g, leaf]);
       nodes[g].leaves.push(nodes[leaf]);
@@ -6076,7 +6089,8 @@ function drawMap(canvas, mode) {
     // structure reads at a glance; leaves are translucent for the same reason.
     size: (n) => n.kind === 'side' ? 15 : n.kind === 'group' ? Math.min(12, 8 + Math.sqrt(n.count) * 0.25)
                                     : Math.min(6.5, 2.5 + Math.sqrt(n.count) * 0.45),
-    color: (n) => MAP_SIDES[n.side].color + (n.kind === 'leaf' ? 'B3' : ''),
+    color: (n) => rooted ? MAP_SIDES[n.side].color + (n.kind === 'leaf' ? 'B3' : '')
+                         : n.kind === 'group' ? MAP_GROUP_COLOR : SERIES.other + 'CC',
     // Roots and groups are always named; the twelve biggest leaves from the
     // start, more as you zoom in, all of them close up.
     label: (n, z) => (n.kind !== 'leaf' || n.leafRank < 12 || (z >= 1.6 && n.leafRank < 40) || z >= 2.4) ? n.label : null,
@@ -6118,7 +6132,7 @@ function openMapSheet(n, mode) {
 
 function graphHint(f, inFull) {
   if (graphView === 'map') {
-    return 'Personal and Work & AI, by ' + (mapMode === 'topics' ? 'tag group' : MAP_WORDS[mapMode][1]) +
+    return (mapMode === 'topics' ? 'Personal and Work & AI, by tag group' : MAP_WORDS[mapMode][1].replace(/^./, c => c.toUpperCase()) + ' by tag group') +
       (inFull ? ' · pinch, scroll or + to zoom · drag to move' : '') + ' · click a dot to list its notes';
   }
   return f.linkCount + ' links' + (inFull ? ' · pinch, scroll or + to zoom · drag to move · click a dot to list its notes'
@@ -6128,6 +6142,13 @@ function graphHint(f, inFull) {
 function mapLegend(mode) {
   const { leaves, skipped } = mapFigures(mode);
   const [, many] = MAP_WORDS[mode];
+  if (mode !== 'topics') {
+    const groups = new Set(leaves.flatMap(l => [l.heading, ...(l.also || [])])).size;
+    return '<div class="legend graph-legend">' +
+      '<span class="key"><i style="background:' + MAP_GROUP_COLOR + '"></i>tag groups <b>' + groups + '</b></span>' +
+      '<span class="key"><i style="background:' + SERIES.other + '"></i>' + many + ' <b>' + leaves.length + '</b></span>' +
+      '<span class="key unlinked">each under every group holding their notes</span></div>';
+  }
   const keys = ['personal', 'work'].map(side => {
     const c = leaves.filter(l => l.side === side).length;
     return c ? '<span class="key"><i style="background:' + MAP_SIDES[side].color + '"></i>' +
