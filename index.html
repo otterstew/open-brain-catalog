@@ -1081,7 +1081,7 @@
   .hubs span { font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-faint); }
 
   #graphCanvas { width: 100%; height: 580px; display: block; cursor: pointer;
-                 touch-action: manipulation; }
+                 touch-action: pan-y; }
   @media (max-width: 700px) { #graphCanvas { height: 380px; } }
 
   /* The graph on the front screen. On a wide screen it heads the main pane's
@@ -1097,7 +1097,35 @@
                      color: var(--ink-dim); font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; }
   .home-graph-more:hover { color: var(--brass); }
   .home-graph-canvas { width: 100%; height: 420px; display: block; cursor: pointer;
-                       touch-action: manipulation; }
+                       touch-action: pan-y; }
+
+  /* Zoom buttons over the graph's top-right corner. */
+  .graph-wrap { position: relative; }
+  .graph-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
+  .graph-tools button { min-width: 30px; height: 30px; padding: 0 8px; cursor: pointer;
+                        background: rgba(27,22,56,0.88); color: var(--ink-dim);
+                        border: 1px solid var(--hairline); border-radius: 3px;
+                        font-family: var(--font-mono); font-size: 14px; line-height: 1; }
+  .graph-tools button[data-zoom="fit"] { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .graph-tools button:hover { color: var(--brass); border-color: var(--brass); }
+
+  /* The full-screen graph: above the stats panel (80), below the hover tip
+     (90) and the node list (95), so both still show over it. */
+  .graph-full { position: fixed; inset: 0; z-index: 85; background: var(--paper);
+                display: flex; flex-direction: column; padding: 14px 18px 12px; }
+  .graph-full[hidden] { display: none; }
+  .graph-full-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; margin-bottom: 10px; }
+  .graph-full-head h3 { font-family: var(--font-display); font-size: 18px; font-weight: 600; margin: 0; }
+  .graph-full-head .hint { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em;
+                           text-transform: uppercase; color: var(--ink-faint); }
+  .graph-full-head .import-btn { margin-left: auto; }
+  .graph-full .graph-wrap { flex: 1; min-height: 0; background: var(--panel);
+                            border: 1px solid var(--hairline); border-radius: 3px; }
+  .graph-full-canvas { width: 100%; height: 100%; display: block; touch-action: none; }
+  @media (max-width: 760px) {
+    .graph-full { padding: 10px 10px 8px; }
+    .graph-full-head .hint { display: none; }
+  }
   .drawer-graph { display: none; }
   @media (max-width: 760px) {
     .drawer-graph { display: block; margin: 12px 14px 10px; padding: 12px 12px 10px; }
@@ -5540,11 +5568,40 @@ function drawGraph(f, canvas) {
   // Dots shrink with the canvas, so a phone's graph is not a solid mass.
   const k = Math.max(0.55, Math.min(1, w / 900));
   const radius = (n) => Math.min(11, 4 + n.deg * 0.8) * k;
+  // Zoom and pan. The fitted layout is the base and the view scales positions
+  // around it. Dots grow with the square root of the zoom and lines not at
+  // all, so zooming into a clump opens up the gaps between its notes rather
+  // than just magnifying the clump.
+  const full = !!canvas.closest('.graph-full');
+  const view = { z: 1, tx: 0, ty: 0 };
+  nodes.forEach(n => { n.bx = n.x; n.by = n.y; });
+  const place = () => nodes.forEach(n => {
+    n.x = n.bx * view.z + view.tx; n.y = n.by * view.z + view.ty;
+  });
+  const rOf = (n) => radius(n) * Math.sqrt(view.z);
+  const clampView = () => {
+    view.z = Math.max(1, Math.min(8, view.z));
+    view.tx = Math.min(0, Math.max(w - w * view.z, view.tx));
+    view.ty = Math.min(0, Math.max(h - h * view.z, view.ty));
+  };
+  // Inline, a finger dragging down the graph should still scroll the page —
+  // until the graph is zoomed, when the drag is for moving around it.
+  const setTouch = () => {
+    canvas.style.touchAction = full || view.z > 1 ? 'none' : 'pan-y';
+  };
+  const zoomAt = (factor, cx, cy) => {
+    const z0 = view.z;
+    view.z = Math.max(1, Math.min(8, z0 * factor));
+    view.tx = cx - (cx - view.tx) * (view.z / z0);
+    view.ty = cy - (cy - view.ty) * (view.z / z0);
+    clampView(); place(); paint(null); setTouch();
+  };
+
   // Generous enough for a fingertip: the dots are small, the gaps are not.
   const hitAt = (mx, my) => {
     let best = null, bestD = Infinity;
     nodes.forEach(n => {
-      const r = Math.max(15, radius(n) + 9);
+      const r = Math.max(15, rOf(n) + 9);
       const d = (n.x - mx) ** 2 + (n.y - my) ** 2;
       if (d < r * r && d < bestD) { best = n; bestD = d; }
     });
@@ -5572,7 +5629,7 @@ function drawGraph(f, canvas) {
     edges.forEach(e => { if (touches(e)) line(e[0], e[1]); });
     nodes.forEach(n => {
       ctx.beginPath();
-      ctx.arc(n.x, n.y, radius(n), 0, Math.PI * 2);
+      ctx.arc(n.x, n.y, rOf(n), 0, Math.PI * 2);
       ctx.fillStyle = seriesFor(n.t.type);
       ctx.fill();
       // A ring in the panel colour keeps touching dots apart.
@@ -5582,8 +5639,78 @@ function drawGraph(f, canvas) {
     });
   };
   paint(null);
+  setTouch();
+
+  const local = (e) => {
+    const r = canvas.getBoundingClientRect();
+    return [e.clientX - r.left, e.clientY - r.top];
+  };
+  // One pointer drags the view about; two pinch it. A press that moves more
+  // than a few pixels is a drag, and the click it ends in is not a tap on a dot.
+  const pts = new Map();
+  let drag = null, pinch = null, moved = false;
+  canvas.onpointerdown = (e) => {
+    pts.set(e.pointerId, local(e));
+    try { canvas.setPointerCapture(e.pointerId); } catch (_) { /* not capturable */ }
+    if (pts.size === 1) {
+      moved = false;
+      drag = { x: e.clientX, y: e.clientY, tx: view.tx, ty: view.ty };
+    } else if (pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]) || 1, z: view.z };
+      drag = null;
+    }
+  };
+  canvas.onpointermove = (e) => {
+    if (!pts.has(e.pointerId)) return;
+    pts.set(e.pointerId, local(e));
+    if (pinch && pts.size === 2) {
+      const [a, b] = [...pts.values()];
+      const d = Math.hypot(a[0] - b[0], a[1] - b[1]);
+      moved = true;
+      hideTip();
+      zoomAt(pinch.z * d / pinch.d / view.z, (a[0] + b[0]) / 2, (a[1] + b[1]) / 2);
+      return;
+    }
+    if (!drag) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
+    if (!moved && Math.hypot(dx, dy) < 5) return;
+    moved = true;
+    if (view.z === 1) return;
+    hideTip();
+    canvas.style.cursor = 'grabbing';
+    view.tx = drag.tx + dx; view.ty = drag.ty + dy;
+    clampView(); place(); paint(null);
+  };
+  const lift = (e) => {
+    pts.delete(e.pointerId);
+    if (pts.size < 2) pinch = null;
+    if (!pts.size) drag = null;
+  };
+  canvas.onpointerup = lift;
+  canvas.onpointercancel = lift;
+  // Full screen, the wheel zooms. Inline it would trap the page's scrolling,
+  // so there it takes a pinch on the trackpad (which arrives as ctrl+wheel)
+  // or cmd/ctrl held down.
+  canvas.onwheel = (e) => {
+    if (!full && !e.ctrlKey && !e.metaKey) return;
+    e.preventDefault();
+    const [x, y] = local(e);
+    zoomAt(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.002)), x, y);
+  };
+  const tools = canvas.parentElement && canvas.parentElement.querySelector('.graph-tools');
+  if (tools) {
+    tools.querySelector('[data-zoom="in"]').onclick = () => zoomAt(1.6, w / 2, h / 2);
+    tools.querySelector('[data-zoom="out"]').onclick = () => zoomAt(1 / 1.6, w / 2, h / 2);
+    tools.querySelector('[data-zoom="fit"]').onclick = () => {
+      view.z = 1; view.tx = 0; view.ty = 0; place(); paint(null); setTouch();
+    };
+    const fs = tools.querySelector('[data-zoom="full"]');
+    if (fs) fs.onclick = openGraphFull;
+  }
 
   canvas.onmousemove = (e) => {
+    if (drag && moved) return;
     const rect = canvas.getBoundingClientRect();
     const hit = hitAt(e.clientX - rect.left, e.clientY - rect.top);
     paint(hit);
@@ -5597,6 +5724,7 @@ function drawGraph(f, canvas) {
   };
   canvas.onmouseleave = () => { hideTip(); paint(null); };
   canvas.onclick = (e) => {
+    if (moved) { moved = false; canvas.style.cursor = 'default'; return; }
     const rect = canvas.getBoundingClientRect();
     const hit = hitAt(e.clientX - rect.left, e.clientY - rect.top);
     if (!hit) return;
@@ -5628,6 +5756,7 @@ function openNodeSheet(node, neighbours) {
       const found = findThought(btn.getAttribute('data-node-open'));
       if (!found) return;
       closeNodeSheet();
+      closeGraphFull();
       closeStats();
       selectThought(found);
     });
@@ -5685,12 +5814,56 @@ function showsHomeGraph() {
   return viewMode === 'notes' && !searchMode && !describeFilters();
 }
 
+// Zoom buttons sit over the graph's corner; the full-screen view has no
+// full-screen button of its own.
+function graphTools(inFull) {
+  return '<div class="graph-tools">' +
+    '<button type="button" data-zoom="in" aria-label="Zoom in" title="Zoom in">+</button>' +
+    '<button type="button" data-zoom="out" aria-label="Zoom out" title="Zoom out">−</button>' +
+    '<button type="button" data-zoom="fit" aria-label="Fit the whole graph" title="Show it all">Fit</button>' +
+    (inFull ? '' : '<button type="button" data-zoom="full" aria-label="Full screen" title="Full screen">⤢</button>') +
+    '</div>';
+}
+
+// The graph across the whole window, for reading a dense archive: the boxes
+// on the front screen and in the stats panel are too small to pick a cluster
+// apart. It sits above both, and below the node list a dot click opens.
+let graphFull;
+function openGraphFull() {
+  if (!allThoughts.length) return;
+  hideTip();
+  const f = archiveFigures();
+  if (!graphFull) {
+    graphFull = document.createElement('div');
+    graphFull.className = 'graph-full';
+    document.body.appendChild(graphFull);
+  }
+  graphFull.innerHTML =
+    '<div class="graph-full-head"><h3>How it hangs together</h3>' +
+    '<span class="hint">' + f.linkCount + ' links · pinch, scroll or + to zoom · drag to move · ' +
+    'click a dot to list its notes</span>' +
+    '<button class="import-btn ghost" type="button" data-full-close>Close</button></div>' +
+    '<div class="graph-wrap"><canvas class="graph-full-canvas"></canvas>' + graphTools(true) + '</div>' +
+    graphLegend(f);
+  graphFull.hidden = false;
+  graphFull.querySelector('[data-full-close]').addEventListener('click', closeGraphFull);
+  drawGraph(f, graphFull.querySelector('canvas'));
+}
+
+function closeGraphFull() {
+  if (!graphFull || graphFull.hidden) return;
+  graphFull.hidden = true;
+  graphFull.innerHTML = '';
+  hideTip();
+}
+
 function homeGraphCard(f, where) {
   return '<div class="home-graph ' + where + '"><div class="home-graph-head">' +
     '<h3>How it hangs together</h3>' +
     '<span class="hint">' + f.linkCount + ' links · click a dot to list the notes it connects</span>' +
     '<button type="button" class="home-graph-more">More about the archive →</button></div>' +
-    '<canvas class="home-graph-canvas"></canvas>' + graphLegend(f) + '</div>';
+    '<div class="graph-wrap"><canvas class="home-graph-canvas"></canvas>' + graphTools(false) + '</div>' +
+    graphLegend(f) + '</div>';
 }
 
 function wireHomeGraph(card, f) {
@@ -5706,7 +5879,7 @@ let graphResizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(graphResizeTimer);
   graphResizeTimer = setTimeout(() => {
-    const canvases = [...document.querySelectorAll('.home-graph-canvas, #graphCanvas')]
+    const canvases = [...document.querySelectorAll('.home-graph-canvas, #graphCanvas, .graph-full-canvas')]
       .filter(c => c.clientWidth);
     if (!canvases.length || !allThoughts.length) return;
     const f = archiveFigures();
@@ -5718,7 +5891,8 @@ function graphCard(f) {
   return '<div class="stats-card wide"><h3>How it hangs together ' +
     '<span class="hint">' + f.linkCount + ' links · dots sized by connections · ' +
     'click a dot to list the notes it connects</span></h3>' +
-    '<canvas id="graphCanvas"></canvas>' + graphLegend(f) + '</div>';
+    '<div class="graph-wrap"><canvas id="graphCanvas"></canvas>' + graphTools(false) + '</div>' +
+    graphLegend(f) + '</div>';
 }
 
 function coverageCard(f) {
@@ -5785,6 +5959,7 @@ document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   // The node list sits on top of the stats view, so it unwinds one layer first.
   if (nodeSheet && !nodeSheet.hidden) { closeNodeSheet(); return; }
+  if (graphFull && !graphFull.hidden) { closeGraphFull(); return; }
   if (!statsPanel.hidden) closeStats();
 });
 
