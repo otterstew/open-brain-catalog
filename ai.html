@@ -24,6 +24,7 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font-body);font-size:16px;line-height:1.5}
+  body{background:none} /* lets the code-ripple canvas sit behind the page */
   a{color:var(--brass)}
   button{font:inherit;color:inherit}
   .shell{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
@@ -225,6 +226,112 @@
     a{color:inherit}
   }
 </style>
+<script>
+window.RIPPLE_CFG = {"mode": "page", "lines": ["const answer = await model.run(prompt);", "for (const doc of sources) index.add(doc);", "if (score > 0.82) keep(note);", "return tokens.slice(0, limit);", "embed(text).then(store.upsert)", "agent.plan() -> tools.call(step)", "// summarise last week", "async function brief(notes) {", "}", "attn = softmax(q @ k.T / sqrt(d))", "messages.push({ role: \"user\", content })", "eval(results).pass_rate", "temperature: 0.2,", "chunks.map(c => c.vector)", "await retry(fetchModels, 3)", "yield* stream.deltas()"], "ink": "--plum", "glow": "--brass", "base": 0.06, "peak": 0.85};
+// Code ripple: faint lines of code behind the page; a click sends a ring out through them.
+// RIPPLE_CFG is set just above this script: { mode: "page" | "header", lines: [...], base, glow }.
+(function(){
+  const C = window.RIPPLE_CFG, GLYPHS = "01<>{}[]/=+*#;:.~", still = matchMedia("(prefers-reduced-motion: reduce)");
+  const cv = document.createElement("canvas"), ctx = cv.getContext("2d"), layer = document.createElement("canvas"), lctx = layer.getContext("2d");
+  cv.setAttribute("aria-hidden", "true");
+  cv.style.cssText = (C.mode === "page" ? "position:fixed;" : "position:absolute;") + "inset:0;width:100%;height:100%;z-index:-1;pointer-events:none";
+  let host, rows = [], cw = 8, lh = 18, W = 0, H = 0, dpr = 1, waves = [], raf = 0;
+  const FONT = '12.5px "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace';
+  const colour = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim() || "#888";
+
+  function layout(){
+    const r = C.mode === "page" ? { width: innerWidth, height: innerHeight } : host.getBoundingClientRect();
+    W = Math.ceil(r.width); H = Math.ceil(r.height); dpr = Math.min(devicePixelRatio || 1, 2);
+    if (!W || !H) return;   // not laid out yet; the resize observer tries again
+    for (const c of [cv, layer]) { c.width = W * dpr; c.height = H * dpr; }
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); lctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.font = lctx.font = FONT; ctx.textBaseline = lctx.textBaseline = "top";
+    cw = ctx.measureText("M").width;
+    const cols = Math.ceil(W / cw) + 1, n = Math.ceil(H / lh) + 1;
+    let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;   // same pattern every load
+    rows = [];
+    for (let i = 0; i < n; i++) {
+      let s = "";
+      while (s.length < cols) {
+        if (rnd() < 0.18) { s += " ".repeat(6 + (rnd() * 30 | 0)); continue; }           // breathing gaps
+        s += " ".repeat(rnd() * 5 | 0) + C.lines[rnd() * C.lines.length | 0] + "   ";
+      }
+      rows.push(s.slice(0, cols));
+    }
+    paintBase();
+  }
+
+  function paintBase(){
+    lctx.clearRect(0, 0, W, H);
+    lctx.globalAlpha = C.base; lctx.fillStyle = colour(C.ink);
+    rows.forEach((s, i) => lctx.fillText(s, 0, i * lh + 3));
+    frame(performance.now());
+  }
+
+  function frame(now){
+    raf = 0;
+    ctx.clearRect(0, 0, W, H);
+    if (W && H) ctx.drawImage(layer, 0, 0, W, H);
+    waves = waves.filter((w) => now - w.t < w.life);
+    if (!waves.length || !W) return;
+    ctx.fillStyle = colour(C.glow);
+    for (const w of waves) {
+      const age = (now - w.t) / w.life, r = age * w.reach, band = 46, fade = 1 - age;
+      const x0 =Math.max(0, w.x - r - band), x1 = Math.min(W, w.x + r + band);
+      for (let i = Math.max(0, (w.y - r - band) / lh | 0); i < rows.length && i * lh < w.y + r + band; i++) {
+        const s = rows[i], cy = i * lh + 3 + lh / 2;
+        for (let j = x0 / cw | 0; j < s.length && j * cw < x1; j++) {
+          if (s[j] === " ") continue;
+          const dx = j * cw + cw / 2 - w.x, dy = cy - w.y, d = Math.hypot(dx, dy), k = 1 - Math.abs(d - r) / band;
+          if (k <= 0) continue;
+          const e = k * k * fade, push = e * 5 / (d || 1);
+          ctx.globalAlpha = Math.min(1, e * C.peak);
+          ctx.fillText(Math.random() < e * 0.35 ? GLYPHS[Math.random() * GLYPHS.length | 0] : s[j], j * cw + dx * push, i * lh + 3 + dy * push);
+        }
+      }
+    }
+    ctx.globalAlpha = 1;
+    raf = requestAnimationFrame(frame);
+  }
+
+  function ripple(e){
+    if (still.matches || e.button > 0 || e.target.closest("input,textarea,select,[contenteditable]")) return;
+    const r = C.mode === "page" ? { left: 0, top: 0 } : host.getBoundingClientRect();
+    const reach = Math.hypot(W, H) * (C.mode === "page" ? 0.6 : 1);
+    waves.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now(), life: 900 + reach * 1.1, reach });
+    if (waves.length > 6) waves.shift();
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+
+  function attach(){
+    host = C.mode === "page" ? document.body : document.querySelector(C.mode);
+    if (!host) return false;
+    if (!cv.isConnected) host.prepend(cv);
+    layout();
+    (C.mode === "page" ? document : host).addEventListener("pointerdown", ripple, { passive: true });
+    return true;
+  }
+
+  function start(){
+    if (C.mode === "page") {
+      attach();
+      // An unlock screen may swap the whole body out; put the canvas back when it does.
+      new MutationObserver(() => { if (!cv.isConnected) document.body.prepend(cv); }).observe(document.body, { childList: true });
+    } else if (!attach()) {
+      const mo = new MutationObserver(() => { if (attach()) mo.disconnect(); });
+      mo.observe(document.body, { childList: true, subtree: true });
+    }
+    let t; const again = () => { clearTimeout(t); t = setTimeout(() => host && layout(), 150); };
+    addEventListener("resize", again);
+    new ResizeObserver(again).observe(C.mode === "page" ? document.documentElement : document.body);
+    // Re-colour when the light/dark theme changes.
+    new MutationObserver(() => host && paintBase()).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme", "class"] });
+    matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => host && paintBase());
+    if (document.fonts) document.fonts.ready.then(() => host && layout());
+  }
+  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", start) : start();
+})();
+</script>
 </head>
 <body>
 <div id="app"></div>
