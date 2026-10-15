@@ -2048,6 +2048,10 @@
           </button>
           <input type="file" id="importInput" hidden
                  accept=".pdf,.txt,.md,.markdown,application/pdf,text/plain,text/markdown" />
+          <button class="refresh-btn" id="photoBtn" title="Photograph some text to make a note" aria-label="Photograph text">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+          </button>
+          <input type="file" id="photoInput" hidden accept="image/*" capture="environment" />
           <button class="refresh-btn" id="lockBtn" title="Forget the access key on this device" aria-label="Lock archive">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
           </button>
@@ -4937,6 +4941,90 @@ importInput.addEventListener('change', () => {
   importFromFile(file);
 });
 
+// The camera button: photograph a book page, a receipt, a sign. The photo is
+// shrunk here, read by the server's /read-photo route, and dropped — only the
+// text survives, into the same check-it-over panel a file import uses. Nothing
+// is saved until Save is pressed.
+const PHOTO_LONG_SIDE = 2000;   // enough for small print; keeps the upload under ~1 MB
+
+function shrinkPhoto(file) {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, PHOTO_LONG_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.naturalWidth * scale);
+      canvas.height = Math.round(img.naturalHeight * scale);
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('this browser could not open that image'));
+    };
+    img.src = url;
+  });
+}
+
+async function readPhotoText(image) {
+  let response;
+  try {
+    response = await fetch(MCP_URL + '/read-photo', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-brain-key': mcpAccessKey },
+      body: JSON.stringify({ image }),
+    });
+  } catch (err) {
+    throw new Error('could not reach the archive server (' + err.message + ')');
+  }
+  let payload = {};
+  try { payload = await response.json(); } catch (_) {}
+  // A wrong key comes back as HTTP 200 with a JSON-RPC error, as everywhere else.
+  if (payload.error && (payload.error.code === -32001 || /unauthor/i.test(payload.error.message || ''))) {
+    setAccessKey('');
+    showUnlock('That key was rejected. Check it and try again.');
+    throw new Error('the archive rejected the access key');
+  }
+  if (!response.ok || payload.error) {
+    throw new Error(typeof payload.error === 'string' ? payload.error : 'HTTP ' + response.status);
+  }
+  return String(payload.text || '');
+}
+
+async function importFromPhoto(file) {
+  if (!file) return;
+  importPanel.hidden = false;
+  importFileName.textContent = 'Photo';
+  importText.value = '';
+  updateImportCount();
+  pendingLinks = [];
+  pendingPlaceholders = [];
+  importMeta = {};
+  setImportStatus('Reading the text in your photo…');
+  try {
+    const text = await readPhotoText(await shrinkPhoto(file));
+    if (!text.trim()) {
+      setImportStatus('No readable text in that photo. Try again closer, with the page flat and well lit.', true);
+      return;
+    }
+    importText.value = text;
+    updateImportCount();
+    setImportStatus('Check it over, then save. Add where it came from (the book and page, or the shop) so you can find it later.');
+  } catch (err) {
+    setImportStatus('Could not read that photo — ' + err.message, true);
+  }
+}
+
+const photoInput = document.getElementById('photoInput');
+document.getElementById('photoBtn').addEventListener('click', () => photoInput.click());
+photoInput.addEventListener('change', () => {
+  const file = photoInput.files && photoInput.files[0];
+  photoInput.value = '';
+  importFromPhoto(file);
+});
+
 let dragDepth = 0;
 window.addEventListener('dragenter', (e) => {
   if (!e.dataTransfer || Array.from(e.dataTransfer.types).indexOf('Files') === -1) return;
@@ -4958,6 +5046,7 @@ window.addEventListener('drop', async (e) => {
   if (!unlockEl.hidden) return;
 
   const file = e.dataTransfer.files[0];
+  if (/^image\//.test(file.type)) { importFromPhoto(file); return; }
   importPanel.hidden = false;
   importFileName.textContent = file.name;
   importText.value = '';
