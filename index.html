@@ -5910,8 +5910,14 @@ function graphLegend(f) {
 // The front screen opens on the archive's shape: the same graph as the stats
 // panel, shown while nothing is filtered or searched. Once a filter narrows
 // the drawer, the list is what is being asked for and the graph steps aside.
+//
+// The Personal / Work & AI switch is not one of those filters: it is a
+// standing choice, remembered per device. Counting it as one meant a phone
+// left on Personal never showed the graph, its tabs or the charts at all
+// (15 Oct 2026), while the computer, on both sides, did.
 function showsHomeGraph() {
-  return viewMode === 'notes' && !searchMode && !describeFilters();
+  return viewMode === 'notes' && !searchMode && !activeTopics.size && !activeTypes.size &&
+    !activeAuthors.size && !activePeople.size && !activeSources.size;
 }
 
 // ---------- the map: the archive organised rather than linked ----------
