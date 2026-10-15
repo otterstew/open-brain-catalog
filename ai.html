@@ -228,7 +228,7 @@
 </style>
 <script>
 window.RIPPLE_CFG = {"mode": "page", "lines": ["const answer = await model.run(prompt);", "for (const doc of sources) index.add(doc);", "if (score > 0.82) keep(note);", "return tokens.slice(0, limit);", "embed(text).then(store.upsert)", "agent.plan() -> tools.call(step)", "// summarise last week", "async function brief(notes) {", "}", "attn = softmax(q @ k.T / sqrt(d))", "messages.push({ role: \"user\", content })", "eval(results).pass_rate", "temperature: 0.2,", "chunks.map(c => c.vector)", "await retry(fetchModels, 3)", "yield* stream.deltas()"], "ink": "--plum", "glow": "--brass", "base": 0.06, "peak": 0.85};
-// Code ripple: faint lines of code behind the page; a click sends a ring out through them.
+// Code ripple: faint lines of code behind the page; a click sends a ragged, branching wave out through them.
 // RIPPLE_CFG is set just above this script: { mode: "page" | "header", lines: [...], base, glow }.
 (function(){
   const C = window.RIPPLE_CFG, GLYPHS = "01<>{}[]/=+*#;:.~", still = matchMedia("(prefers-reduced-motion: reduce)");
@@ -268,6 +268,29 @@ window.RIPPLE_CFG = {"mode": "page", "lines": ["const answer = await model.run(p
     frame(performance.now());
   }
 
+  // Smooth 2D value noise, layered (fbm), so a wavefront frays like a coastline instead of a clean circle.
+  const hash = (x, y) => { const h = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return h - Math.floor(h); };
+  function noise(x, y){
+    const xi = Math.floor(x), yi = Math.floor(y), u = (x - xi) ** 2 * (3 - 2 * (x - xi)), v = (y - yi) ** 2 * (3 - 2 * (y - yi));
+    const a = hash(xi, yi), b = hash(xi + 1, yi), c = hash(xi, yi + 1), d = hash(xi + 1, yi + 1);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  }
+  const fbm = (x, y) => noise(x, y) * 0.55 + noise(x * 2.1 + 5, y * 2.1) * 0.3 + noise(x * 4.3, y * 4.3 + 9) * 0.15;
+
+  // A wave: a lumpy outline (integer angular harmonics, amplitude falling with frequency) that
+  // seeds smaller, lumpier waves along its front as it goes, which seed smaller ones again.
+  function wave(x, y, reach, depth){
+    const harm = [];
+    let sum = 0;
+    for (let k = 2 + (Math.random() * 2 | 0), amp = 0.16 + depth * 0.05; k < 48; k = Math.ceil(k * (1.7 + Math.random() * 0.6)), amp *= 0.55) {
+      const a = amp * (0.5 + Math.random()); harm.push([k, a, Math.random() * 6.283, (Math.random() - 0.5) * 3]); sum += a;
+    }
+    const kids = depth < 3 ? Math.round((3 - depth) * (1 + Math.random() * 1.4)) : 0;
+    return { x, y, reach, depth, harm, sum, kids, born: 0, t: performance.now(), life: 650 + reach * 1.25,
+             band: 18 + reach * 0.03 + Math.random() * 12, seed: Math.random() * 99, next: 0.1 + Math.random() * 0.15 };
+  }
+  const radius = (w, r, th, age) => { let f = 1; for (const [k, a, p, sp] of w.harm) f += a * Math.sin(k * th + p + sp * age); return r * f; };
+
   function frame(now){
     raf = 0;
     ctx.clearRect(0, 0, W, H);
@@ -275,18 +298,28 @@ window.RIPPLE_CFG = {"mode": "page", "lines": ["const answer = await model.run(p
     waves = waves.filter((w) => now - w.t < w.life);
     if (!waves.length || !W) return;
     ctx.fillStyle = colour(C.glow);
-    for (const w of waves) {
-      const age = (now - w.t) / w.life, r = age * w.reach, band = 46, fade = 1 - age;
-      const x0 =Math.max(0, w.x - r - band), x1 = Math.min(W, w.x + r + band);
-      for (let i = Math.max(0, (w.y - r - band) / lh | 0); i < rows.length && i * lh < w.y + r + band; i++) {
+    for (const w of [...waves]) {
+      const age = (now - w.t) / w.life, r = Math.sqrt(age) * w.reach, band = w.band, fade = (1 - age) ** 1.4 * (1 - w.depth * 0.14);
+      // Branch: a child starts somewhere on the current front and heads off on its own.
+      while (w.born < w.kids && age > w.next && waves.length < 48) {
+        const th = Math.random() * 6.283, rr = radius(w, r, th, age);
+        waves.push(wave(w.x + Math.cos(th) * rr, w.y + Math.sin(th) * rr, w.reach * (0.22 + Math.random() * 0.28), w.depth + 1));
+        w.born++; w.next += (0.55 / w.kids) * (0.6 + Math.random() * 0.8);
+      }
+      const rMax = r * (1 + w.sum) + band * 2, rMin = r * (1 - w.sum) - band * 2;
+      const x0 = Math.max(0, w.x - rMax), x1 = Math.min(W, w.x + rMax);
+      for (let i = Math.max(0, (w.y - rMax) / lh | 0); i < rows.length && i * lh < w.y + rMax; i++) {
         const s = rows[i], cy = i * lh + 3 + lh / 2;
         for (let j = x0 / cw | 0; j < s.length && j * cw < x1; j++) {
           if (s[j] === " ") continue;
-          const dx = j * cw + cw / 2 - w.x, dy = cy - w.y, d = Math.hypot(dx, dy), k = 1 - Math.abs(d - r) / band;
+          const px = j * cw + cw / 2, dx = px - w.x, dy = cy - w.y, d = Math.hypot(dx, dy);
+          if (d > rMax || d < rMin) continue;
+          const n = fbm(px / 70 + w.seed, cy / 70 + age * 0.8);
+          const k = 1 - Math.abs(d + (n - 0.5) * band * 2.2 - radius(w, r, Math.atan2(dy, dx), age)) / band;
           if (k <= 0) continue;
-          const e = k * k * fade, push = e * 5 / (d || 1);
+          const e = k * k * fade * (0.25 + 1.1 * n), push = e * 6 / (d || 1);
           ctx.globalAlpha = Math.min(1, e * C.peak);
-          ctx.fillText(Math.random() < e * 0.35 ? GLYPHS[Math.random() * GLYPHS.length | 0] : s[j], j * cw + dx * push, i * lh + 3 + dy * push);
+          ctx.fillText(Math.random() < e * 0.4 ? GLYPHS[Math.random() * GLYPHS.length | 0] : s[j], px - cw / 2 + dx * push, i * lh + 3 + dy * push);
         }
       }
     }
@@ -295,11 +328,10 @@ window.RIPPLE_CFG = {"mode": "page", "lines": ["const answer = await model.run(p
   }
 
   function ripple(e){
-    if (still.matches || e.button > 0 || e.target.closest("input,textarea,select,[contenteditable]")) return;
+    if (still.matches || e.button > 0 || e.target.closest?.("input,textarea,select,[contenteditable]")) return;
     const r = C.mode === "page" ? { left: 0, top: 0 } : host.getBoundingClientRect();
-    const reach = Math.hypot(W, H) * (C.mode === "page" ? 0.6 : 1);
-    waves.push({ x: e.clientX - r.left, y: e.clientY - r.top, t: performance.now(), life: 900 + reach * 1.1, reach });
-    if (waves.length > 6) waves.shift();
+    waves.push(wave(e.clientX - r.left, e.clientY - r.top, Math.hypot(W, H) * (C.mode === "page" ? 0.55 : 0.8), 0));
+    if (waves.length > 48) waves.splice(0, waves.length - 48);
     if (!raf) raf = requestAnimationFrame(frame);
   }
 
