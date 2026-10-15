@@ -5610,8 +5610,18 @@ function drawGraph(f, canvas) {
     clampView(); place(); paint(null); setTouch();
   };
 
-  // Generous enough for a fingertip: the dots are small, the gaps are not.
+  // A press on a drawn dot opens that dot (the one painted on top, where two
+  // overlap). Only a press in a gap falls back to the nearest centre, generous
+  // enough for a fingertip. Nearest-centre alone let the edge of a big dot in
+  // a crowded patch open a small neighbour instead: clicking MTTC Month 9 on
+  // a laptop listed the AI Solutions Manager CV's links (Oct 2026).
   const hitAt = (mx, my) => {
+    let inside = null;
+    nodes.forEach(n => {
+      const r = rOf(n) + 1;
+      if ((n.x - mx) ** 2 + (n.y - my) ** 2 <= r * r) inside = n;
+    });
+    if (inside) return inside;
     let best = null, bestD = Infinity;
     nodes.forEach(n => {
       const r = Math.max(15, rOf(n) + 9);
