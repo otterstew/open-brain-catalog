@@ -6175,7 +6175,8 @@ function graphTabs() {
 
 // Every card with the tabs (the front screen's, the phone's, full screen)
 // follows the one choice, so switching in full screen carries back.
-// The graph's own canvas in a card or frame, never the mist layer behind it.
+// The graph's own canvas in a card or frame, never a background layer. The
+// mist (15 Oct 2026, since removed) put its own canvas first in the frame.
 function graphCanvasIn(el) {
   return el.querySelector('canvas:not(.mist)');
 }
@@ -6194,9 +6195,9 @@ function refreshTabbedGraphs() {
     if (hint) hint.textContent = graphHint(f, card.classList.contains('graph-full'));
     const legend = card.querySelector('.graph-legend');
     if (legend) legend.outerHTML = graphView === 'map' ? mapLegend(mapMode) : graphLegend(f);
-    // Not the first canvas: the mist puts its own canvas at the front of the
-    // frame, and drawing the new map onto that left the graph unchanged when
-    // Topics / People / Sources was switched (15 Oct 2026).
+    // Not simply the first canvas: while the mist sat in front of it, drawing
+    // the new map onto that left the graph unchanged when Topics / People /
+    // Sources was switched (15 Oct 2026).
     renderTabbedCanvas(graphCanvasIn(card), f);
   });
 }
@@ -7399,129 +7400,5 @@ if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
 
 </script>
 
-<style>
-  /* Mist behind the graph: its own canvas under the graph's (which draws on a clear background). */
-  /* It overhangs the frame by 16px and is clipped back, so the blur has haze to draw on at the edges. */
-  .graph-wrap > canvas.mist { position: absolute; inset: -16px; width: calc(100% + 32px); height: calc(100% + 32px);
-                              pointer-events: none; filter: blur(7px); clip-path: inset(16px round 3px); }
-  .graph-wrap > canvas:not(.mist) { position: relative; }
-</style>
-<script>
-// Mist: a faint haze drifts behind the graph's nodes, lit by a slow beam of light, like stage smoke
-// in a laser show. A click stirs it into a swirl that slowly settles.
-(function(){
-  const still = matchMedia("(prefers-reduced-motion: reduce)");
-  const CELL = 8;   // the haze is worked out on a coarse grid, then scaled up and blurred
-  const PAD = 16;   // how far the canvas overhangs the frame (see the CSS)
-  const P = new Uint8Array(512);
-  { const p = [...Array(256).keys()]; let seed = 11;
-    for (let i = 255; i > 0; i--) { seed = (seed * 9301 + 49297) % 233280; const j = seed % (i + 1); [p[i], p[j]] = [p[j], p[i]]; }
-    for (let i = 0; i < 512; i++) P[i] = p[i & 255]; }
-  function noise(x, y){
-    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
-    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf), a = xi & 255, b = yi & 255;
-    const n00 = P[P[a] + b], n10 = P[P[a + 1] + b], n01 = P[P[a] + b + 1], n11 = P[P[a + 1] + b + 1];
-    return ((n00 + (n10 - n00) * u) * (1 - v) + (n01 + (n11 - n01) * u) * v) / 255;
-  }
-  const fbm = (x, y) => (noise(x, y) * 0.57 + noise(x * 2.03 + 3.1, y * 2.03) * 0.29 + noise(x * 4.1, y * 4.1 + 7.7) * 0.14);
-  const ease = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
-
-  const mists = new Set(), t0 = performance.now();
-  let raf = 0, last = 0;
-
-  function size(m){
-    const r = m.wrap.getBoundingClientRect();
-    m.W = Math.round(r.width) + PAD * 2; m.H = Math.round(r.height) + PAD * 2;
-    m.gw = Math.max(1, Math.ceil(m.W / CELL) + 1); m.gh = Math.max(1, Math.ceil(m.H / CELL) + 1);
-    m.small.width = m.gw; m.small.height = m.gh; m.img = m.sctx.createImageData(m.gw, m.gh);
-    m.cv.width = m.W; m.cv.height = m.H;
-    draw(m, performance.now());
-  }
-
-  function draw(m, now){
-    const { W, H, gw, gh, img } = m;
-    if (!W || !H) return;
-    const t = (now - t0) / 1000, d = img.data;
-    m.swirls = m.swirls.filter((s) => now - s.t < 7000);
-    const sw = m.swirls.map((s) => {
-      const age = (now - s.t) / 1000;
-      // Twists in over about a second, then slowly lets go; the stirred patch widens as it goes.
-      return { x: s.x, y: s.y, turn: s.dir * 4.2 * (1 - Math.exp(-age * 2.5)) * Math.exp(-age / 2.6),
-               r: 90 + 80 * age, glow: Math.exp(-age / 1.4) * (1 - Math.exp(-age * 6)) };
-    });
-    // The beam: from above, swinging slowly from side to side.
-    const ang = 1.2 + Math.sin(t * 0.09) * 0.35, bx = W * (0.5 + Math.sin(t * 0.05) * 0.25), ca = Math.cos(ang), sa = Math.sin(ang), bw = Math.max(W, H) * 0.28;
-    for (let j = 0; j < gh; j++) {
-      for (let i = 0; i < gw; i++) {
-        let x = i * CELL, y = j * CELL, lit = 0;
-        for (const s of sw) {
-          const dx = x - s.x, dy = y - s.y, f = Math.exp(-(dx * dx + dy * dy) / (s.r * s.r));
-          if (f < 0.01) continue;
-          const a = s.turn * f, c = Math.cos(a), sn = Math.sin(a);
-          x = s.x + dx * c - dy * sn; y = s.y + dx * sn + dy * c;
-          lit += f * s.glow;
-        }
-        const nx = x / 240 + t * 0.025, ny = y / 240 - t * 0.012;
-        const wx = noise(nx * 0.6 + t * 0.04, ny * 0.6) - 0.5, wy = noise(nx * 0.6 + 5.2, ny * 0.6 - t * 0.03) - 0.5;
-        const haze = ease(0.32, 0.8, fbm(nx + wx * 1.6, ny + wy * 1.6));
-        const px = i * CELL, py = j * CELL, off = (px - bx) * sa - py * ca;   // distance across the beam
-        const beam = Math.exp(-(off * off) / (bw * bw));
-        const light = 0.35 + 0.9 * beam + 1.1 * lit;
-        const tint = ease(0.2, 0.8, noise(nx * 0.4 - 9, ny * 0.4 + t * 0.02));   // lavender to sea-blue
-        const k = (j * gw + i) * 4;
-        d[k] = 179 + (142 - 179) * tint + 40 * beam; d[k + 1] = 164 + (205 - 164) * tint + 30 * beam; d[k + 2] = 245 - 5 * tint;
-        d[k + 3] = Math.min(255, haze * light * 82);
-      }
-    }
-    m.sctx.putImageData(img, 0, 0);
-    const ctx = m.ctx;
-    ctx.clearRect(0, 0, W, H);
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(m.small, 0, 0, gw, gh, 0, 0, gw * CELL, gh * CELL);
-  }
-
-  function loop(now){
-    raf = requestAnimationFrame(loop);
-    if (now - last < 50) return;   // twenty frames a second is plenty for drifting haze
-    last = now;
-    for (const m of mists) {
-      if (!m.wrap.isConnected) { m.ro.disconnect(); m.io.disconnect(); mists.delete(m); continue; }
-      if (m.seen) draw(m, now);
-    }
-  }
-  function play(){ if (!raf && !still.matches && !document.hidden) raf = requestAnimationFrame(loop); }
-  function pause(){ cancelAnimationFrame(raf); raf = 0; }
-
-  function add(wrap){
-    wrap.dataset.mist = "1";
-    const cv = document.createElement("canvas"), small = document.createElement("canvas");
-    cv.className = "mist"; cv.setAttribute("aria-hidden", "true");
-    wrap.prepend(cv);
-    const m = { wrap, cv, ctx: cv.getContext("2d"), small, sctx: small.getContext("2d"), W: 0, H: 0, swirls: [], seen: false };
-    m.ro = new ResizeObserver(() => size(m)); m.ro.observe(wrap);
-    m.io = new IntersectionObserver((e) => { m.seen = e[0].isIntersecting; if (m.seen) draw(m, performance.now()); }); m.io.observe(wrap);
-    wrap.addEventListener("pointerdown", (e) => {
-      if (still.matches || e.button > 0 || e.target.closest("button")) return;
-      const r = wrap.getBoundingClientRect();
-      m.swirls.push({ x: e.clientX - r.left + PAD, y: e.clientY - r.top + PAD, t: performance.now(), dir: Math.random() < 0.5 ? -1 : 1 });
-      if (m.swirls.length > 4) m.swirls.shift();
-    }, { passive: true });
-    mists.add(m);
-  }
-
-  function scan(){ document.querySelectorAll(".graph-wrap:not([data-mist])").forEach(add); }
-  function start(){
-    scan();
-    // The graphs are rebuilt as the page changes; give each new one its mist.
-    let q = 0;
-    new MutationObserver(() => { if (!q) q = requestAnimationFrame(() => { q = 0; scan(); }); })
-      .observe(document.body, { childList: true, subtree: true });
-    document.addEventListener("visibilitychange", () => document.hidden ? pause() : play());
-    still.addEventListener("change", () => { if (still.matches) pause(); else play(); });
-    play();
-  }
-  document.readyState === "loading" ? document.addEventListener("DOMContentLoaded", start) : start();
-})();
-</script>
 </body>
 </html>
