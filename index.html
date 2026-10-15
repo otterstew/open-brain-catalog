@@ -1104,6 +1104,14 @@
 
   /* Zoom buttons over the graph's top-right corner. */
   .graph-wrap { position: relative; }
+  /* Links | Map, and the map's Topics / People / Sources. */
+  .graph-tabs, .map-modes { display: inline-flex; border: 1px solid var(--hairline); border-radius: 3px; overflow: hidden; }
+  .map-modes[hidden] { display: none; }
+  .graph-tabs button, .map-modes button { background: none; border: 0; padding: 4px 10px; cursor: pointer;
+    color: var(--ink-dim); font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .graph-tabs button + button, .map-modes button + button { border-left: 1px solid var(--hairline); }
+  .graph-tabs button[aria-pressed="true"], .map-modes button[aria-pressed="true"] { background: var(--panel-raised); color: var(--brass); }
+  .graph-tabs button:focus-visible, .map-modes button:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
   .graph-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
   .graph-tools button { min-width: 30px; height: 30px; padding: 0 8px; cursor: pointer;
                         background: rgba(27,22,56,0.88); color: var(--ink-dim);
@@ -5496,6 +5504,13 @@ function layoutGraph(nodes, edges, aspect) {
     y: H / 2 + Math.sin(i) * (30 + (i % 13) * 6),
     vx: 0, vy: 0,
   }));
+  // A node with fx/fy (fractions of the box) is held there: the map keeps
+  // Personal and Work & AI apart, left and right, and lets the rest settle.
+  const pin = () => nodes.forEach((n, i) => {
+    if (n.fx == null) return;
+    pos[i].x = n.fx * W; pos[i].y = n.fy * H; pos[i].vx = 0; pos[i].vy = 0;
+  });
+  pin();
   // A few hundred iterations of repulsion + spring is enough at this size.
   for (let step = 0; step < 220; step++) {
     for (let i = 0; i < pos.length; i++) {
@@ -5526,6 +5541,7 @@ function layoutGraph(nodes, edges, aspect) {
       n.y += Math.max(-6, Math.min(6, n.vy));
       n.vx *= 0.82; n.vy *= 0.82;
     });
+    pin();
   }
   const layout = pos.map(n => ({ x: n.x, y: n.y }));
   if (graphLayouts.size > 6) graphLayouts.clear();
@@ -5535,17 +5551,6 @@ function layoutGraph(nodes, edges, aspect) {
 
 function drawGraph(f, canvas) {
   if (!canvas) return;
-  const dpr = window.devicePixelRatio || 1;
-  // Height comes from the stylesheet so the media query can shrink it on a
-  // phone without the hit-testing drifting out of step with what is drawn.
-  // A canvas hidden by the layout (the drawer's copy on a wide screen) has no
-  // width, and is left alone.
-  const w = canvas.clientWidth, h = canvas.clientHeight;
-  if (!w || !h) return;
-  canvas.width = w * dpr; canvas.height = h * dpr;
-  const ctx = canvas.getContext('2d');
-  ctx.scale(dpr, dpr);
-
   const linked = allThoughts.filter(t => f.degree.get(t.id));
   const index = new Map(linked.map((t, i) => [t.id, i]));
   const nodes = linked.map((t, i) => ({
@@ -5558,6 +5563,32 @@ function drawGraph(f, canvas) {
       if (index.has(id) && id !== t.id) edges.push([index.get(t.id), index.get(id)]);
     });
   });
+  canvasGraph(canvas, nodes, edges, {
+    size: (n) => Math.min(11, 4 + n.deg * 0.8),
+    color: (n) => seriesFor(n.t.type),
+    tip: (n) => '<strong>' + escapeHtml(n.t.title || 'Untitled') + '</strong>' +
+      '<span>' + n.deg + ' connection' + (n.deg === 1 ? '' : 's') + ' · click to list them</span>',
+    // Most connected first: the neighbours worth reading next are the hubs.
+    tap: (n, neighbours) => openNodeSheet(n, neighbours.sort((a, b) => b.deg - a.deg)),
+  });
+}
+
+// The drawing and handling both graphs share: fitting the layout to the box,
+// zoom and pan, picking the dot under a press, tooltips and taps. Each graph
+// brings its own nodes and edges and says what a dot looks like and does:
+// opts.size(n) base radius, opts.color(n), opts.label(n, zoom, r) for a name
+// beside the dot (optional), opts.tip(n) tooltip HTML, opts.tap(n, neighbours).
+function canvasGraph(canvas, nodes, edges, opts) {
+  const dpr = window.devicePixelRatio || 1;
+  // Height comes from the stylesheet so the media query can shrink it on a
+  // phone without the hit-testing drifting out of step with what is drawn.
+  // A canvas hidden by the layout (the drawer's copy on a wide screen) has no
+  // width, and is left alone.
+  const w = canvas.clientWidth, h = canvas.clientHeight;
+  if (!w || !h) return;
+  canvas.width = w * dpr; canvas.height = h * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
 
   const layout = layoutGraph(nodes, edges, w / h);
   // Scale the settled layout to fill the box — uniformly, so the shape is not
@@ -5580,7 +5611,7 @@ function drawGraph(f, canvas) {
 
   // Dots shrink with the canvas, so a phone's graph is not a solid mass.
   const k = Math.max(0.55, Math.min(1, w / 900));
-  const radius = (n) => Math.min(11, 4 + n.deg * 0.8) * k;
+  const radius = (n) => opts.size(n) * k;
   // Zoom and pan. The fitted layout is the base and the view scales positions
   // around it. Dots grow with the square root of the zoom and lines not at
   // all, so zooming into a clump opens up the gaps between its notes rather
@@ -5631,6 +5662,7 @@ function drawGraph(f, canvas) {
     return best;
   };
 
+  const font = (getComputedStyle(document.documentElement).getPropertyValue('--font-mono') || '').trim() || 'monospace';
   const paint = (hover) => {
     ctx.clearRect(0, 0, w, h);
     ctx.lineCap = 'round';
@@ -5653,13 +5685,37 @@ function drawGraph(f, canvas) {
     nodes.forEach(n => {
       ctx.beginPath();
       ctx.arc(n.x, n.y, rOf(n), 0, Math.PI * 2);
-      ctx.fillStyle = seriesFor(n.t.type);
+      ctx.fillStyle = opts.color(n);
       ctx.fill();
       // A ring in the panel colour keeps touching dots apart.
       ctx.lineWidth = hover === n ? 2 : 1.5;
       ctx.strokeStyle = hover === n ? '#F7EFE4' : '#241D47';
       ctx.stroke();
     });
+    // Names beside the dots that carry one (the map's groups and larger
+    // leaves), on a dark halo so they read over the lines. Flipped to the
+    // left of a dot near the right edge rather than running off the canvas.
+    // A label that would land on one already drawn is skipped, most
+    // important first (n.labelRank, then size); the hovered dot always gets its.
+    if (!opts.label) return;
+    ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
+    const placed = [];
+    nodes.map(n => ({ n, text: opts.label(n, view.z, rOf(n)) || (hover === n ? n.label : null) }))
+      .filter(c => c.text)
+      .sort((a, b) => (b.n === hover) - (a.n === hover) || (a.n.labelRank || 9) - (b.n.labelRank || 9) || rOf(b.n) - rOf(a.n))
+      .forEach(({ n, text }) => {
+        ctx.font = (n.labelWeight || '') + ' ' + (n.labelPx || 11) + 'px ' + font;
+        const gap = rOf(n) + 4, tw = ctx.measureText(text).width, th = (n.labelPx || 11) + 2;
+        const left = n.x + gap + tw > w - 4;
+        const x = left ? n.x - gap : n.x + gap;
+        const box = { x0: left ? x - tw : x, x1: left ? x : x + tw, y0: n.y - th / 2, y1: n.y + th / 2 };
+        if (n !== hover && placed.some(b => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0)) return;
+        placed.push(box);
+        ctx.textAlign = left ? 'right' : 'left';
+        ctx.lineWidth = 3; ctx.strokeStyle = '#241D47'; ctx.strokeText(text, x, n.y);
+        ctx.fillStyle = hover === n ? '#F5C96B' : '#F7EFE4'; ctx.fillText(text, x, n.y);
+      });
   };
   paint(null);
   setTouch();
@@ -5738,10 +5794,7 @@ function drawGraph(f, canvas) {
     const hit = hitAt(e.clientX - rect.left, e.clientY - rect.top);
     paint(hit);
     if (hit) {
-      showTip('<strong>' + escapeHtml(hit.t.title || 'Untitled') + '</strong>' +
-              '<span>' + hit.deg + ' connection' + (hit.deg === 1 ? '' : 's') +
-              ' · click to list them</span>',
-              e.clientX, e.clientY);
+      showTip(opts.tip(hit), e.clientX, e.clientY);
       canvas.style.cursor = 'pointer';
     } else { hideTip(); canvas.style.cursor = 'default'; }
   };
@@ -5751,19 +5804,15 @@ function drawGraph(f, canvas) {
     const rect = canvas.getBoundingClientRect();
     const hit = hitAt(e.clientX - rect.left, e.clientY - rect.top);
     if (!hit) return;
-    // Most connected first: the neighbours worth reading next are the hubs.
-    const neighbours = [...near[hit.idx]].map(i => nodes[i])
-      .sort((a, b) => b.deg - a.deg);
-    openNodeSheet(hit, neighbours);
+    opts.tap(hit, [...near[hit.idx]].map(i => nodes[i]));
   };
 }
 
 // A dot stands for one note, but what you want on tapping it is the small
 // neighbourhood around it — the note and everything it links to — as a list you
 // can read down and step into, rather than a jump straight into one note.
-let nodeSheet;
-function openNodeSheet(node, neighbours) {
-  hideTip();
+let nodeSheet, sheetSteps = [];
+function ensureNodeSheet() {
   if (!nodeSheet) {
     nodeSheet = document.createElement('div');
     nodeSheet.className = 'node-sheet';
@@ -5774,6 +5823,8 @@ function openNodeSheet(node, neighbours) {
         closeNodeSheet();
         return;
       }
+      const step = e.target.closest('[data-sheet-step]');
+      if (step) { const go = sheetSteps[+step.dataset.sheetStep]; if (go) go(); return; }
       const btn = e.target.closest('[data-node-open]');
       if (!btn) return;
       const found = findThought(btn.getAttribute('data-node-open'));
@@ -5784,6 +5835,10 @@ function openNodeSheet(node, neighbours) {
       selectThought(found);
     });
   }
+}
+function openNodeSheet(node, neighbours) {
+  hideTip();
+  ensureNodeSheet();
   const row = (n, self) =>
     '<li' + (self ? ' class="self"' : '') + '>' +
     '<button type="button" data-node-open="' + escapeAttr(n.id) + '">' +
@@ -5803,6 +5858,28 @@ function openNodeSheet(node, neighbours) {
     neighbours.map(n => row(n, false)).join('') + '</ol></div>';
   nodeSheet.hidden = false;
   const first = nodeSheet.querySelector('button');
+  if (first) first.focus();
+}
+
+// rows: [{ label, meta, thought }] opens a note; [{ label, meta, then }] runs
+// then() — the map uses it to step from a group down to its tags.
+function openListSheet(title, subtitle, rows) {
+  hideTip();
+  ensureNodeSheet();
+  sheetSteps = [];
+  const row = (r) => {
+    const act = r.thought ? 'data-node-open="' + escapeAttr(r.thought) + '"'
+                          : 'data-sheet-step="' + (sheetSteps.push(r.then) - 1) + '"';
+    return '<li><button type="button" ' + act + '><span class="nl-t">' + escapeHtml(r.label) + '</span>' +
+      '<span class="nl-m">' + escapeHtml(r.meta || '') + '</span></button></li>';
+  };
+  nodeSheet.innerHTML =
+    '<div class="node-sheet-inner" role="dialog" aria-modal="true" aria-label="' + escapeAttr(title) + '">' +
+    '<div class="node-sheet-head"><div><h3>' + escapeHtml(title) + '</h3><p>' + escapeHtml(subtitle) + '</p></div>' +
+    '<button class="import-btn ghost" type="button" data-node-close>Close</button></div>' +
+    '<ol class="node-list">' + rows.map(row).join('') + '</ol></div>';
+  nodeSheet.hidden = false;
+  const first = nodeSheet.querySelector('.node-list button');
   if (first) first.focus();
 }
 
@@ -5837,6 +5914,219 @@ function showsHomeGraph() {
   return viewMode === 'notes' && !searchMode && !describeFilters();
 }
 
+// ---------- the map: the archive organised rather than linked ----------
+// The Links graph shows which notes point at which. The Map shows how the
+// archive is organised: Personal and Work & AI are the two roots, each tag
+// heading hangs off its side, and each tag, person or source hangs off its
+// heading — for people and sources, the heading most of their notes sit
+// under. Written by and kind of note are left out (Oct 2026: not wanted).
+let graphView = 'links', mapMode = 'topics';
+try {
+  graphView = localStorage.getItem('ob.graphView') === 'map' ? 'map' : 'links';
+  const m = localStorage.getItem('ob.mapMode');
+  if (m === 'people' || m === 'sources') mapMode = m;
+} catch (_) { /* storage blocked */ }
+
+const MAP_SIDES = {
+  personal: { label: 'Personal', color: SERIES.observation },
+  work: { label: 'Work & AI', color: SERIES.reference },
+};
+const MAP_WORDS = { topics: ['tag', 'tags'], people: ['person', 'people'], sources: ['source', 'sources'] };
+const UNGROUPED = 'Not grouped yet';
+
+function mapFigures(mode) {
+  const notes = allThoughts.filter(t => !t.shelved && t.type !== 'task');
+  const headingOf = (norm) => {
+    const h = topicHeadings && topicHeadings.get(norm);
+    return h ? h.heading : null;
+  };
+  const leaves = new Map();
+  const add = (label, t) => {
+    const key = label.toLowerCase();
+    if (!leaves.has(key)) leaves.set(key, { key, spellings: new Map(), notes: [] });
+    const l = leaves.get(key);
+    l.notes.push(t);
+    l.spellings.set(label, (l.spellings.get(label) || 0) + 1);
+  };
+  notes.forEach(t => {
+    if (mode === 'topics') {
+      (t.topics || []).forEach(x => { const v = (x || '').trim(); if (v) add(v, t); });
+    } else if (mode === 'people') {
+      // Stewart is in half the archive; as a dot he would only be noise.
+      (t.people || []).forEach(x => { const v = (x || '').trim(); if (v && !/^stewart\b/i.test(v)) add(v, t); });
+    } else {
+      const v = (t.source || '').trim();
+      if (v) add(v, t);
+    }
+  });
+  // The heading most of these notes' tags fall under.
+  const commonHeading = (ns) => {
+    const votes = new Map();
+    ns.forEach(t => new Set((t.topics || []).map(x => headingOf(x.trim().toLowerCase())).filter(Boolean))
+      .forEach(h => votes.set(h, (votes.get(h) || 0) + 1)));
+    let best = null, most = 0;
+    votes.forEach((n, h) => { if (n > most) { best = h; most = n; } });
+    return best;
+  };
+  const sideOfNotes = (ns) => {
+    let work = 0;
+    ns.forEach(t => { if (noteSides(t).has('work')) work++; });
+    return work * 2 > ns.length ? 'work' : 'personal';
+  };
+  const out = [];
+  let skipped = 0;
+  leaves.forEach(l => {
+    const label = [...l.spellings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    const heading = mode === 'topics' ? headingOf(l.key) : commonHeading(l.notes);
+    // A tag used once that nobody has given a heading is the extractor's
+    // noise; drawn, it would bury the curated ones.
+    if (mode === 'topics' && !heading && l.notes.length < 2) { skipped++; return; }
+    const side = (heading && headingSides.get(heading)) || (heading ? 'personal' : sideOfNotes(l.notes));
+    out.push({ key: l.key, label, heading: heading || UNGROUPED, side, notes: l.notes });
+  });
+  return { leaves: out, skipped };
+}
+
+function drawMap(canvas, mode) {
+  if (!canvas) return;
+  const { leaves } = mapFigures(mode);
+  const nodes = [], edges = [], at = new Map();
+  const node = (id, props) => {
+    if (!at.has(id)) { at.set(id, nodes.length); nodes.push(Object.assign({ id, idx: nodes.length, x: 0, y: 0 }, props)); }
+    return at.get(id);
+  };
+  const sidesUsed = new Set(leaves.map(l => l.side));
+  ['personal', 'work'].forEach(side => {
+    if (!sidesUsed.has(side)) return;
+    node('side:' + side, { kind: 'side', side, label: MAP_SIDES[side].label, fx: side === 'personal' ? 0.24 : 0.76, fy: 0.5,
+                           labelPx: 13, labelWeight: '600', labelRank: 1, leaves: [], groups: new Set() });
+  });
+  if (sidesUsed.size === 2) edges.push([at.get('side:personal'), at.get('side:work')]);
+  leaves.forEach(l => {
+    const hub = at.get('side:' + l.side);
+    const gid = 'group:' + l.side + ':' + l.heading;
+    const fresh = !at.has(gid);
+    const g = node(gid, { kind: 'group', side: l.side, label: l.heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [] });
+    if (fresh) { edges.push([hub, g]); nodes[hub].groups.add(l.heading); }
+    const leaf = node('leaf:' + l.key, { kind: 'leaf', side: l.side, label: l.label, notes: l.notes, count: l.notes.length });
+    edges.push([g, leaf]);
+    nodes[leaf].groupOf = nodes[g];
+    nodes[g].leaves.push(nodes[leaf]);
+    nodes[hub].leaves.push(nodes[leaf]);
+  });
+  nodes.forEach(n => {
+    if (n.kind !== 'leaf') n.count = new Set(n.leaves.flatMap(l => l.notes.map(t => t.id))).size;
+  });
+  // The biggest leaves are named from the start; the rest as you zoom in.
+  const ranked = nodes.filter(n => n.kind === 'leaf').sort((a, b) => b.count - a.count);
+  ranked.forEach((n, i) => { n.leafRank = i; n.labelRank = 3; });
+  const [one, many] = MAP_WORDS[mode];
+  const notesWord = (c) => c + ' note' + (c === 1 ? '' : 's');
+  canvasGraph(canvas, nodes, edges, {
+    // Roots, then groups, then leaves, each a size band of its own so the
+    // structure reads at a glance; leaves are translucent for the same reason.
+    size: (n) => n.kind === 'side' ? 15 : n.kind === 'group' ? Math.min(12, 8 + Math.sqrt(n.count) * 0.25)
+                                    : Math.min(6.5, 2.5 + Math.sqrt(n.count) * 0.45),
+    color: (n) => MAP_SIDES[n.side].color + (n.kind === 'leaf' ? 'B3' : ''),
+    // Roots and groups are always named; the twelve biggest leaves from the
+    // start, more as you zoom in, all of them close up.
+    label: (n, z) => (n.kind !== 'leaf' || n.leafRank < 12 || (z >= 1.6 && n.leafRank < 40) || z >= 2.4) ? n.label : null,
+    tip: (n) => '<strong>' + escapeHtml(n.label) + '</strong><span>' +
+      (n.kind === 'leaf' ? notesWord(n.count)
+        : n.leaves.length + ' ' + (n.leaves.length === 1 ? one : many) + ' · ' + notesWord(n.count)) +
+      ' · click to list them</span>',
+    tap: (n) => openMapSheet(n, mode),
+  });
+}
+
+// Tapping a root lists its groups, a group its tags (people, sources), and a
+// tag its notes — each step a list you can read down and step into.
+function openMapSheet(n, mode) {
+  const [one, many] = MAP_WORDS[mode];
+  const byCount = (a, b) => b.count - a.count || a.label.localeCompare(b.label);
+  if (n.kind === 'leaf') {
+    const notes = [...n.notes].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    openListSheet(n.label, notes.length + ' note' + (notes.length === 1 ? '' : 's'),
+      notes.map(t => ({ label: t.title || 'Untitled', meta: TYPE_NAMES[t.type] || t.type || 'unfiled', thought: t.id })));
+    return;
+  }
+  if (n.kind === 'side') {
+    const groups = new Map();
+    n.leaves.forEach(l => {
+      const h = l.groupOf;
+      if (!groups.has(h.id)) groups.set(h.id, h);
+    });
+    const rows = [...groups.values()].sort(byCount).map(g => ({
+      label: g.label, meta: g.leaves.length + ' ' + (g.leaves.length === 1 ? one : many) + ' · ' + g.count + ' notes',
+      then: () => openMapSheet(g, mode) }));
+    openListSheet(n.label, rows.length + ' group' + (rows.length === 1 ? '' : 's'), rows);
+    return;
+  }
+  const rows = [...n.leaves].sort(byCount).map(l => ({
+    label: l.label, meta: l.count + ' note' + (l.count === 1 ? '' : 's'), then: () => openMapSheet(l, mode) }));
+  openListSheet(n.label, rows.length + ' ' + (rows.length === 1 ? one : many), rows);
+}
+
+function graphHint(f, inFull) {
+  if (graphView === 'map') {
+    return 'Personal and Work & AI, by ' + (mapMode === 'topics' ? 'tag group' : MAP_WORDS[mapMode][1]) +
+      (inFull ? ' · pinch, scroll or + to zoom · drag to move' : '') + ' · click a dot to list its notes';
+  }
+  return f.linkCount + ' links' + (inFull ? ' · pinch, scroll or + to zoom · drag to move · click a dot to list its notes'
+                                          : ' · click a dot to list the notes it connects');
+}
+
+function mapLegend(mode) {
+  const { leaves, skipped } = mapFigures(mode);
+  const [, many] = MAP_WORDS[mode];
+  const keys = ['personal', 'work'].map(side => {
+    const c = leaves.filter(l => l.side === side).length;
+    return c ? '<span class="key"><i style="background:' + MAP_SIDES[side].color + '"></i>' +
+      MAP_SIDES[side].label + ' <b>' + c + '</b> ' + many + '</span>' : '';
+  }).join('');
+  return '<div class="legend graph-legend">' + keys +
+    (skipped ? '<span class="key unlinked">' + skipped + ' one-off tags with no group, not drawn</span>' : '') + '</div>';
+}
+
+function graphTabs() {
+  const b = (attr, v, label, on) => '<button type="button" ' + attr + '="' + v + '" aria-pressed="' + on + '">' + label + '</button>';
+  return '<div class="graph-tabs" role="group" aria-label="Graph view">' +
+    b('data-gview', 'links', 'Links', graphView === 'links') + b('data-gview', 'map', 'Map', graphView === 'map') + '</div>' +
+    '<div class="map-modes" role="group" aria-label="Organise the map by"' + (graphView === 'map' ? '' : ' hidden') + '>' +
+    b('data-mmode', 'topics', 'Topics', mapMode === 'topics') + b('data-mmode', 'people', 'People', mapMode === 'people') +
+    b('data-mmode', 'sources', 'Sources', mapMode === 'sources') + '</div>';
+}
+
+// Every card with the tabs (the front screen's, the phone's, full screen)
+// follows the one choice, so switching in full screen carries back.
+function renderTabbedCanvas(canvas, f) {
+  if (graphView === 'map') drawMap(canvas, mapMode); else drawGraph(f, canvas);
+}
+function refreshTabbedGraphs() {
+  if (!allThoughts.length) return;
+  const f = archiveFigures();
+  document.querySelectorAll('.tabbed-graph').forEach(card => {
+    card.querySelectorAll('[data-gview]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.gview === graphView)));
+    card.querySelectorAll('[data-mmode]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mmode === mapMode)));
+    const modes = card.querySelector('.map-modes');
+    if (modes) modes.hidden = graphView !== 'map';
+    const hint = card.querySelector('.hint');
+    if (hint) hint.textContent = graphHint(f, card.classList.contains('graph-full'));
+    const legend = card.querySelector('.graph-legend');
+    if (legend) legend.outerHTML = graphView === 'map' ? mapLegend(mapMode) : graphLegend(f);
+    renderTabbedCanvas(card.querySelector('canvas'), f);
+  });
+}
+document.addEventListener('click', (e) => {
+  const v = e.target.closest('[data-gview]'), m = e.target.closest('[data-mmode]');
+  if (!v && !m) return;
+  if (v) graphView = v.dataset.gview;
+  if (m) mapMode = m.dataset.mmode;
+  try { localStorage.setItem('ob.graphView', graphView); localStorage.setItem('ob.mapMode', mapMode); } catch (_) { /* storage blocked */ }
+  hideTip();
+  refreshTabbedGraphs();
+});
+
 // Zoom buttons sit over the graph's corner; the full-screen view has no
 // full-screen button of its own.
 function graphTools(inFull) {
@@ -5861,16 +6151,16 @@ function openGraphFull() {
     graphFull.className = 'graph-full';
     document.body.appendChild(graphFull);
   }
+  graphFull.classList.add('tabbed-graph');
   graphFull.innerHTML =
-    '<div class="graph-full-head"><h3>How it hangs together</h3>' +
-    '<span class="hint">' + f.linkCount + ' links · pinch, scroll or + to zoom · drag to move · ' +
-    'click a dot to list its notes</span>' +
+    '<div class="graph-full-head"><h3>How it hangs together</h3>' + graphTabs() +
+    '<span class="hint">' + escapeHtml(graphHint(f, true)) + '</span>' +
     '<button class="import-btn ghost" type="button" data-full-close>Close</button></div>' +
     '<div class="graph-wrap"><canvas class="graph-full-canvas"></canvas>' + graphTools(true) + '</div>' +
-    graphLegend(f);
+    (graphView === 'map' ? mapLegend(mapMode) : graphLegend(f));
   graphFull.hidden = false;
   graphFull.querySelector('[data-full-close]').addEventListener('click', closeGraphFull);
-  drawGraph(f, graphFull.querySelector('canvas'));
+  renderTabbedCanvas(graphFull.querySelector('canvas'), f);
 }
 
 function closeGraphFull() {
@@ -5883,19 +6173,19 @@ function closeGraphFull() {
 // more: the link to the stats panel. The wide front screen leaves it out, as
 // the panel's other cards sit right beneath the graph there.
 function homeGraphCard(f, where, more = true) {
-  return '<div class="home-graph ' + where + '"><div class="home-graph-head">' +
-    '<h3>How it hangs together</h3>' +
-    '<span class="hint">' + f.linkCount + ' links · click a dot to list the notes it connects</span>' +
+  return '<div class="home-graph tabbed-graph ' + where + '"><div class="home-graph-head">' +
+    '<h3>How it hangs together</h3>' + graphTabs() +
+    '<span class="hint">' + escapeHtml(graphHint(f, false)) + '</span>' +
     (more ? '<button type="button" class="home-graph-more">More about the archive →</button>' : '') + '</div>' +
     '<div class="graph-wrap"><canvas class="home-graph-canvas"></canvas>' + graphTools(false) + '</div>' +
-    graphLegend(f) + '</div>';
+    (graphView === 'map' ? mapLegend(mapMode) : graphLegend(f)) + '</div>';
 }
 
 function wireHomeGraph(card, f) {
   if (!card) return;
   const moreBtn = card.querySelector('.home-graph-more');
   if (moreBtn) moreBtn.addEventListener('click', openStats);
-  drawGraph(f, card.querySelector('canvas'));
+  renderTabbedCanvas(card.querySelector('canvas'), f);
 }
 
 // A canvas is drawn at a fixed size, so a resize (or turning a phone round)
@@ -5909,7 +6199,7 @@ window.addEventListener('resize', () => {
       .filter(c => c.clientWidth);
     if (!canvases.length || !allThoughts.length) return;
     const f = archiveFigures();
-    canvases.forEach(c => drawGraph(f, c));
+    canvases.forEach(c => c.closest('.tabbed-graph') ? renderTabbedCanvas(c, f) : drawGraph(f, c));
   }, 200);
 });
 
