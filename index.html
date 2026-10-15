@@ -5933,6 +5933,7 @@ const MAP_SIDES = {
 };
 const MAP_WORDS = { topics: ['tag', 'tags'], people: ['person', 'people'], sources: ['source', 'sources'] };
 const UNGROUPED = 'Not grouped yet';
+const BOOKS_HEADING = 'Books & Writing';
 // Headings that are the root itself rather than a branch of it: "Work &
 // career" and "Work & AI" say the same thing, so its tags hang straight off
 // the Work & AI root (Stewart, 15 Oct 2026).
@@ -5963,15 +5964,27 @@ function mapFigures(mode) {
       if (v) add(v, t);
     }
   });
-  // The heading most of these notes' tags fall under.
-  const commonHeading = (ns) => {
+  // How many of these notes each heading holds, for placing a person or a
+  // source. "Person notes" (Author, Teacher; called "People" until 15 Oct
+  // 2026) says what kind of note it is, not what it is about, so it never
+  // places anyone. A note the personal-wins rule claims (philosophy,
+  // consciousness, family, the house, MTTC…) votes only for personal
+  // headings, so Kastrup's AI-consciousness notes stay Personal.
+  const NOT_A_PLACE = new Set(['Person notes', 'People']);
+  const headingVotes = (ns) => {
     const votes = new Map();
-    ns.forEach(t => new Set((t.topics || []).map(x => headingOf(x.trim().toLowerCase())).filter(Boolean))
-      .forEach(h => votes.set(h, (votes.get(h) || 0) + 1)));
-    let best = null, most = 0;
-    votes.forEach((n, h) => { if (n > most) { best = h; most = n; } });
-    return best;
+    ns.forEach(t => {
+      const norms = (t.topics || []).map(x => x.trim().toLowerCase());
+      const personalOnly = norms.some(alwaysPersonal);
+      new Set(norms.map(headingOf).filter(h => h && !NOT_A_PLACE.has(h) &&
+        !(personalOnly && headingSides.get(h) === 'work')))
+        .forEach(h => votes.set(h, (votes.get(h) || 0) + 1));
+    });
+    return votes;
   };
+  // Most votes wins; a tie goes to the heading named first, so it is stable.
+  const topHeading = (votes) => [...votes.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0]?.[0] || null;
   const sideOfNotes = (ns) => {
     let work = 0;
     ns.forEach(t => { if (noteSides(t).has('work')) work++; });
@@ -5981,12 +5994,22 @@ function mapFigures(mode) {
   let skipped = 0;
   leaves.forEach(l => {
     const label = [...l.spellings.entries()].sort((a, b) => b[1] - a[1])[0][0];
-    const heading = mode === 'topics' ? headingOf(l.key) : commonHeading(l.notes);
+    const votes = mode === 'topics' ? null : headingVotes(l.notes);
+    const heading = mode === 'topics' ? headingOf(l.key) : topHeading(votes);
     // A tag used once that nobody has given a heading is the extractor's
     // noise; drawn, it would bury the curated ones.
     if (mode === 'topics' && !heading && l.notes.length < 2) { skipped++; return; }
     const side = (heading && headingSides.get(heading)) || (heading ? 'personal' : sideOfNotes(l.notes));
-    out.push({ key: l.key, label, heading: heading || UNGROUPED, side, notes: l.notes });
+    // A person also hangs off every other heading holding two or more of
+    // their notes, and an author off Books & Writing once they have a book
+    // note: Burbea under Traditions and Books & Writing, not one or the other.
+    const also = new Set();
+    if (mode === 'people') {
+      votes.forEach((n, h) => { if (h !== heading && n >= 2) also.add(h); });
+      if (heading !== BOOKS_HEADING &&
+          l.notes.some(t => (t.topics || []).some(x => x.trim().toLowerCase() === 'book'))) also.add(BOOKS_HEADING);
+    }
+    out.push({ key: l.key, label, heading: heading || UNGROUPED, side, notes: l.notes, also: [...also] });
   });
   return { leaves: out, skipped };
 }
@@ -6003,21 +6026,42 @@ function drawMap(canvas, mode) {
   ['personal', 'work'].forEach(side => {
     if (!sidesUsed.has(side)) return;
     node('side:' + side, { kind: 'side', side, label: MAP_SIDES[side].label, fx: side === 'personal' ? 0.24 : 0.76, fy: 0.5,
-                           labelPx: 13, labelWeight: '600', labelRank: 1, leaves: [], groups: new Set() });
+                           labelPx: 13, labelWeight: '600', labelRank: 1, leaves: [], groups: new Set(), groupNodes: [] });
   });
   if (sidesUsed.size === 2) edges.push([at.get('side:personal'), at.get('side:work')]);
+  // The group node for a heading, made (and hung off its root) on first use.
+  // A heading whose side has no root yet gets one.
+  const groupFor = (heading, side) => {
+    if (!at.has('side:' + side)) {
+      node('side:' + side, { kind: 'side', side, label: MAP_SIDES[side].label, fx: side === 'personal' ? 0.24 : 0.76, fy: 0.5,
+                             labelPx: 13, labelWeight: '600', labelRank: 1, leaves: [], groups: new Set(), groupNodes: [] });
+      if (at.has('side:personal') && at.has('side:work')) edges.push([at.get('side:personal'), at.get('side:work')]);
+    }
+    const hub = at.get('side:' + side);
+    const gid = 'group:' + side + ':' + heading;
+    const fresh = !at.has(gid);
+    const g = node(gid, { kind: 'group', side, label: heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [] });
+    if (fresh) { edges.push([hub, g]); nodes[hub].groups.add(heading); nodes[hub].groupNodes.push(nodes[g]); }
+    return g;
+  };
   leaves.forEach(l => {
     const hub = at.get('side:' + l.side);
     const leaf = node('leaf:' + l.key, { kind: 'leaf', side: l.side, label: l.label, notes: l.notes, count: l.notes.length });
     nodes[hub].leaves.push(nodes[leaf]);
-    if (MAP_ROOT_HEADINGS.has(l.heading)) { edges.push([hub, leaf]); nodes[leaf].groupOf = null; return; }
-    const gid = 'group:' + l.side + ':' + l.heading;
-    const fresh = !at.has(gid);
-    const g = node(gid, { kind: 'group', side: l.side, label: l.heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [] });
-    if (fresh) { edges.push([hub, g]); nodes[hub].groups.add(l.heading); }
-    edges.push([g, leaf]);
-    nodes[leaf].groupOf = nodes[g];
-    nodes[g].leaves.push(nodes[leaf]);
+    if (MAP_ROOT_HEADINGS.has(l.heading)) { edges.push([hub, leaf]); nodes[leaf].groupOf = null; }
+    else {
+      const g = groupFor(l.heading, l.side);
+      edges.push([g, leaf]);
+      nodes[leaf].groupOf = nodes[g];
+      nodes[g].leaves.push(nodes[leaf]);
+    }
+    (l.also || []).forEach(h => {
+      const side = headingSides.get(h) || 'personal';
+      if (MAP_ROOT_HEADINGS.has(h)) { const r = at.get('side:' + side); if (r != null && r !== hub) edges.push([r, leaf]); return; }
+      const g = groupFor(h, side);
+      edges.push([g, leaf]);
+      nodes[g].leaves.push(nodes[leaf]);
+    });
   });
   nodes.forEach(n => {
     if (n.kind !== 'leaf') n.count = new Set(n.leaves.flatMap(l => l.notes.map(t => t.id))).size;
@@ -6057,11 +6101,7 @@ function openMapSheet(n, mode) {
   }
   if (n.kind === 'side') {
     // Its groups, then anything hanging straight off the root.
-    const groups = new Map(), direct = [];
-    n.leaves.forEach(l => {
-      if (!l.groupOf) { direct.push(l); return; }
-      if (!groups.has(l.groupOf.id)) groups.set(l.groupOf.id, l.groupOf);
-    });
+    const groups = new Map(n.groupNodes.map(g => [g.id, g])), direct = n.leaves.filter(l => !l.groupOf);
     const rows = [...groups.values()].sort(byCount).map(g => ({
       label: g.label, meta: g.leaves.length + ' ' + (g.leaves.length === 1 ? one : many) + ' · ' + g.count + ' notes',
       then: () => openMapSheet(g, mode) }))
