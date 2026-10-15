@@ -174,6 +174,14 @@
     font-family: var(--f-mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--card-dim);
   }
 
+  /* the meeting's "Keep in mind" section, pinned above whichever card is showing */
+  .keep {
+    background: var(--ground-2); border: 1px solid var(--hairline); border-left: 4px solid var(--accent);
+    border-radius: 10px; padding: 9px 14px; color: var(--ink);
+  }
+  .keep-label { font-family: var(--f-mono); font-size: 10.5px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--label); }
+  .keep-words { margin: 2px 0 0; font-size: 15px; line-height: 1.45; white-space: pre-line; }
+
   .dots { display: flex; gap: 6px; justify-content: center; }
   .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--hairline); border: none; padding: 0; }
   .dot[aria-current="true"] { background: var(--accent); }
@@ -276,6 +284,8 @@
 
   <div class="meetings" id="meetings" role="group" aria-label="Meetings this day"></div>
 
+  <div class="keep" id="keep" hidden><span class="keep-label">Keep in mind</span><p class="keep-words" id="keepWords"></p></div>
+
   <div class="stage" id="stage"></div>
 
   <div class="foot">
@@ -300,7 +310,7 @@
 
     <details class="paste" id="pasteBox">
       <summary>Paste a prep message</summary>
-      <p>Paste the meeting prep (from Telegram, an email, anywhere). Each numbered point, “## heading” or paragraph becomes a card. A “Meeting:”, “Date:” or “Time:” line fills those in.</p>
+      <p>Paste the meeting prep (from Telegram, an email, anywhere). Each numbered point, “## heading” or paragraph becomes a card. A “Meeting:”, “Date:” or “Time:” line fills those in. A card headed “Keep in mind” stays pinned above every card.</p>
       <textarea id="pasteIn" aria-label="Prep message to turn into cards"></textarea>
       <div class="paste-actions">
         <button class="btn" id="pasteReplace" type="button">Make cards</button>
@@ -341,6 +351,9 @@
   //
   // A note with no "##" sections is still read: numbered points, then
   // paragraphs, become the cards.
+  //
+  // A "## Keep in mind" section is not a card: it stays pinned above every
+  // card of that meeting (15 Oct 2026), for the how-I-come-across reminders.
   const MCP_URL = "https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mcp";
   const KEY_STORAGE = "openbrain.accessKey";
   const TAG = "Meeting prep";
@@ -504,16 +517,21 @@
     return { head: "", words: p };
   }
 
+  const isKeep = (c) => /^keep in mind$/i.test(c.head.trim());
+
   function toMeeting(r) {
     const m = r.metadata || {};
     const p = parsePrep(r.content || "");
+    const keep = p.cards.filter(isKeep).map((c) => c.words).join("\n").trim();
     return {
       id: r.id,
       content: r.content || "",
       name: p.name || m.title || "Meeting",
       date: p.date || m.published_date || (r.created_at || "").slice(0, 10),
       time: p.time,
-      cards: p.cards,
+      cards: p.cards.filter((c) => !isKeep(c)),
+      keep,
+      allCards: p.cards,     // the editor works on these, Keep in mind included
       created: r.created_at || "",
     };
   }
@@ -599,6 +617,8 @@
     if (on && on.scrollIntoView) on.scrollIntoView({ block: "nearest", inline: "nearest" });
 
     const m = current();
+    $("keep").hidden = !(m && m.keep) || !!loadErr;
+    $("keepWords").innerHTML = m && m.keep ? words(m.keep) : "";
     $("editBtn").hidden = !m;
     $("viewBtn").hidden = !m || m.cards.length < 2;
     $("viewBtn").textContent = listView ? "One at a time" : "All cards";
@@ -713,7 +733,7 @@
 
   function openSheet(m) {
     editing = m;
-    draft = m ? m.cards.map((c) => ({ head: c.head, words: c.words })) : [{ head: "", words: "" }, { head: "", words: "" }, { head: "", words: "" }];
+    draft = m ? m.allCards.map((c) => ({ head: c.head, words: c.words })) : [{ head: "", words: "" }, { head: "", words: "" }, { head: "", words: "" }];
     $("sheetTitle").textContent = m ? "Edit meeting prep" : "New meeting prep";
     $("mName").value = m ? m.name : "";
     $("mDate").value = m ? m.date : day;
