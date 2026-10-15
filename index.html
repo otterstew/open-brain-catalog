@@ -2919,18 +2919,21 @@ function describeFilters() {
 }
 
 function renderMainList(items, homeF) {
+  // The untouched front screen shows the archive at a glance: the same cards
+  // as the stats panel. The drawer already lists every note, so a second copy
+  // of that list here only pushed the charts out of sight. Once a filter or a
+  // search narrows things, the main pane goes back to listing the matches.
+  if (homeF) { renderHomeDashboard(homeF); return; }
   const shown = items.slice(0, RESULTS_SHOWN);
   const filters = describeFilters();
   main.innerHTML = `
     <div class="results">
-      ${homeF ? homeGraphCard(homeF, 'main-graph') : ''}
       <div class="results-head">
         <span class="results-count">${items.length} note${items.length === 1 ? '' : 's'}</span>
         <span class="results-filters">${escapeHtml(filters || 'Everything in the drawer')}</span>
       </div>
       <div class="results-rows"></div>
     </div>`;
-  if (homeF) wireHomeGraph(main.querySelector('.home-graph'), homeF);
   const rows = main.querySelector('.results-rows');
   shown.forEach(t => {
     const style = typeStyle(t.type);
@@ -5867,18 +5870,21 @@ function closeGraphFull() {
   hideTip();
 }
 
-function homeGraphCard(f, where) {
+// more: the link to the stats panel. The wide front screen leaves it out, as
+// the panel's other cards sit right beneath the graph there.
+function homeGraphCard(f, where, more = true) {
   return '<div class="home-graph ' + where + '"><div class="home-graph-head">' +
     '<h3>How it hangs together</h3>' +
     '<span class="hint">' + f.linkCount + ' links · click a dot to list the notes it connects</span>' +
-    '<button type="button" class="home-graph-more">More about the archive →</button></div>' +
+    (more ? '<button type="button" class="home-graph-more">More about the archive →</button>' : '') + '</div>' +
     '<div class="graph-wrap"><canvas class="home-graph-canvas"></canvas>' + graphTools(false) + '</div>' +
     graphLegend(f) + '</div>';
 }
 
 function wireHomeGraph(card, f) {
   if (!card) return;
-  card.querySelector('.home-graph-more').addEventListener('click', openStats);
+  const moreBtn = card.querySelector('.home-graph-more');
+  if (moreBtn) moreBtn.addEventListener('click', openStats);
   drawGraph(f, card.querySelector('canvas'));
 }
 
@@ -5920,20 +5926,34 @@ function coverageCard(f) {
     '</ol></div>';
 }
 
+// Two stacked columns rather than grid rows: in rows the tall topic list
+// set the height of its row and left a gap under its shorter neighbour.
+function statsGrid(f) {
+  return '<div class="stats-grid">' +
+    '<div class="stats-col">' + completeness(f) + typeChart(f) + hubsList(f) + '</div>' +
+    '<div class="stats-col">' + weeksChart(f) + topicsChart(f) + coverageCard(f) + '</div>' +
+    '</div>';
+}
+
+function renderHomeDashboard(f) {
+  main.innerHTML = '<div class="results home-dash">' + tileRow(f) +
+    homeGraphCard(f, 'main-graph', false) + statsGrid(f) + '</div>';
+  wireHomeGraph(main.querySelector('.home-graph'), f);
+  wireStatsCharts(main);
+}
+
 function openStats() {
   if (!allThoughts.length) return;
   const f = archiveFigures();
-  // Two stacked columns rather than grid rows: in rows the tall topic list
-  // set the height of its row and left a gap under its shorter neighbour.
-  statsBody.innerHTML = tileRow(f) + graphCard(f) +
-                        '<div class="stats-grid">' +
-                        '<div class="stats-col">' + completeness(f) + typeChart(f) + hubsList(f) + '</div>' +
-                        '<div class="stats-col">' + weeksChart(f) + topicsChart(f) + coverageCard(f) + '</div>' +
-                        '</div>';
+  statsBody.innerHTML = tileRow(f) + graphCard(f) + statsGrid(f);
   statsPanel.hidden = false;
-  drawGraph(f, document.getElementById('graphCanvas'));
+  drawGraph(f, statsBody.querySelector('#graphCanvas'));
+  wireStatsCharts(statsBody);
+}
 
-  statsBody.querySelectorAll('#weeksChart .bar').forEach(bar => {
+// Tooltips on the bars and the type strip, and the hub list's links into notes.
+function wireStatsCharts(root) {
+  root.querySelectorAll('#weeksChart .bar').forEach(bar => {
     bar.addEventListener('mousemove', (e) => {
       const d = new Date(bar.getAttribute('data-week'));
       showTip('<strong>' + bar.getAttribute('data-count') + ' notes</strong><span>week of ' +
@@ -5942,14 +5962,14 @@ function openStats() {
     });
     bar.addEventListener('mouseleave', hideTip);
   });
-  statsBody.querySelectorAll('#typeStack .seg').forEach(seg => {
+  root.querySelectorAll('#typeStack .seg').forEach(seg => {
     seg.addEventListener('mousemove', (e) => {
       showTip('<strong>' + seg.getAttribute('data-count') + ' ' +
         seg.getAttribute('data-type') + '</strong>', e.clientX, e.clientY);
     });
     seg.addEventListener('mouseleave', hideTip);
   });
-  statsBody.querySelectorAll('[data-open]').forEach(btn => {
+  root.querySelectorAll('[data-open]').forEach(btn => {
     btn.addEventListener('click', () => {
       const found = findThought(btn.getAttribute('data-open'));
       if (found) { closeStats(); selectThought(found); }
