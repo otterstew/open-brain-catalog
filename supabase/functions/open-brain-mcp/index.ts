@@ -1403,7 +1403,7 @@ function buildServer(): McpServer {
           .enum(["text", "json"])
           .optional()
           .default("text")
-          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}, sides: {heading: personal|work}} — use this when a script is going to write the list to a file."),
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}, sides: {heading: personal|work}, personal: {exact: [...], contains: [...]}} — use this when a script is going to write the list to a file."),
       },
     },
     async ({ format }) => {
@@ -1426,7 +1426,17 @@ function buildServer(): McpServer {
           const sides = Object.fromEntries(
             ((sideRows || []) as { heading: string; side: string }[]).map((r) => [r.heading, r.side])
           );
-          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings, sides }) }] };
+          // Tags that put a note on Personal only, whatever else it carries
+          // (public.personal_rules). Matched exactly or as a substring.
+          const { data: ruleRows } = await supabase
+            .from("personal_rules")
+            .select("pattern, match");
+          const rules = (ruleRows || []) as { pattern: string; match: string }[];
+          const personal = {
+            exact: rules.filter((r) => r.match === "exact").map((r) => r.pattern),
+            contains: rules.filter((r) => r.match === "contains").map((r) => r.pattern),
+          };
+          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings, sides, personal }) }] };
         }
         const lines = [
           `Preferred topics (${vocab.preferred.length}), in the order the extractor is shown them:`,

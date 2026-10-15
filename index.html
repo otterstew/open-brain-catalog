@@ -2495,16 +2495,30 @@ let headingSides = new Map(); // heading -> 'personal' | 'work'
 let activeSide = 'all';
 try { activeSide = localStorage.getItem('ob.side') || 'all'; } catch (_) { activeSide = 'all'; }
 
+// Tags that put a note on Personal only, from public.personal_rules (15 Oct
+// 2026): philosophy, consciousness, idealism, family, the house. They win over
+// headings, so "Theories of AI Consciousness" stays off Work & AI although it
+// also carries "AI tools". 'contains' rules catch tags coined later.
+let personalExact = new Set();
+let personalContains = [];
+function alwaysPersonal(norm) {
+  return personalExact.has(norm) || personalContains.some(p => norm.includes(p));
+}
+
 // Which sides a note sits on, from its tags' headings. A note none of whose
-// tags has a sided heading — untagged, or tagged since the last review — is on
-// both, so choosing a side never makes a note vanish for want of a heading.
+// tags has a sided heading — untagged, or tagged since the last review — is
+// Personal: Work & AI is the curated side, and on 15 Oct 2026 every such note
+// (the house plan, Dad's bio) was personal and showing on both.
 function noteSides(t) {
   const sides = new Set();
-  (t.topics || []).forEach(top => {
-    const h = topicHeadings && topicHeadings.get(top.trim().toLowerCase());
+  const norms = (t.topics || []).map(top => top.trim().toLowerCase());
+  if (norms.some(alwaysPersonal)) return new Set(['personal']);
+  norms.forEach(norm => {
+    const h = topicHeadings && topicHeadings.get(norm);
     const side = h && headingSides.get(h.heading);
     if (side) sides.add(side);
   });
+  if (!sides.size) sides.add('personal');
   return sides;
 }
 
@@ -2530,8 +2544,7 @@ function noteThoughts() {
 
 function onActiveSide(t) {
   if (activeSide === 'all' || !headingSides.size) return true;
-  const sides = noteSides(t);
-  return sides.size === 0 || sides.has(activeSide);
+  return noteSides(t).has(activeSide);
 }
 
 function renderSideSwitch() {
@@ -2560,9 +2573,14 @@ async function loadTopicHeadings() {
     });
     topicHeadings = map.size ? map : null;
     headingSides = new Map(Object.entries(v.sides || {}));
+    const p = v.personal || {};
+    personalExact = new Set((p.exact || []).map(x => x.trim().toLowerCase()));
+    personalContains = (p.contains || []).map(x => x.trim().toLowerCase()).filter(Boolean);
   } catch (_) {
     topicHeadings = null;
     headingSides = new Map();
+    personalExact = new Set();
+    personalContains = [];
   }
   renderSideSwitch();
   applyFilters();
