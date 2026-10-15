@@ -6175,6 +6175,10 @@ function graphTabs() {
 
 // Every card with the tabs (the front screen's, the phone's, full screen)
 // follows the one choice, so switching in full screen carries back.
+// The graph's own canvas in a card or frame, never the mist layer behind it.
+function graphCanvasIn(el) {
+  return el.querySelector('canvas:not(.mist)');
+}
 function renderTabbedCanvas(canvas, f) {
   if (graphView === 'map') drawMap(canvas, mapMode); else drawGraph(f, canvas);
 }
@@ -6190,7 +6194,10 @@ function refreshTabbedGraphs() {
     if (hint) hint.textContent = graphHint(f, card.classList.contains('graph-full'));
     const legend = card.querySelector('.graph-legend');
     if (legend) legend.outerHTML = graphView === 'map' ? mapLegend(mapMode) : graphLegend(f);
-    renderTabbedCanvas(card.querySelector('canvas'), f);
+    // Not the first canvas: the mist puts its own canvas at the front of the
+    // frame, and drawing the new map onto that left the graph unchanged when
+    // Topics / People / Sources was switched (15 Oct 2026).
+    renderTabbedCanvas(graphCanvasIn(card), f);
   });
 }
 document.addEventListener('click', (e) => {
@@ -6236,7 +6243,7 @@ function openGraphFull() {
     (graphView === 'map' ? mapLegend(mapMode) : graphLegend(f));
   graphFull.hidden = false;
   graphFull.querySelector('[data-full-close]').addEventListener('click', closeGraphFull);
-  renderTabbedCanvas(graphFull.querySelector('canvas'), f);
+  renderTabbedCanvas(graphCanvasIn(graphFull), f);
 }
 
 function closeGraphFull() {
@@ -6261,7 +6268,7 @@ function wireHomeGraph(card, f) {
   if (!card) return;
   const moreBtn = card.querySelector('.home-graph-more');
   if (moreBtn) moreBtn.addEventListener('click', openStats);
-  renderTabbedCanvas(card.querySelector('canvas'), f);
+  renderTabbedCanvas(graphCanvasIn(card), f);
 }
 
 // A canvas is drawn at a fixed size, so a resize (or turning a phone round)
