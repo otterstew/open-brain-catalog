@@ -4793,6 +4793,12 @@ function prefillImportFields(text, today) {
   const date = importMeta.published_date || (today ? todayISO() : '');
   if (date) importField('importPublished').value = formatDateInput(date);
   if (importMeta.source_name) importField('importSource').value = importMeta.source_name;
+  // The panel is reused, so swap in fresh copies before wiring the tag picker,
+  // or every import would stack another set of listeners on the same elements.
+  ['importFieldTags', 'importFieldTagAdd', 'importFieldTagCommon'].forEach(id => {
+    const el = importField(id);
+    el.replaceWith(el.cloneNode(true));
+  });
   wireTagSuggestions('importFieldTags', 'importFieldTagAdd', 'importFieldTagOptions', 'importFieldTagCommon');
 }
 

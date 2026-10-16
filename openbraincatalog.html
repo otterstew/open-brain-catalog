@@ -1386,6 +1386,10 @@
     outline: none;
   }
   .import-text:focus { border-color: var(--brass); }
+  .import-panel { overflow-y: auto; }
+  .import-fields { padding: 0 0 4px; }
+  .import-fields[hidden] { display: none; }
+  @media (max-width: 640px) { .import-text { min-height: 180px; } }
   .import-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   .import-btn {
     background: var(--brass);
@@ -1984,6 +1988,26 @@
     </div>
     <div class="import-status" id="importStatus"></div>
     <div class="import-editor" id="importEditor">
+      <!-- Filled in here rather than in a second pass after saving: what was
+           typed is stated, what is left blank is worked out from the text. -->
+      <div class="edit-field-list import-fields" id="importFields">
+        <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="importTitle" type="text" placeholder="blank — worked out from the text" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="importAuthor" type="text" placeholder="blank — worked out from the text" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="importPublished" type="text" placeholder="dd/mm/yyyy — blank to work it out" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="importSource" type="text" placeholder="the book and page, the site, the shop…" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="importFieldTags" type="text" placeholder="comma, separated — blank to suggest them after saving" /></div>
+        <div class="edit-field-row edit-tag-suggest">
+          <span class="edit-field-label"></span>
+          <div class="edit-tag-suggest-body">
+            <input class="edit-field-input" id="importFieldTagAdd" type="text" list="importFieldTagOptions"
+                   placeholder="Add a tag — type to search, Enter to add" autocomplete="off"
+                   aria-label="Add a tag from the ones already in use" />
+            <datalist id="importFieldTagOptions"></datalist>
+            <div class="import-tag-common" id="importFieldTagCommon"></div>
+          </div>
+        </div>
+        <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="importUrl" type="text" /></div>
+      </div>
       <textarea class="import-text" id="importText" spellcheck="false"
                 aria-label="Text to save as a note"></textarea>
       <div class="import-actions">
@@ -4754,6 +4778,45 @@ async function applyDetectedMeta(id, existing) {
 
 let importMeta = {};
 
+const IMPORT_FIELDS = ['importTitle', 'importAuthor', 'importPublished', 'importSource',
+                       'importFieldTags', 'importUrl'];
+const importField = id => document.getElementById(id);
+
+// Put what the file told us into the fields, so it can be checked and
+// corrected before saving instead of after. today: a photo has no date of its
+// own, so it is filed under the day it was taken.
+function prefillImportFields(text, today) {
+  IMPORT_FIELDS.forEach(id => { importField(id).value = ''; importField(id).style.borderColor = ''; });
+  const heading = /^#\s+(.+)$/m.exec(text || '');
+  if (heading) importField('importTitle').value = heading[1].trim();
+  if (importMeta.author) importField('importAuthor').value = importMeta.author;
+  const date = importMeta.published_date || (today ? todayISO() : '');
+  if (date) importField('importPublished').value = formatDateInput(date);
+  if (importMeta.source_name) importField('importSource').value = importMeta.source_name;
+  // The panel is reused, so swap in fresh copies before wiring the tag picker,
+  // or every import would stack another set of listeners on the same elements.
+  ['importFieldTags', 'importFieldTagAdd', 'importFieldTagCommon'].forEach(id => {
+    const el = importField(id);
+    el.replaceWith(el.cloneNode(true));
+  });
+  wireTagSuggestions('importFieldTags', 'importFieldTagAdd', 'importFieldTagOptions', 'importFieldTagCommon');
+}
+
+const importPublishedEl = importField('importPublished');
+const IMPORT_DATE_HINT = 'Date not recognised — try 01/08/1974, 1 Aug 1974 or 1974-08-01.';
+importPublishedEl.addEventListener('blur', () => {
+  if (!importPublishedEl.value.trim()) { importPublishedEl.style.borderColor = ''; return; }
+  const iso = parseDateInput(importPublishedEl.value);
+  if (iso === null) {
+    importPublishedEl.style.borderColor = 'var(--rust)';
+    setImportStatus(IMPORT_DATE_HINT, true);
+    return;
+  }
+  importPublishedEl.style.borderColor = '';
+  importPublishedEl.value = formatDateInput(iso);
+  if (importStatus.textContent === IMPORT_DATE_HINT) setImportStatus('');
+});
+
 const dropVeil = document.getElementById('dropVeil');
 const importPanel = document.getElementById('importPanel');
 const importText = document.getElementById('importText');
@@ -4908,6 +4971,7 @@ async function importFromFile(file) {
     pendingLinks = ruled.linked;
     pendingPlaceholders = ruled.pending;
     importText.value = cleanImportedText(ruled.text);
+    prefillImportFields(importText.value, false);
     updateImportCount();
     const bits = [];
     if (pendingLinks.length) {
@@ -5010,8 +5074,9 @@ async function importFromPhoto(file) {
       return;
     }
     importText.value = text;
+    prefillImportFields(text, true);
     updateImportCount();
-    setImportStatus('Check it over, then save. Add where it came from (the book and page, or the shop) so you can find it later.');
+    setImportStatus('Check it over, give it a title and say where it came from (the book and page, or the shop), then save.');
   } catch (err) {
     setImportStatus('Could not read that photo — ' + err.message, true);
   }
@@ -5061,6 +5126,7 @@ window.addEventListener('drop', async (e) => {
     pendingLinks = ruled.linked;
     pendingPlaceholders = ruled.pending;
     importText.value = cleanImportedText(ruled.text);
+    prefillImportFields(importText.value, false);
     updateImportCount();
     const bits = [];
     if (pendingLinks.length) {
@@ -5247,18 +5313,42 @@ importSaveNew.addEventListener('click', async () => {
   importSaveNew.disabled = true;
   setImportStatus('Saving…');
   try {
-    const body = content;
+    const published = importPublishedEl.value.trim() ? parseDateInput(importPublishedEl.value) : '';
+    if (published === null) {
+      setImportStatus(IMPORT_DATE_HINT, true);
+      importPublishedEl.focus();
+      return;
+    }
+    const value = id => importField(id).value.trim();
+    const title = value('importTitle');
+    const author = value('importAuthor');
+    const source = value('importSource');
+    const url = value('importUrl');
+    const tags = value('importFieldTags').split(',').map(x => x.trim()).filter(Boolean);
     const made = [];
-    setImportStatus('Saving…');
-    const res = await callTool('capture_thought', { content: body });
+    // What is in the fields is stated; anything blank goes to the extractor.
+    const args = { content };
+    if (author) args.author = author;
+    if (published) args.published_date = published;
+    if (source) args.source_name = source;
+    const res = await callTool('capture_thought', args);
     const id = /id: ([0-9a-f-]{36})/.exec(res);
     if (id) {
-      await applyDetectedMeta(id[1], null);
+      // capture_thought takes no title, tags or URL, so those follow as an edit.
+      const extra = {};
+      if (title) extra.title = title;
+      if (url) extra.source_url = url;
+      if (tags.length) extra.topics = tags;
+      if (Object.keys(extra).length) {
+        try { await callTool('update_thought', Object.assign({ id: id[1] }, extra)); }
+        catch (err) { setImportStatus('Saved, but the title, tags or URL did not stick — ' + err.message, true); }
+      }
       await recordImportLinks(id[1]);
     }
     await loadAll();
-    setImportStatus('');
-    if (id) { tagNoteId = id[1]; await confirmTags(id[1]); }
+    // Tags typed in were a decision already made; the tag step is only for
+    // checking the extractor's guesses.
+    if (id && !tags.length) { setImportStatus(''); tagNoteId = id[1]; await confirmTags(id[1]); }
     showImportSummary(made);
   } catch (err) {
     setImportStatus('Could not save — ' + err.message, true);
@@ -5276,6 +5366,7 @@ function setImportEmphasis(fillingExisting) {
   importFillToggle.classList.toggle('ghost', !fillingExisting);
   importSaveNew.classList.toggle('ghost', fillingExisting);
   importFillToggle.setAttribute('aria-expanded', fillingExisting ? 'true' : 'false');
+  importField('importFields').hidden = fillingExisting;
 }
 
 importFillToggle.addEventListener('click', () => {
