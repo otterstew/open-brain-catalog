@@ -1828,7 +1828,7 @@
 
   /* ---------- task detail ---------- */
 
-  .task-detail { padding: 40px 48px 80px; max-width: 640px; }
+  .task-detail { padding: 40px 48px 80px; max-width: 760px; }
 
   .task-field { margin-top: 18px; }
 
@@ -1853,7 +1853,8 @@
     padding: 9px 11px;
     line-height: 1.5;
   }
-  .task-textarea { min-height: 90px; resize: vertical; }
+  /* Room for a real note; it grows with what's typed (wireTaskDetail). */
+  .task-textarea { min-height: 260px; resize: vertical; }
   .task-note-links { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
   .task-note-links:empty { display: none; }
   .task-select { font-family: var(--font-mono); font-size: 12px; }
@@ -5522,7 +5523,10 @@ function archiveFigures() {
   return {
     notes, linkCount, degree, byType, topics, weeks, waiting,
     complete: notes.length - waiting.length,
-    orphans: notes.filter(t => (degree.get(t.id) || 0) === 0),
+    // Journal days usually stand on their own, so an unlinked one is not a gap
+    // to fill and is left out of the count (16 Oct 2026).
+    orphans: notes.filter(t => (degree.get(t.id) || 0) === 0 &&
+                               !(t.topics || []).includes('Journal')),
     withAuthor: notes.filter(t => t.author).length,
     withSource: notes.filter(t => t.source_url).length,
   };
@@ -7274,9 +7278,18 @@ function wireTaskDetail(t) {
       if (found) { setViewMode('notes'); selectThought(found); }
     }));
   }
-  notesEl.addEventListener('input', renderNoteLinks);
-  setupBodyLinkPicker(null, notesEl, renderNoteLinks);
+  // Grows with its text, as the note editor's body does, and keeps the scroll.
+  function growNotes() {
+    const keep = main.scrollTop;
+    notesEl.style.height = 'auto';
+    notesEl.style.height = (notesEl.scrollHeight + 2) + 'px';
+    if (main.scrollTop !== keep) main.scrollTop = keep;
+  }
+  const notesChanged = () => { growNotes(); renderNoteLinks(); };
+  notesEl.addEventListener('input', notesChanged);
+  setupBodyLinkPicker(null, notesEl, notesChanged);
   renderNoteLinks();
+  growNotes();
 
   const noteBtn = document.getElementById('tdOpenNote');
   if (noteBtn) noteBtn.addEventListener('click', async () => {
