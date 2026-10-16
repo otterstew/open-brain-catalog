@@ -2505,6 +2505,7 @@ function findThought(id) {
 // a control — "show me every author note" was reachable only by knowing that
 // the Author topic tag happens to mirror the person_note type.
 function renderChips() {
+  if (viewMode === 'tasks') return; // the chip row holds the task filters
   const counts = new Map();
   noteThoughts().forEach(t => {
     const k = t.type || '__unfiled__';
@@ -3008,6 +3009,10 @@ function renderList(items, isSearch) {
   const base = isSearch ? displayed.baseResults : items;
   displayed = items;
   displayed.baseResults = base;
+  // The drawer and main pane belong to the tasks while they are showing. The
+  // notes still loading in the background (loadAll on opening) used to land on
+  // top of the task list (16 Oct 2026); keep their state, draw nothing.
+  if (viewMode === 'tasks') return;
   listScroll.innerHTML = '';
   const homeF = showsHomeGraph() && allThoughts.length ? archiveFigures() : null;
   if (mainShowsList()) renderMainList(items, homeF);
@@ -4341,7 +4346,7 @@ async function loadAll() {
   lastSearchQuery = '';
   searchInput.value = '';
   searchClear.style.display = 'none';
-  showStatus('Opening the drawer…', false);
+  if (viewMode !== 'tasks') showStatus('Opening the drawer…', false);
   try {
     // Every note, not the newest hundred. The 100 dated from a 77-note archive
     // and went on quietly hiding two thirds of it once it passed 300: a filter
@@ -4361,7 +4366,7 @@ async function loadAll() {
     // just changed has to be re-read too, or it reopens with the old text.
     if (viewMode === 'journal') await (journalReady = loadJournal());
   } catch (err) {
-    showStatus('Could not reach the archive — ' + err.message, true, loadAll);
+    if (viewMode !== 'tasks') showStatus('Could not reach the archive — ' + err.message, true, loadAll);
   }
 }
 
