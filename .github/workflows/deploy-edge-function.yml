@@ -53,6 +53,11 @@ jobs:
       # --no-verify-jwt is required, not cosmetic: the function authenticates
       # requests itself on the x-brain-key header. Deploying with JWT
       # verification on rejects every catalog request before it reaches the code.
+      #
+      # --yes: since early November 2026 the CLI asks before deploying, and in
+      # this unattended run there is no one to answer, so it stopped with
+      # "Nothing was changed" (2 Nov 2026). Reaching this step already means a
+      # push to main and both tests passing; that is the confirmation.
       - name: Deploy
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
@@ -61,4 +66,5 @@ jobs:
             --project-ref uftlxeahciewiitclkbu \
             --no-verify-jwt \
             --import-map supabase/functions/open-brain-mcp/deno.json \
-            --use-api
+            --use-api \
+            --yes
