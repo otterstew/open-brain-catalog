@@ -108,6 +108,18 @@ function handle(body) {
   await page.waitForTimeout(400);
   const topics = await page.$$eval(G + '.ex-pill .ex-l', els => els.map(e => e.textContent).sort());
   check('Topics lens names the topics', JSON.stringify(topics) === JSON.stringify([...TOPICS].sort()), topics);
+  // --- sources: a note has one source, so their ties come through links ---
+  await page.click(G + '[data-elens="sources"]');
+  await page.waitForTimeout(400);
+  const sourceLines = await page.$$eval(G + '.explore-lines line', els => els.length);
+  check('Sources overview draws ties between sources', sourceLines > 0, sourceLines);
+  await page.click(G + '.ex-pill[data-ex-key="source:youtube"]');
+  await page.waitForTimeout(500);
+  const aroundYouTube = await page.$$eval(G + '.ex-pill:not(.ex-center)', els => els.map(e => e.dataset.exKey));
+  check('a source shows the sources its notes link to', aroundYouTube.includes('source:kindle'), aroundYouTube);
+  await page.click(G + '[data-ex-crumb="0"]');
+  await page.waitForTimeout(300);
+
   await page.click(G + '[data-elens="people"]');
   await page.waitForTimeout(400);
 

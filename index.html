@@ -6428,8 +6428,10 @@ function exLabel(idx, key) {
 }
 
 // The overview: the lens's names, the most-noted first, each tied to the
-// ones it shares notes with — only its three strongest ties, or the lines
-// would bury the names.
+// ones it shares notes with, or whose notes link to its notes — only its three
+// strongest ties, or the lines would bury the names. The links matter most for
+// sources: a note has one source, so two sources never share a note, and on
+// sharing alone the Sources overview drew no lines at all (2 Nov 2026).
 function exploreOverview(idx, cap) {
   const lens = EXPLORE_LENSES[exploreLens];
   const all = [...idx.ents.values()].filter(e => e.kind === lens.kind)
@@ -6437,12 +6439,21 @@ function exploreOverview(idx, cap) {
   const top = all.slice(0, cap);
   const at = new Map(top.map((e, i) => [e.key, i]));
   const weight = new Map();
+  const tie = (i, j) => {
+    if (i === j) return;
+    const k = Math.min(i, j) + ',' + Math.max(i, j);
+    weight.set(k, (weight.get(k) || 0) + 1);
+  };
+  const drawn = (t) => idx.keysOf.get(t.id).filter(k => at.has(k)).map(k => at.get(k));
   idx.notes.forEach(t => {
-    const ks = idx.keysOf.get(t.id).filter(k => at.has(k)).map(k => at.get(k));
-    for (let a = 0; a < ks.length; a++) for (let b = a + 1; b < ks.length; b++) {
-      const k = Math.min(ks[a], ks[b]) + ',' + Math.max(ks[a], ks[b]);
-      weight.set(k, (weight.get(k) || 0) + 1);
-    }
+    const ks = drawn(t);
+    for (let a = 0; a < ks.length; a++) for (let b = a + 1; b < ks.length; b++) tie(ks[a], ks[b]);
+    // Each linked pair of notes once, from the note with the smaller id.
+    idx.linked.get(t.id).forEach(id => {
+      if (id <= t.id) return;
+      const other = drawn(idx.byId.get(id));
+      ks.forEach(i => other.forEach(j => tie(i, j)));
+    });
   });
   const ties = top.map(() => []);
   weight.forEach((w, k) => { const [i, j] = k.split(',').map(Number); ties[i].push([w, k]); ties[j].push([w, k]); });
@@ -6476,6 +6487,18 @@ function exploreFocus(idx, key, cap) {
   }));
   const byKind = { person: [], topic: [], source: [] };
   tally.forEach((n, k) => { const e = idx.ents.get(k); byKind[e.kind].push(exEntNode(e, isNote ? null : n)); });
+  // A source's notes carry no other source, so its neighbouring sources come
+  // through links instead: the sources of the notes its notes link to.
+  if (!isNote && e0.kind === 'source') {
+    const via = new Map();
+    notes.forEach(t => idx.linked.get(t.id).forEach(id => idx.keysOf.get(id).forEach(k => {
+      if (k.startsWith('source:') && k !== key) via.set(k, (via.get(k) || 0) + 1);
+    })));
+    via.forEach((n, k) => {
+      const e = idx.ents.get(k);
+      byKind.source.push(Object.assign(exEntNode(e), { n, meta: n + ' link' + (n === 1 ? '' : 's') + ' · ' + exNotes(e.count) + ' in all' }));
+    });
+  }
   Object.values(byKind).forEach(l => l.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label)));
   const noteNodes = notes.map(t => exNoteNode(idx, t));
   // Drawn: the best-linked notes (they lead somewhere), then the newest.
@@ -6494,7 +6517,7 @@ function exploreFocus(idx, key, cap) {
     room -= more.length;
   });
   const around = ['person', 'topic', 'source', 'note'].flatMap(k => chosen[k]);
-  const total = notes.length + tally.size;
+  const total = notes.length + byKind.person.length + byKind.topic.length + byKind.source.length;
   const groups = [];
   if (notes.length) {
     groups.push({ title: (isNote ? 'Linked notes ' : 'Notes ') + notes.length, clip: 8,
