@@ -4385,22 +4385,34 @@ function searchableText(t) {
 }
 
 // Word-based, punctuation-blind: "burn tokens" finds "token burn", and
-// "4question" finds "4-Question". Every word must appear somewhere.
+// "4question" finds "4-Question". Every word must appear somewhere, and each
+// must start a word: matching anywhere inside one made "AI impacts" find
+// "trAIt … Impact" and bury the notes about AI under everything with "ai" in
+// it — said, again, detail (2 Nov 2026).
 function localSearch(query) {
   const flat = query.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const words = flat.split(' ').filter(Boolean);
   if (!words.length) return [];
   const squashed = flat.replace(/ /g, '');
-  // "tokens" should find "token burn"; a bare substring test misses the plural.
-  const present = (hay, w) =>
-    hay.indexOf(w) !== -1 || (w.length > 3 && w.slice(-1) === 's' && hay.indexOf(w.slice(0, -1)) !== -1);
+  // Hay is padded with spaces so " w" means "a word starting with w".
+  const pad = s => ' ' + s + ' ';
+  // Short words (AI, tax, art) must be the whole word, or a plural of it —
+  // as a prefix "ai" would still find air, aim and aisle. Longer ones may
+  // start a word, so "token" finds "tokens"; and "tokens" finds "token burn".
+  const present = (hay, w) => {
+    if (w.length <= 3) return hay.indexOf(' ' + w + ' ') !== -1 || hay.indexOf(' ' + w + 's ') !== -1;
+    return hay.indexOf(' ' + w) !== -1 || (w.slice(-1) === 's' && hay.indexOf(' ' + w.slice(0, -1)) !== -1);
+  };
+  // The run-together form, anchored at a word start: "4question" finds
+  // "4 question". Only for something long enough not to match by accident.
+  const squashedRe = squashed.length > 3 ? new RegExp(' ' + squashed.split('').join(' ?')) : null;
   return allThoughts.filter(t => {
-    const hay = searchableText(t);
-    return words.every(w => present(hay, w)) ||
-           hay.replace(/ /g, '').indexOf(squashed) !== -1;
+    const hay = pad(searchableText(t));
+    return words.every(w => present(hay, w)) || (squashedRe !== null && squashedRe.test(hay));
   }).sort((a, b) => {
     // A note *about* the thing beats one that mentions it in passing.
-    const at = (a.title || '').toLowerCase(), bt = (b.title || '').toLowerCase();
+    const flatTitle = t => pad((t.title || '').toLowerCase().replace(/[^a-z0-9]+/g, ' '));
+    const at = flatTitle(a), bt = flatTitle(b);
     const aHit = words.every(w => present(at, w)) ? 0 : 1;
     const bHit = words.every(w => present(bt, w)) ? 0 : 1;
     return aHit - bHit;
