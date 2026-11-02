@@ -265,7 +265,10 @@ function backfillSomeChunks(n = 2): void {
 // so reaches past a long note's first 24,000 characters; "note" is the original
 // whole-note embedding. If the chunk search fails for any reason, the note
 // search answers instead: search must never come back empty because of this.
-const DEFAULT_RETRIEVAL: "note" | "chunks" = "note";
+// Switched to "chunks" on 16 Oct 2026 after comparing both on 14 real queries:
+// chunks was as good or better on every one (two deep-text queries moved from
+// rank 4-5 to rank 1) and worse on none.
+const DEFAULT_RETRIEVAL: "note" | "chunks" = "chunks";
 
 async function matchThoughts(
   args: { query_embedding: number[]; match_threshold: number; match_count: number; filter: Record<string, unknown> },
