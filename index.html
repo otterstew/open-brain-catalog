@@ -1369,6 +1369,10 @@
      filter by the whole heading, over the chips for its tags. */
   .facet-chips.grouped { display: block; max-height: 220px; }
   .heading-group + .heading-group { margin-top: 10px; }
+  /* A sub-heading sits indented under its parent, on a rule. */
+  .heading-group.sub { margin-left: calc(var(--depth, 1) * 14px); padding-left: 10px;
+                       border-left: 2px solid var(--hairline); }
+  .heading-sub { color: var(--ink-faint); margin-right: 5px; }
   .heading-group .chip-row { margin-top: 5px; }
   .heading-btn {
     display: flex; align-items: baseline; gap: 8px;
@@ -2686,6 +2690,39 @@ let topicLetter = null;    // null means the "common" view
 // convenience, never a reason for the filter not to open.
 let topicHeadings = null;   // normalised tag -> { heading, suggested }
 let headingSides = new Map(); // heading -> 'personal' | 'work'
+// A heading can hang under another on the same side (2 Nov 2026): Traditions →
+// Practice → Mindfulness teacher training, AI → AI products, Work & career →
+// Work projects. Picking a heading picks everything beneath it.
+let headingParents = new Map(); // heading -> parent heading
+function headingDepth(h) {
+  let d = 0;
+  const seen = new Set();
+  for (let x = h; headingParents.has(x) && !seen.has(x); x = headingParents.get(x)) { seen.add(x); d++; }
+  return d;
+}
+function headingDescendants(h) {
+  const out = [];
+  const walk = (x) => headingParents.forEach((p, c) => {
+    if (p === x && c !== h && !out.includes(c)) { out.push(c); walk(c); }
+  });
+  walk(h);
+  return out;
+}
+// heading -> every tag in use under it and its sub-headings, the topmost
+// headings first, so a whole Traditions reads as "Traditions", not as
+// Traditions, Practice and Mindfulness teacher training.
+function headingTagSets(counts) {
+  const own = new Map();
+  counts.forEach((v, norm) => {
+    const h = topicHeadings && topicHeadings.get(norm);
+    if (h) { if (!own.has(h.heading)) own.set(h.heading, []); own.get(h.heading).push(norm); }
+  });
+  const all = new Map();
+  own.forEach((norms, heading) => {
+    all.set(heading, norms.concat(...headingDescendants(heading).map(d => own.get(d) || [])));
+  });
+  return new Map([...all.entries()].sort((a, b) => headingDepth(a[0]) - headingDepth(b[0])));
+}
 let activeSide = 'all';
 try { activeSide = localStorage.getItem('ob.side') || 'all'; } catch (_) { activeSide = 'all'; }
 
@@ -2767,12 +2804,14 @@ async function loadTopicHeadings() {
     });
     topicHeadings = map.size ? map : null;
     headingSides = new Map(Object.entries(v.sides || {}));
+    headingParents = new Map(Object.entries(v.parents || {}));
     const p = v.personal || {};
     personalExact = new Set((p.exact || []).map(x => x.trim().toLowerCase()));
     personalContains = (p.contains || []).map(x => x.trim().toLowerCase()).filter(Boolean);
   } catch (_) {
     topicHeadings = null;
     headingSides = new Map();
+    headingParents = new Map();
     personalExact = new Set();
     personalContains = [];
   }
@@ -2792,30 +2831,51 @@ function headingGroups(counts) {
     if (h && h.suggested) g.suggested = true;
     g.tags.push([norm, v]);
   });
+  // A parent with no tags of its own still heads its sub-headings.
+  [...groups.keys()].forEach(name => {
+    for (let p = headingParents.get(name); p && !groups.has(p); p = headingParents.get(p)) {
+      groups.set(p, { heading: p, placed: true, suggested: false, tags: [] });
+    }
+  });
   const list = [...groups.values()].filter(g =>
     activeSide === 'all' || !headingSides.has(g.heading) || headingSides.get(g.heading) === activeSide);
   list.forEach(g => {
-    const norms = new Set(g.tags.map(([n]) => n));
+    g.tags.sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label));
+    g.depth = headingDepth(g.heading);
+    // A heading's button picks its own tags and every sub-heading's.
+    g.allNorms = g.tags.map(([n]) => n).concat(...headingDescendants(g.heading)
+      .map(d => groups.has(d) ? groups.get(d).tags.map(([n]) => n) : []));
+    const norms = new Set(g.allNorms);
     g.notes = noteThoughts().filter(t =>
       (t.topics || []).some(top => norms.has(top.trim().toLowerCase()))).length;
-    g.tags.sort((a, b) => b[1].n - a[1].n || a[1].label.localeCompare(b[1].label));
   });
-  return list.sort((a, b) => (b.placed - a.placed) || b.notes - a.notes || a.heading.localeCompare(b.heading));
+  const order = (a, b) => (b.placed - a.placed) || b.notes - a.notes || a.heading.localeCompare(b.heading);
+  // Top-level headings in their usual order, each followed by its sub-headings.
+  const shown = new Set(list.map(g => g.heading));
+  const out = [];
+  const place = (g) => {
+    out.push(g);
+    list.filter(c => headingParents.get(c.heading) === g.heading).sort(order).forEach(place);
+  };
+  list.filter(g => !shown.has(headingParents.get(g.heading))).sort(order).forEach(place);
+  return out;
 }
 
 function renderHeadingGroups(counts) {
   facetChips.classList.add('grouped');
   headingGroups(counts).forEach(g => {
     const wrap = document.createElement('div');
-    wrap.className = 'heading-group';
-    const norms = g.tags.map(([n]) => n);
-    const allOn = norms.every(n => activeTopics.has(n));
+    wrap.className = 'heading-group' + (g.depth ? ' sub' : '');
+    if (g.depth) wrap.style.setProperty('--depth', g.depth);
+    const norms = g.allNorms;
+    const allOn = norms.length > 0 && norms.every(n => activeTopics.has(n));
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'heading-btn' + (allOn ? ' on' : '');
     btn.setAttribute('aria-pressed', allOn ? 'true' : 'false');
     btn.title = allOn ? 'Stop filtering by ' + g.heading : 'Show every note under ' + g.heading;
-    btn.innerHTML = '<span class="heading-name">' + escapeHtml(g.heading) + '</span>'
+    btn.innerHTML = '<span class="heading-name">' + (g.depth ? '<span class="heading-sub" aria-hidden="true">↳</span>' : '')
+      + escapeHtml(g.heading) + '</span>'
       + '<span class="heading-n">' + g.notes + ' note' + (g.notes === 1 ? '' : 's') + '</span>'
       + (g.suggested ? '<span class="heading-note">suggested</span>' : '');
     btn.addEventListener('click', () => {
@@ -3040,13 +3100,8 @@ function describeFilters() {
     const counts = topicCounts();
     let rest = new Set(tags);
     if (topicHeadings) {
-      const byHeading = new Map();
-      counts.forEach((v, norm) => {
-        const h = topicHeadings.get(norm);
-        if (h) { if (!byHeading.has(h.heading)) byHeading.set(h.heading, []); byHeading.get(h.heading).push(norm); }
-      });
-      byHeading.forEach((norms, heading) => {
-        if (norms.every(n => rest.has(n))) { parts.push(heading); norms.forEach(n => rest.delete(n)); }
+      headingTagSets(counts).forEach((norms, heading) => {
+        if (norms.length && norms.every(n => rest.has(n))) { parts.push(heading); norms.forEach(n => rest.delete(n)); }
       });
     }
     rest = [...rest];
@@ -3115,12 +3170,7 @@ function activeTopicChips() {
   const rest = new Set(activeTopics);
   const out = [];
   if (topicHeadings) {
-    const byHeading = new Map();
-    counts.forEach((v, norm) => {
-      const h = topicHeadings.get(norm);
-      if (h) { if (!byHeading.has(h.heading)) byHeading.set(h.heading, []); byHeading.get(h.heading).push(norm); }
-    });
-    byHeading.forEach((norms, heading) => {
+    headingTagSets(counts).forEach((norms, heading) => {
       if (norms.length > 1 && norms.every(n => rest.has(n))) {
         out.push({ label: heading, norms });
         norms.forEach(n => rest.delete(n));
@@ -6113,10 +6163,21 @@ function canvasGraph(canvas, nodes, edges, opts) {
       .forEach(({ n, text }) => {
         ctx.font = (n.labelWeight || '') + ' ' + (n.labelPx || 11) + 'px ' + font;
         const gap = rOf(n) + 4, tw = ctx.measureText(text).width, th = (n.labelPx || 11) + 2;
-        const left = n.x + gap + tw > w - 4;
-        const x = left ? n.x - gap : n.x + gap;
-        const box = { x0: left ? x - tw : x, x1: left ? x : x + tw, y0: n.y - th / 2, y1: n.y + th / 2 };
-        if (n !== hover && placed.some(b => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0)) return;
+        // Right of the dot unless that runs off the canvas; and if that side
+        // would land on a name already drawn, the other side before giving up.
+        // Tried on one side only, the long "Mindfulness teacher training" lost
+        // its name to Practice beside it (2 Nov 2026).
+        const boxAt = (left) => {
+          const x = left ? n.x - gap : n.x + gap;
+          return { left, x, x0: left ? x - tw : x, x1: left ? x : x + tw, y0: n.y - th / 2, y1: n.y + th / 2 };
+        };
+        const clash = (box) => placed.some(b => box.x0 < b.x1 && box.x1 > b.x0 && box.y0 < b.y1 && box.y1 > b.y0);
+        const fits = (box) => box.x0 >= 2 && box.x1 <= w - 2;
+        const first = boxAt(n.x + gap + tw > w - 4);
+        const second = boxAt(!first.left);
+        const box = !clash(first) ? first : (fits(second) && !clash(second)) ? second : first;
+        if (n !== hover && clash(box)) return;
+        const left = box.left, x = box.x;
         placed.push(box);
         ctx.textAlign = left ? 'right' : 'left';
         ctx.lineWidth = 3; ctx.strokeStyle = '#241D47'; ctx.strokeText(text, x, n.y);
@@ -6940,7 +7001,7 @@ function drawMap(canvas, mode) {
   // A heading whose side has no root yet gets one.
   const groupFor = (heading, side) => {
     if (!rooted) {
-      const g = node('group:' + heading, { kind: 'group', side, label: heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [] });
+      const g = node('group:' + heading, { kind: 'group', side, label: heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [], subgroups: [] });
       return g;
     }
     if (!at.has('side:' + side)) {
@@ -6948,12 +7009,9 @@ function drawMap(canvas, mode) {
                              labelPx: 13, labelWeight: '600', labelRank: 1, leaves: [], groups: new Set(), groupNodes: [] });
       if (at.has('side:personal') && at.has('side:work')) edges.push([at.get('side:personal'), at.get('side:work')]);
     }
-    const hub = at.get('side:' + side);
     const gid = 'group:' + side + ':' + heading;
-    const fresh = !at.has(gid);
-    const g = node(gid, { kind: 'group', side, label: heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [] });
-    if (fresh) { edges.push([hub, g]); nodes[hub].groups.add(heading); nodes[hub].groupNodes.push(nodes[g]); }
-    return g;
+    // Hung off the root or off a parent heading once every group is known.
+    return node(gid, { kind: 'group', side, label: heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [], subgroups: [] });
   };
   leaves.forEach(l => {
     const hub = rooted ? at.get('side:' + l.side) : null;
@@ -6973,6 +7031,26 @@ function drawMap(canvas, mode) {
       edges.push([g, leaf]);
       nodes[g].leaves.push(nodes[leaf]);
     });
+  });
+  // A sub-heading hangs off its parent heading where that parent is drawn on
+  // the same side (Traditions → Practice → Mindfulness teacher training);
+  // otherwise, as every heading did before 2 Nov 2026, off its side's root.
+  // Without the roots (People, Sources) the groups float, and a sub-heading is
+  // tied to its parent where both are on the map.
+  nodes.filter(n => n.kind === 'group').forEach(g => {
+    const parent = headingParents.get(g.label);
+    const pid = parent && (rooted ? 'group:' + g.side + ':' + parent : 'group:' + parent);
+    if (pid && at.has(pid) && at.get(pid) !== g.idx) {
+      edges.push([at.get(pid), g.idx]);
+      nodes[at.get(pid)].subgroups.push(g);
+      g.parentGroup = nodes[at.get(pid)];
+      return;
+    }
+    if (!rooted) return;
+    const hub = at.get('side:' + g.side);
+    edges.push([hub, g.idx]);
+    nodes[hub].groups.add(g.label);
+    nodes[hub].groupNodes.push(g);
   });
   nodes.forEach(n => {
     if (n.kind !== 'leaf') n.count = new Set(n.leaves.flatMap(l => l.notes.map(t => t.id))).size;
@@ -7023,9 +7101,15 @@ function openMapSheet(n, mode) {
       (direct.length ? ' and ' + direct.length + ' ' + (direct.length === 1 ? one : many) : ''), rows);
     return;
   }
-  const rows = [...n.leaves].sort(byCount).map(l => ({
-    label: l.label, meta: l.count + ' note' + (l.count === 1 ? '' : 's'), then: () => openMapSheet(l, mode) }));
-  openListSheet(n.label, rows.length + ' ' + (rows.length === 1 ? one : many), rows);
+  // A heading lists its sub-headings first, then its own tags (people, sources).
+  const subs = [...(n.subgroups || [])].sort(byCount).map(g => ({
+    label: '↳ ' + g.label, meta: g.leaves.length + ' ' + (g.leaves.length === 1 ? one : many) + ' · ' + g.count + ' notes',
+    then: () => openMapSheet(g, mode) }));
+  const rows = subs.concat([...n.leaves].sort(byCount).map(l => ({
+    label: l.label, meta: l.count + ' note' + (l.count === 1 ? '' : 's'), then: () => openMapSheet(l, mode) })));
+  const own = n.leaves.length;
+  openListSheet(n.label, (subs.length ? subs.length + ' sub-heading' + (subs.length === 1 ? '' : 's') + ' and ' : '') +
+    own + ' ' + (own === 1 ? one : many), rows);
 }
 
 function graphHint(f, inFull) {

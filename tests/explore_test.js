@@ -13,7 +13,7 @@ const MCP = 'https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mc
 
 const id = i => '00000000-0000-4000-8000-' + String(i + 1).padStart(12, '0');
 const PEOPLE = ['Rob Burbea', 'Tara Brach', 'Ethan Mollick', 'Simon Willison', 'Ruth King', 'Sam Harris'];
-const TOPICS = ['Meditation', 'AI tools', 'Health', 'Book'];
+const TOPICS = ['Meditation', 'AI tools', 'Health', 'Book', 'Buddhism'];
 const thoughts = [];
 for (let i = 0; i < 60; i++) {
   const people = [PEOPLE[i % PEOPLE.length]];
@@ -30,7 +30,12 @@ function handle(body) {
   const reply = text => ({ jsonrpc: '2.0', id: rid, result: { content: [{ type: 'text', text }] } });
   if (method !== 'tools/call') return { jsonrpc: '2.0', id: rid, result: {} };
   if (params.name === 'list_thoughts') return reply(JSON.stringify((params.arguments || {}).topic ? [] : thoughts));
-  if (params.name === 'topic_vocabulary') return reply(JSON.stringify({ headings: {}, sides: {}, personal: {} }));
+  if (params.name === 'topic_vocabulary') return reply(JSON.stringify({
+    headings: { Meditation: { heading: 'Practice' }, Buddhism: { heading: 'Traditions' },
+                Health: { heading: 'Mind & body' }, Book: { heading: 'Books & Writing' }, 'AI tools': { heading: 'AI' } },
+    sides: { Practice: 'personal', Traditions: 'personal', 'Mind & body': 'personal', 'Books & Writing': 'personal', AI: 'work' },
+    parents: { Practice: 'Traditions' },
+    personal: {} }));
   return reply('[]');
 }
 
@@ -167,6 +172,40 @@ function handle(body) {
   await page.waitForTimeout(400);
   const after = await page.evaluate(() => document.querySelector('.drawer').scrollTop);
   check('Back from a note keeps the list where it was', Math.abs(after - before) < 2, { before, after });
+
+  // --- sub-headings: Practice sits under Traditions ---
+  await page.evaluate(() => {
+    [activeTypes, activeTopics, activeAuthors, activeSources, activePeople].forEach(x => x.clear());
+    applyFilters();
+    document.querySelector('.drawer').scrollTop = 0;
+  });
+  await page.waitForTimeout(300);
+  await page.click('#facetBtnTopics');
+  await page.waitForTimeout(300);
+  const panel = await page.$$eval('#facetChips .heading-group', els => els.map(e => ({
+    name: e.querySelector('.heading-name').textContent.replace('↳', '').trim(), sub: e.classList.contains('sub') })));
+  const ti = panel.findIndex(g => g.name === 'Traditions');
+  check('a sub-heading follows its parent, indented',
+    ti !== -1 && panel[ti + 1] && panel[ti + 1].name === 'Practice' && panel[ti + 1].sub && !panel[ti].sub, panel);
+  await page.click('#facetChips .heading-group:not(.sub) .heading-btn >> text=Traditions');
+  await page.waitForTimeout(400);
+  const picked = await page.evaluate(() => [...activeTopics].sort());
+  check('a parent heading picks its sub-headings\' tags too',
+    JSON.stringify(picked) === JSON.stringify(['buddhism', 'meditation']), picked);
+  const headChips = await page.$$eval('.lh-chip', els => els.map(e => e.textContent.replace('×', '').trim()));
+  check('a whole parent reads as one chip', JSON.stringify(headChips) === JSON.stringify(['Traditions']), headChips);
+
+  // The Map hangs Practice off Traditions, not off the Personal root.
+  const mapEdges = await page.evaluate(() => {
+    let got = null;
+    const real = window.canvasGraph;
+    window.canvasGraph = (c, nodes, edges) => { got = edges.map(([i, j]) => [nodes[i].id, nodes[j].id].sort().join(' ~ ')); };
+    try { drawMap(document.createElement('canvas'), 'topics'); } finally { window.canvasGraph = real; }
+    return got || [];
+  });
+  check('the Map hangs a sub-heading off its parent',
+    mapEdges.includes(['group:personal:Practice', 'group:personal:Traditions'].sort().join(' ~ ')) &&
+    !mapEdges.includes(['group:personal:Practice', 'side:personal'].sort().join(' ~ ')), mapEdges);
 
   check('no page errors', errors.length === 0, errors);
   results.forEach(r => console.log((r.ok ? 'ok   ' : 'FAIL ') + r.label + (r.ok ? '' : '  ' + JSON.stringify(r.extra))));

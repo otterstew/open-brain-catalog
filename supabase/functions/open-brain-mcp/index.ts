@@ -1475,7 +1475,7 @@ function buildServer(): McpServer {
           .enum(["text", "json"])
           .optional()
           .default("text")
-          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}, sides: {heading: personal|work}, personal: {exact: [...], contains: [...]}} — use this when a script is going to write the list to a file."),
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}, sides: {heading: personal|work}, parents: {heading: parent heading}, personal: {exact: [...], contains: [...]}} — use this when a script is going to write the list to a file."),
       },
     },
     async ({ format }) => {
@@ -1494,9 +1494,13 @@ function buildServer(): McpServer {
           );
           const { data: sideRows } = await supabase
             .from("heading_sides")
-            .select("heading, side");
-          const sides = Object.fromEntries(
-            ((sideRows || []) as { heading: string; side: string }[]).map((r) => [r.heading, r.side])
+            .select("heading, side, parent");
+          const sideList = (sideRows || []) as { heading: string; side: string; parent: string | null }[];
+          const sides = Object.fromEntries(sideList.map((r) => [r.heading, r.side]));
+          // A heading can hang under another on the same side (2 Nov 2026):
+          // Traditions → Practice → Mindfulness teacher training, AI → AI products.
+          const parents = Object.fromEntries(
+            sideList.filter((r) => r.parent).map((r) => [r.heading, r.parent as string])
           );
           // Tags that put a note on Personal only, whatever else it carries
           // (public.personal_rules). Matched exactly or as a substring.
@@ -1508,7 +1512,7 @@ function buildServer(): McpServer {
             exact: rules.filter((r) => r.match === "exact").map((r) => r.pattern),
             contains: rules.filter((r) => r.match === "contains").map((r) => r.pattern),
           };
-          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings, sides, personal }) }] };
+          return { content: [{ type: "text" as const, text: JSON.stringify({ ...vocab, headings, sides, parents, personal }) }] };
         }
         const lines = [
           `Preferred topics (${vocab.preferred.length}), in the order the extractor is shown them:`,
