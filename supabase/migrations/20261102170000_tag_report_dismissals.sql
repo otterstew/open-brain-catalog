@@ -1,6 +1,3 @@
--- NOT YET APPLIED (2 Nov 2026): the apply twice waited on a confirmation that
--- timed out, and nothing was applied. Delete these lines once it is applied.
---
 -- tag_structure_report, second version. A finding Stewart has looked at and
 -- ruled fine goes in tag_report_dismissals and stops appearing; a report that
 -- repeats a settled answer every Monday trains the eye to skip it. Work
@@ -17,7 +14,7 @@ create table if not exists public.tag_report_dismissals (
 alter table public.tag_report_dismissals enable row level security;
 -- No "drop policy if exists" first, unlike the older tag tables: the table is
 -- new, so there is nothing to drop, and the drop made the connector ask for a
--- confirmation that twice timed out unanswered (2 Nov 2026).
+-- confirmation that twice timed out unanswered. Applied without it, 2 Nov 2026.
 create policy "Service role full access" on public.tag_report_dismissals
   for all using (auth.role() = 'service_role');
 
