@@ -254,6 +254,23 @@
   .list-scroll::-webkit-scrollbar { width: 8px; }
   .list-scroll::-webkit-scrollbar-thumb { background: var(--hairline); border-radius: 4px; }
 
+  /* The phone's pinned line over the list: how many notes, what they are
+     filtered by (each one a tap to remove), and the way back up to the
+     filters, which scroll away with the list there. */
+  .list-head { display: none; position: sticky; top: 0; z-index: 4; flex-wrap: wrap; align-items: center;
+               gap: 6px; padding: 8px 14px; background: var(--panel); border-bottom: 1px solid var(--hairline);
+               box-shadow: 0 8px 14px -12px rgba(0,0,0,0.7); }
+  .lh-count { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+              color: var(--ink-dim); margin-right: 2px; white-space: nowrap; }
+  .lh-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
+             padding: 5px 10px; border-radius: 999px; border: 1px solid var(--brass);
+             background: rgba(245,201,107,0.12); color: var(--ink); font-family: var(--font-mono); font-size: 11px; }
+  .lh-chip span { color: var(--brass); margin-left: 2px; }
+  .lh-top { margin-left: auto; flex-shrink: 0; cursor: pointer; padding: 5px 9px; background: none;
+            border: 1px solid var(--hairline); border-radius: 3px; color: var(--ink-dim);
+            font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; }
+  .lh-chip:focus-visible, .lh-top:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+
   .card-row {
     display: flex;
     width: 100%;
@@ -1157,6 +1174,75 @@
   .graph-legend .key i { border-radius: 50%; }
   .graph-legend .unlinked { color: var(--ink-faint); font-style: italic; }
 
+  /* Explore: the graph walked a name at a time. Names are buttons laid out
+     over a line layer rather than dots on a canvas, so every one is labelled,
+     big enough for a finger, and readable by a screen reader. */
+  .explore[hidden] { display: none; }
+  .exploring .home-graph-canvas, .exploring .graph-full-canvas { display: none; }
+  .exploring .graph-tools [data-zoom="in"], .exploring .graph-tools [data-zoom="out"],
+  .exploring .graph-tools [data-zoom="fit"] { display: none; }
+  .graph-full.exploring .graph-wrap { overflow-y: auto; }
+  .graph-full .explore { padding: 8px 12px 14px; }
+  .explore-bar { display: flex; align-items: center; gap: 8px; min-height: 32px; padding-right: 42px; }
+  .ex-crumbs { display: flex; align-items: center; gap: 2px; min-width: 0; overflow-x: auto;
+               white-space: nowrap; scrollbar-width: none; font-family: var(--font-mono);
+               font-size: 11px; letter-spacing: 0.04em; }
+  .ex-crumbs::-webkit-scrollbar { display: none; }
+  .ex-crumbs button { background: none; border: 0; padding: 6px 3px; cursor: pointer; color: var(--ink-dim);
+                      font: inherit; letter-spacing: inherit; max-width: 18ch; overflow: hidden;
+                      text-overflow: ellipsis; flex-shrink: 0; }
+  .ex-crumbs button:hover { color: var(--brass); }
+  .ex-crumbs button.here { color: var(--brass); max-width: 26ch; }
+  .ex-crumbs .sep { color: var(--ink-faint); padding: 0 1px; flex-shrink: 0; }
+  .ex-back { flex-shrink: 0; background: none; border: 1px solid var(--hairline); border-radius: 3px;
+             color: var(--ink); cursor: pointer; padding: 5px 10px; font-family: var(--font-mono);
+             font-size: 11px; letter-spacing: 0.04em; }
+  .ex-back:hover { border-color: var(--brass); color: var(--brass); }
+  .explore-stage { position: relative; width: 100%; margin-top: 6px; overflow: hidden; }
+  .explore-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+  .ex-empty { margin: 30px 0; text-align: center; color: var(--ink-faint); font-style: italic; }
+  .ex-pill { position: absolute; left: 0; top: 0; display: flex; align-items: center; gap: 6px;
+             max-width: 140px; min-height: 32px; padding: 6px 10px; cursor: pointer; text-align: left;
+             font-family: var(--font-body); font-size: 12.5px; line-height: 1.2; color: var(--ink);
+             background: var(--panel-raised); border: 1px solid var(--hairline); border-radius: 6px;
+             transition: opacity 260ms ease, border-color 120ms; will-change: transform; }
+  .ex-pill:hover { border-color: var(--brass); }
+  .ex-pill:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  /* People, topics and sources are rounded and take their colour; notes are
+     cards with a dot in their kind's colour — the two read apart at a glance. */
+  .ex-pill.ex-ent { border-radius: 999px; border-color: var(--c); color: var(--c); background: rgba(27,22,56,0.94); }
+  .ex-pill.ex-center { max-width: 190px; padding: 8px 14px; font-size: 14px; font-weight: 600; z-index: 2;
+                       border-width: 2px; box-shadow: 0 0 0 4px rgba(245,201,107,0.16), 0 6px 18px rgba(0,0,0,0.35); }
+  .ex-pill.ex-note.ex-center { border-color: var(--c); }
+  .ex-pill.ex-new { opacity: 0; }
+  .ex-pill .ex-l { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+                   overflow: hidden; overflow-wrap: anywhere; }
+  .ex-pill .ex-n { flex-shrink: 0; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); font-weight: 400; }
+  .ex-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c); flex-shrink: 0; }
+  .ex-caption { margin: 6px 0 0; font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--ink-faint); }
+  .explore-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 2px; }
+  .explore-list { margin-top: 6px; }
+  .ex-group h4 { margin: 14px 0 4px; font-family: var(--font-mono); font-size: 10.5px; font-weight: 400;
+                 letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-faint); }
+  .ex-find { margin: 2px 0 6px; }
+  .ex-rows { list-style: none; margin: 0; padding: 0; }
+  .ex-rows li { display: flex; align-items: stretch; border-bottom: 1px solid var(--ruled); }
+  .ex-rows li[hidden] { display: none; }
+  .ex-rows.clipped li.ex-over { display: none; }
+  .ex-row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; min-height: 44px;
+            padding: 8px 2px; background: none; border: 0; cursor: pointer; text-align: left;
+            color: var(--ink); font-family: var(--font-body); font-size: 14px; line-height: 1.3; }
+  .ex-row:hover .ex-t { color: var(--brass); }
+  .ex-row:focus-visible, .ex-read:focus-visible, .ex-more:focus-visible { outline: 2px solid var(--brass); outline-offset: -2px; }
+  .ex-row .ex-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .ex-row .ex-m { flex-shrink: 0; font-family: var(--font-mono); font-size: 10.5px; color: var(--ink-faint); white-space: nowrap; }
+  .ex-read { flex-shrink: 0; background: none; border: 0; border-left: 1px solid var(--ruled); cursor: pointer;
+             padding: 0 12px; color: var(--brass); font-family: var(--font-mono); font-size: 10.5px;
+             letter-spacing: 0.08em; text-transform: uppercase; }
+  .ex-more { margin-top: 6px; background: none; border: 0; padding: 8px 0; cursor: pointer; color: var(--ink-dim);
+             font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; }
+  .ex-more:hover { color: var(--brass); }
+
   /* Tasks filed from the note being read — the task detail's "Came from"
      button, followed backwards. */
   .note-tasks { padding: 12px 18px 4px; border-top: 1px solid var(--ruled); }
@@ -1550,6 +1636,18 @@
        wider than the screen — taking its right-hand edge out of view. */
     .app, .app.detail-open, .app.ref-open { grid-template-columns: minmax(0, 1fr); }
     .drawer, .main { min-width: 0; }
+
+    /* The whole drawer scrolls on a phone, filters and all. With the filters
+       pinned above a list that scrolled on its own, an open People panel left
+       room for one note (2 Nov 2026). The list's own head stays pinned
+       instead, with the count, the filters in force and a way back up. */
+    .drawer { overflow-y: auto; }
+    .drawer-header { flex: none; padding: 16px 14px 12px; }
+    .list-scroll { flex: none; overflow: visible; padding-top: 0; }
+    .list-head { display: flex; }
+    /* No box scrolling inside the scrolling page: the panel is as long as it
+       needs to be, and closes itself once something in it is picked. */
+    .facet-chips, .facet-chips.grouped { max-height: none; overflow: visible; }
 
     .facet-toggle {
       display: flex;
@@ -2723,7 +2821,9 @@ function renderHeadingGroups(counts) {
     btn.addEventListener('click', () => {
       if (allOn) norms.forEach(n => activeTopics.delete(n));
       else norms.forEach(n => activeTopics.add(n));
+      const closed = closeFacetOnPhone();
       applyFilters();
+      if (closed) revealListOnPhone();
     });
     const row = document.createElement('div');
     row.className = 'chip-row';
@@ -2784,7 +2884,9 @@ function facetChip(norm, label, count, activeSet, colour) {
     + (count > 1 ? '<span class="chip-count">(' + count + ')</span>' : '');
   chip.addEventListener('click', () => {
     if (activeSet.has(norm)) activeSet.delete(norm); else activeSet.add(norm);
+    const closed = closeFacetOnPhone();
     applyFilters();
+    if (closed) revealListOnPhone();
   });
   return chip;
 }
@@ -2999,6 +3101,106 @@ function mainShowsList() {
     && !!main.querySelector(':scope > .results, :scope > .empty-state');
 }
 
+// ---------- the phone's list head ----------
+// On a phone the filters scroll away with the list, so the list carries its
+// own pinned head: the count, each filter in force as a chip that removes it,
+// and a button back up to the rest. The stylesheet shows it only on a phone.
+const isPhone = () => window.matchMedia('(max-width: 760px)').matches;
+let listHeadActs = [];
+
+// The topics in force, a whole heading reading as the heading (as in
+// describeFilters) so picking "Practice" gives one chip, not eleven.
+function activeTopicChips() {
+  const counts = topicCounts();
+  const rest = new Set(activeTopics);
+  const out = [];
+  if (topicHeadings) {
+    const byHeading = new Map();
+    counts.forEach((v, norm) => {
+      const h = topicHeadings.get(norm);
+      if (h) { if (!byHeading.has(h.heading)) byHeading.set(h.heading, []); byHeading.get(h.heading).push(norm); }
+    });
+    byHeading.forEach((norms, heading) => {
+      if (norms.length > 1 && norms.every(n => rest.has(n))) {
+        out.push({ label: heading, norms });
+        norms.forEach(n => rest.delete(n));
+      }
+    });
+  }
+  rest.forEach(n => out.push({ label: '#' + ((counts.get(n) || {}).label || n), norms: [n] }));
+  return out;
+}
+
+function listHeadHtml(n) {
+  listHeadActs = [];
+  const chips = [];
+  const chip = (label, undo) => chips.push(
+    '<button type="button" class="lh-chip" data-lh="' + (listHeadActs.push(undo) - 1) + '"' +
+    ' aria-label="Stop filtering by ' + escapeAttr(label) + '">' + escapeHtml(label) +
+    '<span aria-hidden="true"> ×</span></button>');
+  const drop = (set, norms) => () => { norms.forEach(x => set.delete(x)); applyFilters(); };
+  if (searchMode && lastSearchQuery) chip('“' + lastSearchQuery + '”', () => searchClear.click());
+  [...activeTypes].forEach(k => chip(typeStyle(k === '__unfiled__' ? null : k).label, drop(activeTypes, [k])));
+  activeTopicChips().forEach(c => chip(c.label, drop(activeTopics, c.norms)));
+  const named = (set, counts) => [...set].forEach(norm => chip((counts.get(norm) || {}).label || norm, drop(set, [norm])));
+  if (activePeople.size) named(activePeople, listCounts('people'));
+  if (activeAuthors.size) named(activeAuthors, valueCounts('author'));
+  if (activeSources.size) named(activeSources, valueCounts('source'));
+  return '<div class="list-head" id="listHead">' +
+    '<span class="lh-count">' + n + ' note' + (n === 1 ? '' : 's') + '</span>' + chips.join('') +
+    '<button type="button" class="lh-top" data-lh-top>' + (chips.length ? 'Filters' : 'Search &amp; filter') +
+    ' <span aria-hidden="true">↑</span></button></div>';
+}
+
+listScroll.addEventListener('click', (e) => {
+  const c = e.target.closest('[data-lh]');
+  if (c) { const undo = listHeadActs[+c.dataset.lh]; if (undo) undo(); return; }
+  if (e.target.closest('[data-lh-top]')) listScroll.parentElement.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// Back from a note on a phone lands where you were in the list. The drawer is
+// hidden while the note shows, and a hidden box forgets how far it had
+// scrolled: back from the twentieth note put you near the top again. Only the
+// same list gets its place back; a filter picked from inside the note starts
+// a new list at the top.
+(() => {
+  const drawer = listScroll.parentElement;
+  const listKey = () => viewMode + '|' + describeFilters();
+  let kept = 0, keptFor = '', wasOpen = false;
+  drawer.addEventListener('scroll', () => {
+    if (app.classList.contains('detail-open')) return;
+    kept = drawer.scrollTop;
+    keptFor = listKey();
+  }, { passive: true });
+  new MutationObserver(() => {
+    const open = app.classList.contains('detail-open');
+    if (wasOpen && !open && isPhone() && keptFor === listKey()) {
+      const to = kept;
+      requestAnimationFrame(() => { drawer.scrollTop = to; });
+    }
+    wasOpen = open;
+  }).observe(app, { attributes: true, attributeFilter: ['class'] });
+})();
+
+// Picking a person or a topic on a phone closes the panel it came from and
+// brings the list up under its head: the point of picking was the notes.
+function closeFacetOnPhone() {
+  if (!isPhone()) return false;
+  openFacet = null;
+  topicLetter = null;
+  return true;
+}
+function revealListOnPhone() {
+  if (!isPhone() || viewMode !== 'notes') return;
+  const drawer = listScroll.parentElement;
+  const head = document.getElementById('listHead');
+  if (!head) return;
+  // Where the head sits in the list, not where it is pinned on screen.
+  const top = listScroll.getBoundingClientRect().top - drawer.getBoundingClientRect().top +
+    drawer.scrollTop + (head.previousElementSibling ? head.previousElementSibling.offsetHeight : 0);
+  drawer.scrollTop = Math.max(0, top);
+}
+
 function renderList(items, isSearch) {
   // Everything that refreshes the drawer comes through here, so in journal mode
   // this is where it turns back into the journal — and leaves the note list's
@@ -3022,6 +3224,9 @@ function renderList(items, isSearch) {
     listScroll.insertAdjacentHTML('afterbegin', homeGraphCard(homeF, 'drawer-graph'));
     wireHomeGraph(listScroll.querySelector('.home-graph'), homeF);
   }
+  // After the graph, so on the front screen the graph comes first and the
+  // head pins itself once the list scrolls up to it.
+  listScroll.insertAdjacentHTML('beforeend', listHeadHtml(items.length));
 
   if (items.length === 0) {
     const status = document.createElement('div');
@@ -6127,12 +6332,475 @@ function showsHomeGraph() {
 // heading hangs off its side, and each tag, person or source hangs off its
 // heading — for people and sources, the heading most of their notes sit
 // under. Written by and kind of note are left out (Oct 2026: not wanted).
-let graphView = 'links', mapMode = 'topics';
+// Explore is the first tab and where the graph opens. The choice is kept
+// under a new name so a device that last showed Links or Map opens on
+// Explore once, rather than never finding it (2 Nov 2026).
+let graphView = 'explore', mapMode = 'topics';
 try {
-  graphView = localStorage.getItem('ob.graphView') === 'map' ? 'map' : 'links';
+  const g = localStorage.getItem('ob.graphTab');
+  if (g === 'links' || g === 'map' || g === 'explore') graphView = g;
   const m = localStorage.getItem('ob.mapMode');
   if (m === 'people' || m === 'sources') mapMode = m;
 } catch (_) { /* storage blocked */ }
+
+// ---------- Explore: the graph walked a name at a time ----------
+// Links draws every note at once, and on a phone that is four hundred
+// unlabelled dots no finger can pick apart; the Map names its groups but only
+// the biggest of the people, and a tap there gives a flat list. Explore starts
+// from one kind of thing — people, topics or sources — drawn as names you can
+// read and tap. Tapping one moves it to the middle with what it connects to
+// around it: its notes, the people they mention, their topics. Tap any of
+// those to move on; the trail above steps back. Everything drawn is also
+// listed underneath, where long titles read properly (2 Nov 2026).
+const EXPLORE_LENSES = {
+  people:  { kind: 'person', one: 'person', many: 'people',  label: 'People' },
+  topics:  { kind: 'topic',  one: 'topic',  many: 'topics',  label: 'Topics' },
+  sources: { kind: 'source', one: 'source', many: 'sources', label: 'Sources' },
+};
+const EXPLORE_COLOUR = { person: 'var(--plum)', topic: 'var(--brass)', source: 'var(--blue)' };
+const EXPLORE_GROUP = { person: 'People', topic: 'Topics', source: 'Sources' };
+let exploreLens = 'people';
+// The trail: 'person:rob burbea', 'topic:mindfulness', 'note:<id>'. Empty is
+// the lens's overview. Shared by every copy of the graph on screen.
+let explorePath = [];
+try {
+  const l = localStorage.getItem('ob.exploreLens');
+  if (EXPLORE_LENSES[l]) exploreLens = l;
+} catch (_) { /* storage blocked */ }
+
+// Who and what each note names, and which notes link either way, over the
+// notes the drawer would show (so Personal / Work & AI carries through).
+// Stewart is in half the archive; as a name he would tie everything to
+// everything, as he would on the Map.
+function exploreIndex() {
+  const notes = noteThoughts().filter(onActiveSide);
+  const byId = new Map(notes.map(t => [t.id, t]));
+  const ents = new Map(), keysOf = new Map();
+  const add = (kind, raw, t) => {
+    const label = (raw || '').trim();
+    if (!label) return;
+    const key = kind + ':' + label.toLowerCase();
+    let e = ents.get(key);
+    if (!e) ents.set(key, e = { key, kind, spellings: new Map(), notes: [] });
+    // A note naming someone twice still counts once (its values arrive together).
+    if (e.notes[e.notes.length - 1] === t) return;
+    e.notes.push(t);
+    e.spellings.set(label, (e.spellings.get(label) || 0) + 1);
+    keysOf.get(t.id).push(key);
+  };
+  notes.forEach(t => {
+    keysOf.set(t.id, []);
+    (t.people || []).forEach(p => { if (!/^stewart\b/i.test((p || '').trim())) add('person', p, t); });
+    (t.topics || []).forEach(x => add('topic', x, t));
+    if (t.source) add('source', t.source, t);
+  });
+  ents.forEach(e => {
+    e.label = [...e.spellings.entries()].sort((a, b) => b[1] - a[1])[0][0];
+    e.count = e.notes.length;
+  });
+  const linked = new Map(notes.map(t => [t.id, new Set()]));
+  notes.forEach(t => noteLinks(t).forEach(id => {
+    if (id === t.id || !byId.has(id)) return;
+    linked.get(t.id).add(id);
+    linked.get(id).add(t.id);
+  }));
+  return { notes, byId, ents, keysOf, linked };
+}
+
+const exNotes = (c) => c + ' note' + (c === 1 ? '' : 's');
+function exNoteNode(idx, t) {
+  const s = typeStyle(t.type), deg = idx.linked.get(t.id).size;
+  return { key: 'note:' + t.id, kind: 'note', id: t.id, colour: s.color, rank: deg, date: t.created_at || '',
+           label: t.title || (t.content || '').replace(/\s+/g, ' ').slice(0, 80) || 'Untitled',
+           meta: s.label + (deg ? ' · ' + deg + ' link' + (deg === 1 ? '' : 's') : '') };
+}
+// shared: how many of the focused thing's notes it turns up in, when that is
+// the number worth showing; otherwise its own count.
+function exEntNode(e, shared) {
+  const n = shared == null ? e.count : shared;
+  return { key: e.key, kind: e.kind, colour: EXPLORE_COLOUR[e.kind], label: e.label, n,
+           meta: shared == null ? exNotes(e.count) : shared + ' of these · ' + e.count + ' in all' };
+}
+function exLabel(idx, key) {
+  if (key.startsWith('note:')) { const t = idx.byId.get(key.slice(5)); return t ? exNoteNode(idx, t).label : ''; }
+  const e = idx.ents.get(key);
+  return e ? e.label : '';
+}
+
+// The overview: the lens's names, the most-noted first, each tied to the
+// ones it shares notes with — only its three strongest ties, or the lines
+// would bury the names.
+function exploreOverview(idx, cap) {
+  const lens = EXPLORE_LENSES[exploreLens];
+  const all = [...idx.ents.values()].filter(e => e.kind === lens.kind)
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
+  const top = all.slice(0, cap);
+  const at = new Map(top.map((e, i) => [e.key, i]));
+  const weight = new Map();
+  idx.notes.forEach(t => {
+    const ks = idx.keysOf.get(t.id).filter(k => at.has(k)).map(k => at.get(k));
+    for (let a = 0; a < ks.length; a++) for (let b = a + 1; b < ks.length; b++) {
+      const k = Math.min(ks[a], ks[b]) + ',' + Math.max(ks[a], ks[b]);
+      weight.set(k, (weight.get(k) || 0) + 1);
+    }
+  });
+  const ties = top.map(() => []);
+  weight.forEach((w, k) => { const [i, j] = k.split(',').map(Number); ties[i].push([w, k]); ties[j].push([w, k]); });
+  const keep = new Set();
+  ties.forEach(l => l.sort((a, b) => b[0] - a[0]).slice(0, 3).forEach(([, k]) => keep.add(k)));
+  return {
+    center: null,
+    nodes: top.map(e => exEntNode(e)),
+    edges: [...keep].map(k => { const [i, j] = k.split(',').map(Number); return [i, j, weight.get(k)]; }),
+    caption: all.length > top.length
+      ? 'The ' + top.length + ' with the most notes are drawn; all ' + all.length + ' are listed below.' : '',
+    empty: 'No ' + lens.many + ' named in these notes yet.',
+    groups: [{ title: 'All ' + all.length + ' ' + (all.length === 1 ? lens.one : lens.many), find: lens.one, clip: 12,
+               rows: all.map(e => exEntNode(e)) }],
+  };
+}
+
+// One thing in the middle and what it connects to around it. For a person,
+// topic or source: its notes, and the people, topics and sources across them.
+// For a note: the notes it links to either way, and its own people, topics
+// and source. A phone draws up to 14 of them, the rest are in the list.
+function exploreFocus(idx, key, cap) {
+  const isNote = key.startsWith('note:');
+  const t0 = isNote ? idx.byId.get(key.slice(5)) : null;
+  const e0 = isNote ? null : idx.ents.get(key);
+  const center = isNote ? exNoteNode(idx, t0) : exEntNode(e0);
+  const notes = isNote ? [...idx.linked.get(t0.id)].map(id => idx.byId.get(id)) : e0.notes;
+  const tally = new Map();
+  (isNote ? [t0] : notes).forEach(t => idx.keysOf.get(t.id).forEach(k => {
+    if (k !== key) tally.set(k, (tally.get(k) || 0) + 1);
+  }));
+  const byKind = { person: [], topic: [], source: [] };
+  tally.forEach((n, k) => { const e = idx.ents.get(k); byKind[e.kind].push(exEntNode(e, isNote ? null : n)); });
+  Object.values(byKind).forEach(l => l.sort((a, b) => b.n - a.n || a.label.localeCompare(b.label)));
+  const noteNodes = notes.map(t => exNoteNode(idx, t));
+  // Drawn: the best-linked notes (they lead somewhere), then the newest.
+  const drawnNotes = [...noteNodes].sort((a, b) => b.rank - a.rank || b.date.localeCompare(a.date));
+  const pools = { person: byKind.person, topic: byKind.topic, source: byKind.source, note: drawnNotes };
+  const quota = isNote ? { person: 6, topic: 5, source: 1, note: cap }
+                       : { person: 4, topic: 3, source: 2, note: Math.ceil(cap * 0.5) };
+  const chosen = {};
+  let room = cap;
+  Object.keys(quota).forEach(k => { chosen[k] = pools[k].slice(0, Math.min(quota[k], room)); room -= chosen[k].length; });
+  // Room a kind left unused goes to the others, in the same order.
+  Object.keys(quota).forEach(k => {
+    if (room <= 0) return;
+    const more = pools[k].slice(chosen[k].length, chosen[k].length + room);
+    chosen[k] = chosen[k].concat(more);
+    room -= more.length;
+  });
+  const around = ['person', 'topic', 'source', 'note'].flatMap(k => chosen[k]);
+  const total = notes.length + tally.size;
+  const groups = [];
+  if (notes.length) {
+    groups.push({ title: (isNote ? 'Linked notes ' : 'Notes ') + notes.length, clip: 8,
+                  rows: isNote ? drawnNotes : [...noteNodes].sort((a, b) => b.date.localeCompare(a.date)) });
+  }
+  ['person', 'topic', 'source'].forEach(k => {
+    if (byKind[k].length) groups.push({ title: EXPLORE_GROUP[k] + ' ' + byKind[k].length, clip: 8, rows: byKind[k] });
+  });
+  return {
+    center, nodes: around, edges: [], notesCount: notes.length,
+    caption: !around.length ? 'This note links to nothing yet, and names no one.'
+      : total > around.length ? around.length + ' of ' + total + ' drawn; everything is in the list below.' : '',
+    groups,
+  };
+}
+
+// Pills are measured first, then placed: rectangles pushed apart until none
+// overlap, inside the box. Around a focus each one starts on a ring in kind
+// order, so people, topics and notes each hold an arc; the overview starts as
+// a sunflower, the most-noted in the middle, with its ties pulling friends
+// together. Small numbers (40 at most), so a plain pairwise pass is plenty.
+function exploreLayout(nodes, view, W, H) {
+  const cx = W / 2, cy = H / 2, PAD = 4, GAP = 8;
+  const ring = view.nodes;
+  if (view.center) {
+    Object.assign(view.center, { x: cx, y: cy, pin: true });
+    const two = ring.length > 9;
+    ring.forEach((n, i) => {
+      const a = -Math.PI / 2 + (i / Math.max(1, ring.length)) * Math.PI * 2;
+      const f = two ? (i % 2 ? 0.6 : 0.97) : 0.82;
+      n.tx = cx + Math.cos(a) * Math.max(0, W / 2 - n.w / 2 - PAD) * f;
+      n.ty = cy + Math.sin(a) * Math.max(0, H / 2 - n.h / 2 - PAD) * f;
+      n.x = n.tx; n.y = n.ty;
+    });
+  } else {
+    ring.forEach((n, i) => {
+      const r = Math.sqrt((i + 0.5) / ring.length), a = i * 2.39996;
+      n.tx = cx; n.ty = cy;
+      n.x = cx + Math.cos(a) * r * Math.max(0, W / 2 - n.w / 2 - PAD);
+      n.y = cy + Math.sin(a) * r * Math.max(0, H / 2 - n.h / 2 - PAD);
+    });
+  }
+  // Around a focus each name is held near its place on the ring. The
+  // overview has no such place: pulled to the middle, the wide names stacked
+  // into one column on a phone, so there only the ties and the edges hold it.
+  const pull = view.center ? 0.05 : 0;
+  const ITER = 320;
+  for (let it = 0; it < ITER; it++) {
+    const cool = 1 - it / ITER;
+    view.edges.forEach(([i, j, w]) => {
+      const a = ring[i], b = ring[j];
+      const dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1;
+      const f = (d - ((a.w + b.w) / 2 + 20)) / d * 0.006 * Math.min(3, w) * cool;
+      a.x += dx * f; a.y += dy * f; b.x -= dx * f; b.y -= dy * f;
+    });
+    ring.forEach(n => { n.x += (n.tx - n.x) * pull; n.y += (n.ty - n.y) * pull; });
+    for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const ox = (a.w + b.w) / 2 + GAP - Math.abs(dx), oy = (a.h + b.h) / 2 + GAP - Math.abs(dy);
+      if (ox <= 0 || oy <= 0) continue;
+      const wa = a.pin ? 0 : b.pin ? 1 : 0.5, wb = 1 - wa;
+      if (ox < oy) { const s = (dx >= 0 ? 1 : -1) * ox; a.x -= s * wa; b.x += s * wb; }
+      else { const s = (dy >= 0 ? 1 : -1) * oy; a.y -= s * wa; b.y += s * wb; }
+    }
+    nodes.forEach(n => {
+      if (n.pin) return;
+      n.x = Math.max(n.w / 2 + PAD, Math.min(W - n.w / 2 - PAD, n.x));
+      n.y = Math.max(n.h / 2 + PAD, Math.min(H - n.h / 2 - PAD, n.y));
+    });
+  }
+  let overlaps = 0;
+  for (let i = 0; i < nodes.length; i++) for (let j = i + 1; j < nodes.length; j++) {
+    const a = nodes[i], b = nodes[j];
+    if (Math.abs(b.x - a.x) < (a.w + b.w) / 2 + 2 && Math.abs(b.y - a.y) < (a.h + b.h) / 2 + 2) overlaps++;
+  }
+  return overlaps;
+}
+
+function renderExploreIn(card) {
+  const box = card && card.querySelector('.explore');
+  if (!box || box.hidden) return;
+  if (!box.clientWidth) return;   // the drawer's copy on a wide screen, hidden by the stylesheet
+  const idx = exploreIndex();
+  explorePath = explorePath.filter(k => k.startsWith('note:') ? idx.byId.has(k.slice(5)) : idx.ents.has(k));
+  const focus = explorePath[explorePath.length - 1] || null;
+  const narrow = box.clientWidth < 560;
+  const full = !!card.closest('.graph-full');
+  const view = focus ? exploreFocus(idx, focus, narrow ? 14 : 24) : exploreOverview(idx, narrow ? 24 : 44);
+  const lens = EXPLORE_LENSES[exploreLens];
+
+  const crumbs = ['<button type="button" data-ex-crumb="0"' + (focus ? '' : ' class="here" aria-current="true"') + '>' +
+    escapeHtml(lens.label) + '</button>'];
+  explorePath.forEach((k, i) => {
+    const label = exLabel(idx, k), here = i === explorePath.length - 1;
+    crumbs.push('<span class="sep" aria-hidden="true">›</span><button type="button" data-ex-crumb="' + (i + 1) + '"' +
+      (here ? ' class="here" aria-current="true"' : '') + ' title="' + escapeAttr(label) + '">' + escapeHtml(label) + '</button>');
+  });
+  let actions = '';
+  if (focus && focus.startsWith('note:')) {
+    actions = '<button class="import-btn" type="button" data-ex-open="' + escapeAttr(focus.slice(5)) + '">Read this note</button>';
+  } else if (focus) {
+    actions = '<button class="import-btn" type="button" data-ex-filter="' + escapeAttr(focus) + '">List ' +
+      (view.notesCount === 1 ? 'its note' : 'its ' + view.notesCount + ' notes') + ' in the drawer</button>';
+  }
+  const row = (r, over) => '<li' + (over ? ' class="ex-over"' : '') + '><button type="button" class="ex-row" data-ex-key="' + escapeAttr(r.key) + '"' +
+    ' data-find="' + escapeAttr(r.label.toLowerCase()) + '" style="--c:' + r.colour + '">' +
+    '<span class="ex-dot"></span><span class="ex-t">' + escapeHtml(r.label) + '</span>' +
+    '<span class="ex-m">' + escapeHtml(r.meta) + '</span></button>' +
+    (r.kind === 'note' ? '<button type="button" class="ex-read" data-ex-open="' + escapeAttr(r.id) + '"' +
+      ' aria-label="Read ' + escapeAttr(r.label) + '">Read</button>' : '') + '</li>';
+  const list = view.groups.map(g => {
+    const clipped = g.rows.length > g.clip;
+    return '<section class="ex-group"><h4>' + escapeHtml(g.title) + '</h4>' +
+      (g.find ? '<input class="search-input ex-find" type="search" placeholder="Find a ' + g.find + '…"' +
+        ' aria-label="Find a ' + g.find + '" autocomplete="off">' : '') +
+      '<ol class="ex-rows' + (clipped ? ' clipped' : '') + '" data-clip="' + (clipped ? 1 : 0) + '">' +
+      g.rows.map((r, i) => row(r, i >= g.clip)).join('') + '</ol>' +
+      (clipped ? '<button type="button" class="ex-more" data-ex-more>Show all ' + g.rows.length + '</button>' : '') +
+      '</section>';
+  }).join('');
+  box.innerHTML =
+    '<div class="explore-bar">' +
+      (focus ? '<button type="button" class="ex-back" data-ex-back>‹ Back</button>' : '') +
+      '<nav class="ex-crumbs" aria-label="Where you are">' + crumbs.join('') + '</nav></div>' +
+    '<div class="explore-stage"><svg class="explore-lines" aria-hidden="true"></svg></div>' +
+    (view.caption ? '<p class="ex-caption">' + escapeHtml(view.caption) + '</p>' : '') +
+    (actions ? '<div class="explore-actions">' + actions + '</div>' : '') +
+    '<div class="explore-list">' + list + '</div>';
+  const trail = box.querySelector('.ex-crumbs');
+  trail.scrollLeft = trail.scrollWidth;
+
+  const stage = box.querySelector('.explore-stage');
+  // The stage's own width: the box's includes its padding in full screen,
+  // and names laid out to it ran off the right edge.
+  const W = stage.clientWidth;
+  const all = view.center ? [view.center].concat(view.nodes) : view.nodes;
+  if (!all.length) {
+    stage.insertAdjacentHTML('beforeend', '<p class="ex-empty">' + escapeHtml(view.empty) + '</p>');
+    card._exPos = null;
+    card._exW = box.clientWidth;
+    return;
+  }
+  const top1 = view.center ? 0 : Math.max(0, ...view.nodes.map(n => n.n));
+  all.forEach(n => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ex-pill ' + (n.kind === 'note' ? 'ex-note' : 'ex-ent') + (n === view.center ? ' ex-center' : '');
+    b.dataset.exKey = n.key;
+    b.style.setProperty('--c', n.colour);
+    b.title = n.label + ' — ' + n.meta;
+    b.innerHTML = (n.kind === 'note' ? '<span class="ex-dot"></span>' : '') +
+      '<span class="ex-l">' + escapeHtml(n.label) + '</span>' +
+      (n.kind !== 'note' ? '<span class="ex-n">' + n.n + '</span>' : '');
+    if (n === view.center) b.setAttribute('aria-current', 'true');
+    // In the overview the most-noted names are set larger, so the archive's
+    // main people stand out before anything is read.
+    if (!view.center && top1) b.style.fontSize = (12 + 3 * Math.sqrt(n.n / top1)).toFixed(1) + 'px';
+    stage.appendChild(b);
+    n.el = b;
+  });
+  all.forEach(n => { n.w = n.el.offsetWidth; n.h = n.el.offsetHeight; });
+  // Tall enough for the names to sit apart, grown until they do.
+  const area = all.reduce((s, n) => s + (n.w + 16) * (n.h + 16), 0);
+  const minH = full ? Math.max(360, Math.round(window.innerHeight * 0.6)) : narrow ? 320 : 400;
+  let H = Math.max(minH, Math.min(narrow ? 620 : 700, Math.round(area * 2 / W)));
+  for (let tries = 0; tries < 3 && exploreLayout(all, view, W, H) > 0; tries++) H = Math.round(H * 1.15);
+  stage.style.height = H + 'px';
+
+  const svg = stage.querySelector('svg');
+  const lines = (view.center ? view.nodes.map(n => [view.center, n, 1]) : view.edges.map(([i, j, w]) => [view.nodes[i], view.nodes[j], w]))
+    .map(([a, b, w]) => {
+      const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      if (view.center) { l.style.stroke = b.colour; l.style.strokeOpacity = '0.45'; l.style.strokeWidth = '1.2'; }
+      else { l.style.stroke = 'rgba(246,238,227,0.2)'; l.style.strokeWidth = String(Math.min(3, 0.8 + w * 0.35)); }
+      svg.appendChild(l);
+      return [a, b, l];
+    });
+
+  // Moving, not redrawing: names already on screen glide to their new place,
+  // new ones come out of the name that was tapped.
+  const prev = card._exPos || new Map();
+  const origin = (focus && prev.get(focus)) || { x: W / 2, y: H / 2 };
+  const from = new Map(all.map(n => [n, prev.get(n.key) || origin]));
+  const draw = (p) => {
+    all.forEach(n => {
+      const f = from.get(n);
+      n.dx = f.x + (n.x - f.x) * p; n.dy = f.y + (n.y - f.y) * p;
+      n.el.style.transform = 'translate(' + (n.dx - n.w / 2).toFixed(1) + 'px,' + (n.dy - n.h / 2).toFixed(1) + 'px)';
+    });
+    lines.forEach(([a, b, l]) => {
+      l.setAttribute('x1', a.dx); l.setAttribute('y1', a.dy); l.setAttribute('x2', b.dx); l.setAttribute('y2', b.dy);
+    });
+  };
+  const still = !prev.size || window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (still) draw(1);
+  else {
+    const fresh = all.filter(n => !prev.has(n.key));
+    fresh.forEach(n => n.el.classList.add('ex-new'));
+    draw(0);
+    const t0 = performance.now(), D = 420;
+    const tick = (now) => {
+      const p = Math.min(1, (now - t0) / D);
+      draw(1 - Math.pow(1 - p, 3));
+      if (p < 1 && stage.isConnected) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(() => { fresh.forEach(n => n.el.classList.remove('ex-new')); requestAnimationFrame(tick); });
+  }
+  card._exPos = new Map(all.map(n => [n.key, { x: n.x, y: n.y }]));
+  card._exW = box.clientWidth;
+}
+
+function refreshExplores() {
+  document.querySelectorAll('.tabbed-graph.exploring').forEach(renderExploreIn);
+}
+
+function exploreLegend() {
+  const k = (colour, label, round) => '<span class="key"><i style="background:' + colour +
+    (round ? '' : ';border-radius:2px') + '"></i>' + label + '</span>';
+  return '<div class="legend graph-legend">' + k(EXPLORE_COLOUR.person, 'people', true) +
+    k(EXPLORE_COLOUR.topic, 'topics', true) + k(EXPLORE_COLOUR.source, 'sources', true) +
+    k('var(--ink-dim)', 'notes, dot by kind', false) + '</div>';
+}
+
+function exploreGo(key, card, fromList) {
+  const focus = explorePath[explorePath.length - 1];
+  if (key === focus) {
+    if (key.startsWith('note:')) exploreOpen(key.slice(5));
+    return;
+  }
+  const at = explorePath.indexOf(key);
+  if (at !== -1) explorePath = explorePath.slice(0, at + 1);
+  else explorePath.push(key);
+  if (explorePath.length > 30) explorePath = explorePath.slice(-30);
+  refreshExplores();
+  // Picked from the list below: bring the graph back into view to show it.
+  if (fromList && card) {
+    const box = card.querySelector('.explore');
+    if (box) box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  }
+}
+
+function exploreOpen(id) {
+  const t = findThought(id);
+  if (!t) return;
+  closeGraphFull();
+  selectThought(t);
+}
+
+// A person, topic or source as the drawer's filter, the same as picking it
+// in the People / Topics / Sources panel.
+function exploreFilter(key) {
+  const e = exploreIndex().ents.get(key);
+  if (!e) return;
+  const set = { person: activePeople, topic: activeTopics, source: activeSources }[e.kind];
+  closeGraphFull();
+  filterToSingleValue(set, e.label);
+  revealListOnPhone();
+}
+
+document.addEventListener('click', (e) => {
+  const lens = e.target.closest('[data-elens]');
+  if (lens) {
+    exploreLens = lens.dataset.elens;
+    explorePath = [];
+    try { localStorage.setItem('ob.exploreLens', exploreLens); } catch (_) { /* storage blocked */ }
+    refreshTabbedGraphs();
+    return;
+  }
+  const box = e.target.closest('.explore');
+  if (!box) return;
+  const card = box.closest('.tabbed-graph');
+  const open = e.target.closest('[data-ex-open]');
+  if (open) { exploreOpen(open.dataset.exOpen); return; }
+  const filt = e.target.closest('[data-ex-filter]');
+  if (filt) { exploreFilter(filt.dataset.exFilter); return; }
+  const more = e.target.closest('[data-ex-more]');
+  if (more) {
+    const ol = more.parentElement.querySelector('.ex-rows');
+    ol.classList.remove('clipped');
+    ol.dataset.clip = '0';
+    more.remove();
+    return;
+  }
+  if (e.target.closest('[data-ex-back]')) { explorePath.pop(); refreshExplores(); return; }
+  const crumb = e.target.closest('[data-ex-crumb]');
+  if (crumb) { explorePath = explorePath.slice(0, +crumb.dataset.exCrumb); refreshExplores(); return; }
+  const node = e.target.closest('[data-ex-key]');
+  if (node) exploreGo(node.dataset.exKey, card, !!node.closest('.explore-list'));
+});
+
+// Finding a name in the overview's full list. Typing lifts the list's
+// "first twelve" clip; clearing the box puts it back.
+document.addEventListener('input', (e) => {
+  const input = e.target.closest('.ex-find');
+  if (!input) return;
+  const q = input.value.trim().toLowerCase();
+  const group = input.closest('.ex-group');
+  const ol = group.querySelector('.ex-rows');
+  ol.classList.toggle('clipped', !q && ol.dataset.clip === '1');
+  ol.querySelectorAll('li').forEach(li => {
+    li.hidden = !!q && !li.querySelector('.ex-row').dataset.find.includes(q);
+  });
+  const more = group.querySelector('.ex-more');
+  if (more) more.hidden = !!q;
+});
 
 const MAP_SIDES = {
   personal: { label: 'Personal', color: SERIES.observation },
@@ -6338,6 +7006,7 @@ function openMapSheet(n, mode) {
 }
 
 function graphHint(f, inFull) {
+  if (graphView === 'explore') return 'Tap a name to see what connects to it';
   if (graphView === 'map') {
     return (mapMode === 'topics' ? 'Personal and Work & AI, by tag group' : MAP_WORDS[mapMode][1].replace(/^./, c => c.toUpperCase()) + ' by tag group') +
       (inFull ? ' · pinch, scroll or + to zoom · drag to move' : '') + ' · click a dot to list its notes';
@@ -6368,7 +7037,10 @@ function mapLegend(mode) {
 function graphTabs() {
   const b = (attr, v, label, on) => '<button type="button" ' + attr + '="' + v + '" aria-pressed="' + on + '">' + label + '</button>';
   return '<div class="graph-tabs" role="group" aria-label="Graph view">' +
+    b('data-gview', 'explore', 'Explore', graphView === 'explore') +
     b('data-gview', 'links', 'Links', graphView === 'links') + b('data-gview', 'map', 'Map', graphView === 'map') + '</div>' +
+    '<div class="map-modes explore-lenses" role="group" aria-label="Explore by"' + (graphView === 'explore' ? '' : ' hidden') + '>' +
+    Object.keys(EXPLORE_LENSES).map(k => b('data-elens', k, EXPLORE_LENSES[k].label, exploreLens === k)).join('') + '</div>' +
     '<div class="map-modes" role="group" aria-label="Organise the map by"' + (graphView === 'map' ? '' : ' hidden') + '>' +
     b('data-mmode', 'topics', 'Topics', mapMode === 'topics') + b('data-mmode', 'people', 'People', mapMode === 'people') +
     b('data-mmode', 'sources', 'Sources', mapMode === 'sources') + '</div>';
@@ -6382,7 +7054,22 @@ function graphCanvasIn(el) {
   return el.querySelector('canvas:not(.mist)');
 }
 function renderTabbedCanvas(canvas, f) {
+  // Explore draws names rather than dots, into its own box beside the canvas.
+  const card = canvas && canvas.closest('.tabbed-graph');
+  if (card) {
+    const exploring = graphView === 'explore';
+    card.classList.toggle('exploring', exploring);
+    const box = card.querySelector('.explore');
+    if (box) box.hidden = !exploring;
+    // canvasGraph wires the full-screen button; Explore never runs it.
+    const fs = card.querySelector('[data-zoom="full"]');
+    if (fs) fs.onclick = openGraphFull;
+    if (exploring) { renderExploreIn(card); return; }
+  }
   if (graphView === 'map') drawMap(canvas, mapMode); else drawGraph(f, canvas);
+}
+function tabbedLegend(f) {
+  return graphView === 'explore' ? exploreLegend() : graphView === 'map' ? mapLegend(mapMode) : graphLegend(f);
 }
 function refreshTabbedGraphs() {
   if (!allThoughts.length) return;
@@ -6390,12 +7077,15 @@ function refreshTabbedGraphs() {
   document.querySelectorAll('.tabbed-graph').forEach(card => {
     card.querySelectorAll('[data-gview]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.gview === graphView)));
     card.querySelectorAll('[data-mmode]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.mmode === mapMode)));
-    const modes = card.querySelector('.map-modes');
+    card.querySelectorAll('[data-elens]').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.elens === exploreLens)));
+    const modes = card.querySelector('.map-modes:not(.explore-lenses)');
     if (modes) modes.hidden = graphView !== 'map';
+    const lenses = card.querySelector('.explore-lenses');
+    if (lenses) lenses.hidden = graphView !== 'explore';
     const hint = card.querySelector('.hint');
     if (hint) hint.textContent = graphHint(f, card.classList.contains('graph-full'));
     const legend = card.querySelector('.graph-legend');
-    if (legend) legend.outerHTML = graphView === 'map' ? mapLegend(mapMode) : graphLegend(f);
+    if (legend) legend.outerHTML = tabbedLegend(f);
     // Not simply the first canvas: while the mist sat in front of it, drawing
     // the new map onto that left the graph unchanged when Topics / People /
     // Sources was switched (15 Oct 2026).
@@ -6407,7 +7097,7 @@ document.addEventListener('click', (e) => {
   if (!v && !m) return;
   if (v) graphView = v.dataset.gview;
   if (m) mapMode = m.dataset.mmode;
-  try { localStorage.setItem('ob.graphView', graphView); localStorage.setItem('ob.mapMode', mapMode); } catch (_) { /* storage blocked */ }
+  try { localStorage.setItem('ob.graphTab', graphView); localStorage.setItem('ob.mapMode', mapMode); } catch (_) { /* storage blocked */ }
   hideTip();
   refreshTabbedGraphs();
 });
@@ -6441,8 +7131,8 @@ function openGraphFull() {
     '<div class="graph-full-head"><h3>How it hangs together</h3>' + graphTabs() +
     '<span class="hint">' + escapeHtml(graphHint(f, true)) + '</span>' +
     '<button class="import-btn ghost" type="button" data-full-close>Close</button></div>' +
-    '<div class="graph-wrap"><canvas class="graph-full-canvas"></canvas>' + graphTools(true) + '</div>' +
-    (graphView === 'map' ? mapLegend(mapMode) : graphLegend(f));
+    '<div class="graph-wrap"><canvas class="graph-full-canvas"></canvas><div class="explore" hidden></div>' + graphTools(true) + '</div>' +
+    tabbedLegend(f);
   graphFull.hidden = false;
   graphFull.querySelector('[data-full-close]').addEventListener('click', closeGraphFull);
   renderTabbedCanvas(graphCanvasIn(graphFull), f);
@@ -6462,8 +7152,8 @@ function homeGraphCard(f, where, more = true) {
     '<h3>How it hangs together</h3>' + graphTabs() +
     '<span class="hint">' + escapeHtml(graphHint(f, false)) + '</span>' +
     (more ? '<button type="button" class="home-graph-more">More about the archive →</button>' : '') + '</div>' +
-    '<div class="graph-wrap"><canvas class="home-graph-canvas"></canvas>' + graphTools(false) + '</div>' +
-    (graphView === 'map' ? mapLegend(mapMode) : graphLegend(f)) + '</div>';
+    '<div class="graph-wrap"><canvas class="home-graph-canvas"></canvas><div class="explore" hidden></div>' + graphTools(false) + '</div>' +
+    tabbedLegend(f) + '</div>';
 }
 
 function wireHomeGraph(card, f) {
@@ -6480,6 +7170,12 @@ let graphResizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(graphResizeTimer);
   graphResizeTimer = setTimeout(() => {
+    // Explore lays its names out to the box's width; a phone's URL bar
+    // coming and going changes only the height, and is left alone.
+    document.querySelectorAll('.tabbed-graph.exploring').forEach(card => {
+      const box = card.querySelector('.explore');
+      if (box && box.clientWidth && box.clientWidth !== card._exW) renderExploreIn(card);
+    });
     const canvases = [...document.querySelectorAll('.home-graph-canvas, #graphCanvas, .graph-full-canvas')]
       .filter(c => c.clientWidth);
     if (!canvases.length || !allThoughts.length) return;
