@@ -13,7 +13,7 @@ const MCP = 'https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mc
 
 const id = i => '00000000-0000-4000-8000-' + String(i + 1).padStart(12, '0');
 const PEOPLE = ['Rob Burbea', 'Tara Brach', 'Ethan Mollick', 'Simon Willison', 'Ruth King', 'Sam Harris'];
-const TOPICS = ['Meditation', 'AI tools', 'Health', 'Book', 'Buddhism'];
+const TOPICS = ['Meditation', 'AI tools', 'Health', 'Book', 'Buddhism', 'Poetry'];
 const thoughts = [];
 for (let i = 0; i < 60; i++) {
   const people = [PEOPLE[i % PEOPLE.length]];
@@ -32,7 +32,8 @@ function handle(body) {
   if (params.name === 'list_thoughts') return reply(JSON.stringify((params.arguments || {}).topic ? [] : thoughts));
   if (params.name === 'topic_vocabulary') return reply(JSON.stringify({
     headings: { Meditation: { heading: 'Practice' }, Buddhism: { heading: 'Traditions' },
-                Health: { heading: 'Mind & body' }, Book: { heading: 'Books & Writing' }, 'AI tools': { heading: 'AI' } },
+                Health: { heading: 'Mind & body' }, Book: { heading: 'Books & Writing' }, 'AI tools': { heading: 'AI' },
+                Poetry: { heading: 'Books & Writing', parent: 'Book' } },
     sides: { Practice: 'personal', Traditions: 'personal', 'Mind & body': 'personal', 'Books & Writing': 'personal', AI: 'work' },
     parents: { Practice: 'Traditions' },
     personal: {} }));
@@ -195,6 +196,18 @@ function handle(body) {
   const headChips = await page.$$eval('.lh-chip', els => els.map(e => e.textContent.replace('×', '').trim()));
   check('a whole parent reads as one chip', JSON.stringify(headChips) === JSON.stringify(['Traditions']), headChips);
 
+  // A sub-tag rides under its parent tag in the panel.
+  await page.click('#facetBtnTopics');
+  await page.waitForTimeout(300);
+  const subTag = await page.evaluate(() => {
+    const chip = [...document.querySelectorAll('#facetChips .chip-subrow .chip')].find(c => /Poetry/.test(c.textContent));
+    const prev = chip && chip.parentElement.previousElementSibling;
+    return { found: !!chip, after: prev ? prev.textContent : null };
+  });
+  check('a sub-tag sits under its parent tag in the panel', subTag.found && /Book/.test(subTag.after || ''), subTag);
+  await page.click('#facetBtnTopics');
+  await page.waitForTimeout(200);
+
   // The Map hangs Practice off Traditions, not off the Personal root.
   const mapEdges = await page.evaluate(() => {
     let got = null;
@@ -203,6 +216,9 @@ function handle(body) {
     try { drawMap(document.createElement('canvas'), 'topics'); } finally { window.canvasGraph = real; }
     return got || [];
   });
+  check('the Map hangs a sub-tag off its parent tag',
+    mapEdges.includes(['leaf:book', 'leaf:poetry'].sort().join(' ~ ')) &&
+    !mapEdges.includes(['group:personal:Books & Writing', 'leaf:poetry'].sort().join(' ~ ')), mapEdges);
   check('the Map hangs a sub-heading off its parent',
     mapEdges.includes(['group:personal:Practice', 'group:personal:Traditions'].sort().join(' ~ ')) &&
     !mapEdges.includes(['group:personal:Practice', 'side:personal'].sort().join(' ~ ')), mapEdges);

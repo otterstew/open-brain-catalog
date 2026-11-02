@@ -2693,6 +2693,12 @@ let headingSides = new Map(); // heading -> 'personal' | 'work'
 // Practice → Mindfulness teacher training, AI → AI products, Work & career →
 // Work projects. Picking a heading picks everything beneath it.
 let headingParents = new Map(); // heading -> parent heading
+// A tag can sit under another tag in its heading (2 Nov 2026): CDD under the
+// COU project, GUI under Open Brain, the course tags under MTTC.
+function parentTagOf(norm) {
+  const h = topicHeadings && topicHeadings.get(norm);
+  return h && h.parent ? h.parent.trim().toLowerCase() : null;
+}
 function headingDepth(h) {
   let d = 0;
   const seen = new Set();
@@ -2886,8 +2892,18 @@ function renderHeadingGroups(counts) {
     });
     const row = document.createElement('div');
     row.className = 'chip-row';
-    g.tags.forEach(([norm, v]) =>
-      row.appendChild(facetChip(norm, '# ' + v.label, v.n, activeTopics, 'var(--brass)')));
+    // Sub-tags ride on their own line under their parent tag.
+    const inGroup = new Set(g.tags.map(([n]) => n));
+    const under = (norm) => { const p = parentTagOf(norm); return p && p !== norm && inGroup.has(p) ? p : null; };
+    g.tags.filter(([norm]) => !under(norm)).forEach(([norm, v]) => {
+      row.appendChild(facetChip(norm, '# ' + v.label, v.n, activeTopics, 'var(--brass)'));
+      const kids = g.tags.filter(([n]) => under(n) === norm);
+      if (!kids.length) return;
+      const sub = document.createElement('div');
+      sub.className = 'chip-subrow';
+      kids.forEach(([n, kv]) => sub.appendChild(facetChip(n, '# ' + kv.label, kv.n, activeTopics, 'var(--brass)')));
+      row.appendChild(sub);
+    });
     wrap.appendChild(btn);
     wrap.appendChild(row);
     facetChips.appendChild(wrap);
@@ -7008,6 +7024,15 @@ function drawMap(canvas, mode) {
     // Hung off the root or off a parent heading once every group is known.
     return node(gid, { kind: 'group', side, label: heading, labelPx: 11, labelWeight: '600', labelRank: 2, leaves: [], subgroups: [] });
   };
+  // In the Topics map a sub-tag hangs off its parent tag where both are drawn
+  // under the same heading: CDD off the COU project, not off Work projects.
+  const leafHeading = new Map(leaves.map(l => [l.key, l.heading]));
+  const subOf = (l) => {
+    if (mode !== 'topics') return null;
+    const p = parentTagOf(l.key);
+    return p && p !== l.key && leafHeading.get(p) === l.heading ? p : null;
+  };
+  const subLeaves = [];
   leaves.forEach(l => {
     const hub = rooted ? at.get('side:' + l.side) : null;
     const leaf = node('leaf:' + l.key, { kind: 'leaf', side: l.side, label: l.label, notes: l.notes, count: l.notes.length });
@@ -7015,7 +7040,8 @@ function drawMap(canvas, mode) {
     if (rooted && MAP_ROOT_HEADINGS.has(l.heading)) { edges.push([hub, leaf]); nodes[leaf].groupOf = null; }
     else {
       const g = groupFor(l.heading, l.side);
-      edges.push([g, leaf]);
+      if (subOf(l)) subLeaves.push([leaf, subOf(l)]);
+      else edges.push([g, leaf]);
       nodes[leaf].groupOf = nodes[g];
       nodes[g].leaves.push(nodes[leaf]);
     }
@@ -7027,6 +7053,7 @@ function drawMap(canvas, mode) {
       nodes[g].leaves.push(nodes[leaf]);
     });
   });
+  subLeaves.forEach(([leaf, parentKey]) => edges.push([at.get('leaf:' + parentKey), leaf]));
   // A sub-heading hangs off its parent heading where that parent is drawn on
   // the same side (Traditions → Practice → Mindfulness teacher training);
   // otherwise, as every heading did before 2 Nov 2026, off its side's root.

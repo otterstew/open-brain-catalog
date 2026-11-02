@@ -1475,7 +1475,7 @@ function buildServer(): McpServer {
           .enum(["text", "json"])
           .optional()
           .default("text")
-          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested}}, sides: {heading: personal|work}, parents: {heading: parent heading}, personal: {exact: [...], contains: [...]}} — use this when a script is going to write the list to a file."),
+          .describe("\"text\" (default) for a readable summary. \"json\" for {preferred: [...], collection: [...], usage: {tag: rule}, headings: {tag: {heading, suggested, parent?}}, sides: {heading: personal|work}, parents: {heading: parent heading}, personal: {exact: [...], contains: [...]}} — use this when a script is going to write the list to a file."),
       },
     },
     async ({ format }) => {
@@ -1487,10 +1487,16 @@ function buildServer(): McpServer {
           // set should show on the next reload rather than a minute later.
           const { data: rows } = await supabase
             .from("topic_headings")
-            .select("topic, heading, source");
+            .select("topic, heading, source, parent_topic");
+          // parent: the tag this one sits under, where it has one (2 Nov 2026):
+          // CDD under the COU project, GUI under Open Brain.
           const headings = Object.fromEntries(
-            ((rows || []) as { topic: string; heading: string; source: string }[])
-              .map((r) => [r.topic, { heading: r.heading, suggested: r.source === "suggested" }])
+            ((rows || []) as { topic: string; heading: string; source: string; parent_topic: string | null }[])
+              .map((r) => [r.topic, {
+                heading: r.heading,
+                suggested: r.source === "suggested",
+                ...(r.parent_topic ? { parent: r.parent_topic } : {}),
+              }])
           );
           const { data: sideRows } = await supabase
             .from("heading_sides")
