@@ -1,7 +1,7 @@
 {
   "id": "/open-brain-catalog",
-  "name": "Open Brain — Catalog",
-  "short_name": "Open Brain",
+  "name": "Stew's 2nd Brain",
+  "short_name": "Stew's 2nd Brain",
   "description": "Your captured thoughts, searchable by meaning.",
   "start_url": "/index.html",
   "scope": "/index.html",
