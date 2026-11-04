@@ -2437,12 +2437,23 @@ a.o-card:hover{filter:brightness(.98)}
     .more-screen { padding: var(--s5) var(--s4) var(--s8); }
   }
 
-  .mic-add i { font-size: 15px; vertical-align: -2px; }
+  .mic-add i, .rec-add i { font-size: 15px; vertical-align: -2px; }
+  .rec-add.is-listening { background: var(--accent); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
+  .rec-add.is-listening i { animation: mic-pulse 1.2s ease-in-out infinite; }
+  .rec-time { font-size: var(--t-xs); }
+  .wv .rec-add { display: inline-flex; align-items: center; gap: 4px; }
+  .md-audio { display: block; margin: var(--s2) 0; padding: var(--s3); background: var(--stone); border-radius: var(--r-md); }
+  .md-audio audio { display: block; width: 100%; height: 40px; }
+  .md-audio-cap { display: block; margin-top: var(--s2); font-size: var(--t-sm); color: var(--ink-2); }
+  .md-audio.is-missing audio { display: none; }
+  .md-audio.is-missing .md-audio-cap::after { content: ' · not available'; color: var(--ink-3); }
+  .task-sounds { flex-basis: 100%; display: flex; flex-direction: column; gap: var(--s2); margin-top: var(--s2); }
   .wv .o-write__bar button { white-space: nowrap; }
   .wv .mic-add { display: inline-flex; align-items: center; gap: 4px; }
   @media (max-width: 480px) {
     .wv .o-write__bar { gap: var(--s3); }
-    .wv .mic-add i { display: none; }
+    .wv .btn-lbl { display: none; }
+    .wv .mic-add i, .wv .rec-add i { font-size: 20px; }
   }
   .mic-add.is-listening { background: var(--accent); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
   .mic-add.is-listening i { animation: mic-pulse 1.2s ease-in-out infinite; }
@@ -2492,6 +2503,8 @@ a.o-card:hover{filter:brightness(.98)}
   .colour-filter-label, .colour-filter-hint { font-size: var(--t-xs); color: var(--ink-3); }
   .colour-filter-hint { flex-basis: 100%; }
   .colour-chip:disabled { opacity: .45; cursor: default; }
+  .colour-chip[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .colour-chip[aria-pressed="true"] .o-num { color: inherit; opacity: .7; }
   .colour-dot { width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
     background: color-mix(in oklab, var(--tint), var(--paper) 40%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 12%, transparent); }
   .colour-dot[data-colour=""] { background: var(--paper); }
@@ -3114,6 +3127,7 @@ function renderInline(line) {
   html = html.replace(PHOTO_LINK_RE, (_m, alt, path) => keep(
     '<span class="md-photo"><img class="md-photo-img" data-photo="' + path + '" alt="' + alt.replace(/"/g, '&quot;') + '" loading="lazy">' +
     (alt && alt !== 'Photo' ? '<span class="md-photo-cap">' + alt + '</span>' : '') + '</span>'));
+  html = html.replace(AUDIO_LINK_RE, (_m, label, path) => keep(audioPlayerHtml(label, path)));
   html = html.replace(/`([^`]+)`/g, (_m, code) =>
     keep('<span class="o-md">`</span><code class="md-code-in">' + code + '</code><span class="o-md">`</span>'));
   html = html.replace(THOUGHT_LINK_RE, (_m, text, id) => keep(findThought(id)
@@ -3885,7 +3899,9 @@ function noteCardGrid(items) {
   wrap.className = 'results results--cards';
   const filters = describeFilters();
   const anyColoured = NOTE_COLOURS.some(c => counts[c]);
-  const swatches = `<span class="colour-filter-label">Show colour</span>` + NOTE_COLOURS.map(c =>
+  const swatches = `<span class="colour-filter-label">Show colour</span>`
+    + `<button type="button" class="o-chip colour-chip" data-colour="" aria-pressed="${!colourFilter}" title="Every note, coloured or not">All <span class="o-num">${items.length}</span></button>`
+    + NOTE_COLOURS.map(c =>
     `<button type="button" class="o-chip colour-chip" data-colour="${c}" aria-pressed="${colourFilter === c}" ${counts[c] ? '' : 'disabled'} title="${counts[c] ? 'Only ' + NOTE_COLOUR_NAMES[c].toLowerCase() + ' notes' : 'No ' + NOTE_COLOUR_NAMES[c].toLowerCase() + ' notes yet'}">
       <span class="colour-swatch" style="--tint:var(--${c})"></span>${NOTE_COLOUR_NAMES[c]} <span class="o-num">${counts[c] || 0}</span></button>`).join('')
     + (anyColoured ? '' : `<span class="colour-filter-hint">Open a note and pick a card colour under its title.</span>`);
@@ -3924,7 +3940,7 @@ function noteCardGrid(items) {
     wrap.appendChild(more);
   }
   wrap.querySelectorAll('.colour-chip').forEach(b => b.addEventListener('click', () => {
-    colourFilter = colourFilter === b.dataset.colour ? null : b.dataset.colour;
+    colourFilter = !b.dataset.colour || colourFilter === b.dataset.colour ? null : b.dataset.colour;
     cardLimit = 60;
     wrap.replaceWith(noteCardGrid(items));
   }));
@@ -5278,6 +5294,13 @@ async function noteArticleNode(t, inlinePhotos) {
   const box = document.createElement('div');
   box.innerHTML = noteArticleHtml(t);
   box.querySelectorAll('.thought-link').forEach(a => a.replaceWith(document.createTextNode(a.textContent)));
+  // Recordings stay in the archive; the page says where one was.
+  box.querySelectorAll('.md-audio').forEach(a => {
+    const note = document.createElement('span');
+    note.className = 'md-photo-cap';
+    note.textContent = (a.querySelector('.md-audio-cap') || a).textContent.trim() + ' (sound recording, kept in Open Brain)';
+    a.replaceWith(note);
+  });
   const imgs = [...box.querySelectorAll('img[data-photo]')];
   if (imgs.length) {
     const paths = [...new Set(imgs.map(i => i.dataset.photo))];
@@ -5408,7 +5431,8 @@ function openWritingView(t, startWriting) {
       <button type="button" data-wv="mode">Write</button>
       <button type="button" data-wv="focus" aria-pressed="false" hidden>Focus</button>
       <button type="button" class="photo-add" data-wv="photo" hidden>Add photo</button>
-      ${SpeechRec ? '<button type="button" class="mic-add" data-wv="mic" aria-pressed="false" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i> Speak</button>' : ''}
+      ${micButtonHtml() ? '<button type="button" class="mic-add" data-wv="mic" aria-pressed="false" aria-label="Speak" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Speak</span></button>' : ''}
+      ${CAN_RECORD ? '<button type="button" class="rec-add" data-wv="rec" aria-pressed="false" aria-label="Record a sound" hidden><i class="ph-light ph-waveform" aria-hidden="true"></i><span class="btn-lbl"> Record</span></button>' : ''}
       <span class="o-bar__spacer"></span>
       <span class="wv-status o-meta" aria-live="polite"></span>
       <button type="button" data-wv="save" hidden>Save</button>
@@ -5470,6 +5494,7 @@ function openWritingView(t, startWriting) {
     saveBtn.hidden = !writing;
     $('[data-wv="photo"]').hidden = !writing;
     if ($('[data-wv="mic"]')) { $('[data-wv="mic"]').hidden = !writing; if (!writing && activeMic) activeMic.rec.stop(); }
+    if ($('[data-wv="rec"]')) $('[data-wv="rec"]').hidden = !writing;
     modeBtn.textContent = writing ? 'Read' : 'Write';
     if (writing) { paint(); ta.focus({ preventScroll: true }); }
     else renderRead();
@@ -6649,81 +6674,257 @@ async function hydratePhotos() {
     if (c) i.src = c.url; else missing(i, 'This photo is no longer in the archive');
   });
 }
-new MutationObserver(() => { clearTimeout(photoTimer); photoTimer = setTimeout(hydratePhotos, 30); })
+new MutationObserver(() => { clearTimeout(photoTimer); photoTimer = setTimeout(() => { hydratePhotos(); hydrateAudio(); }, 30); })
   .observe(document.body, { childList: true, subtree: true });
 
-const photoButtonHtml = () => '<button class="link-add-toggle photo-add" type="button">Add photo</button>' + micButtonHtml();
+const photoButtonHtml = () => '<button class="link-add-toggle photo-add" type="button">Add photo</button>' + micButtonHtml() + recordButtonHtml();
 
 // ---------- speaking into a note (4 Nov 2026, Otter v2.1 capture) ----------
-// The browser's own speech recognition, in British English: words type in at
-// the cursor as they are spoken, the unsettled ones replaced as they settle.
-// Where the browser has none (Firefox, some in-app browsers) there is no mic.
-const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
-const micButtonHtml = () => SpeechRec
-  ? '<button class="link-add-toggle mic-add" type="button" aria-pressed="false" title="Speak: words type in where the cursor is"><i class="ph-light ph-microphone" aria-hidden="true"></i> Speak</button>'
+// Tap Speak, talk, tap Stop: the sound goes to Parakeet v3 (POST
+// /audio/transcribe) and the words type in where the cursor was. The phone's
+// own recogniser was tried first and missed too many words. The sound itself
+// is not kept (that is Record). If writing it out fails, the speech stays on
+// the button and the next tap tries again, so nothing said is lost.
+const SPEAK_MAX_MS = 15 * 60 * 1000;
+const micButtonHtml = () => (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)
+  ? '<button class="link-add-toggle mic-add" type="button" aria-pressed="false" aria-label="Speak" title="Speak: tap Stop when done and the words type in where the cursor is"><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Speak</span></button>'
   : '';
 let activeMic = null;
+
+// ---------- sound recordings in notes (4 Nov 2026) ----------
+// Speak types words in; Record keeps the sound itself: a voice note, birdsong,
+// the sea. The file goes to the private note-audio bucket and the note gets a
+// line, [Recording · 0:42](audio:2026/11/<uuid>.webm), shown as a player.
+// The browser's voice clean-up is switched off so other sounds come through
+// as they were. If the upload fails the recording is kept on the button, and
+// the next tap tries again, so nothing recorded is lost to a bad connection.
+const AUDIO_LINK_RE = /\[([^\]\n]{1,200})\]\(audio:(\d{4}\/\d{2}\/[0-9a-f-]{36}\.(?:webm|ogg|m4a|mp3))\)/g;
+const CAN_RECORD = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder);
+const RECORD_MAX_MS = 30 * 60 * 1000;
+const recordButtonHtml = () => CAN_RECORD
+  ? '<button class="link-add-toggle rec-add" type="button" aria-pressed="false" aria-label="Record a sound" title="Record a voice note or a sound and keep it with this note"><i class="ph-light ph-waveform" aria-hidden="true"></i><span class="btn-lbl"> Record</span></button>'
+  : '';
+// label arrives already escaped (from renderInline) or is escaped by the caller.
+const audioPlayerHtml = (label, path) =>
+  '<span class="md-audio"><audio controls preload="none" data-audio="' + path + '"></audio>' +
+  '<span class="md-audio-cap"><i class="ph-light ph-waveform" aria-hidden="true"></i> ' + label + '</span></span>';
+let activeRec = null;
+const clock = secs => Math.floor(secs / 60) + ':' + String(secs % 60).padStart(2, '0');
+
+function wireRecordButtons(root, textarea, after) {
+  root.querySelectorAll('.rec-add').forEach(btn => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.dataset.label = btn.innerHTML;
+    btn.addEventListener('click', () => {
+      if (btn._pending) { saveRecording(btn, textarea, after, btn._pending); return; }
+      if (activeRec && activeRec.btn === btn) { activeRec.stop(); return; }
+      if (activeRec || activeMic) return;   // one microphone at a time
+      startRecording(btn, textarea, after);
+    });
+  });
+}
+
+async function startRecording(btn, ta, after) {
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    });
+  } catch (_) {
+    btn.title = 'The microphone is blocked for this site. Allow it in the browser’s site settings.';
+    btn.innerHTML = '<span class="rec-msg">Microphone blocked</span>';
+    setTimeout(() => { btn.innerHTML = btn.dataset.label; }, 3000);
+    return;
+  }
+  const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm']
+    .find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 64000 } : undefined);
+  const chunks = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const startAt = Date.now();
+  const at = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
+  const tick = () => {
+    const ms = Date.now() - startAt;
+    btn.innerHTML = '<i class="ph-light ph-stop-circle" aria-hidden="true"></i><span class="btn-lbl"> Stop</span> <span class="rec-time o-num">' + clock(Math.floor(ms / 1000)) + '</span>';
+    if (ms > RECORD_MAX_MS && rec.state !== 'inactive') rec.stop();
+  };
+  const timer = setInterval(tick, 500);
+  tick();
+  btn.classList.add('is-listening');
+  btn.setAttribute('aria-pressed', 'true');
+  activeRec = { btn, stop: () => { if (rec.state !== 'inactive') rec.stop(); } };
+  rec.onstop = () => {
+    clearInterval(timer);
+    stream.getTracks().forEach(t => t.stop());
+    activeRec = null;
+    btn.classList.remove('is-listening');
+    btn.setAttribute('aria-pressed', 'false');
+    const blob = new Blob(chunks, { type: (rec.mimeType || type || 'audio/webm') });
+    if (!blob.size) { btn.innerHTML = btn.dataset.label; return; }
+    saveRecording(btn, ta, after, { blob, secs: Math.max(1, Math.round((Date.now() - startAt) / 1000)), at });
+  };
+  rec.start(1000);
+}
+
+async function saveRecording(btn, ta, after, rec) {
+  btn._pending = null;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="rec-msg">Saving the recording…</span>';
+  try {
+    const audio = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('could not read the recording'));
+      r.readAsDataURL(rec.blob);
+    });
+    const { path } = await photoRequest('/audio/upload', { audio });
+    if (!path) throw new Error('the archive did not say where the recording went');
+    const line = '[Recording · ' + clock(rec.secs) + '](audio:' + path + ')';
+    if (!ta.isConnected) {
+      showStatus('The recording was saved, but its note had been closed, so it was not added. Its line: ' + line, true);
+    } else {
+      const v = ta.value, at = Math.min(rec.at, v.length);
+      const before = v.slice(0, at), rest = v.slice(at);
+      const lead = !before ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+      const tail = rest.startsWith('\n\n') ? '' : rest.startsWith('\n') ? '\n' : '\n\n';
+      ta.value = before + lead + line + tail + rest;
+      const caret = (before + lead + line).length;
+      try { ta.setSelectionRange(caret, caret); } catch (_) {}
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      if (after) after();
+    }
+    btn.innerHTML = btn.dataset.label;
+    btn.title = 'Record a voice note or a sound and keep it with this note';
+  } catch (err) {
+    btn._pending = rec;
+    btn.innerHTML = '<span class="rec-msg">Not saved — tap to try again</span>';
+    btn.title = 'Could not save the recording — ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Every <audio data-audio> gets a short-lived link, like photos.
+const audioUrlCache = new Map();
+async function hydrateAudio() {
+  const els = [...document.querySelectorAll('audio[data-audio]:not([data-ready])')];
+  if (!els.length || !mcpAccessKey) return;
+  els.forEach(a => { a.dataset.ready = '1'; });
+  const now = Date.now();
+  const need = [...new Set(els.map(a => a.dataset.audio))]
+    .filter(path => { const c = audioUrlCache.get(path); return !c || c.until < now; });
+  const missing = (a, why) => { const box = a.closest('.md-audio'); if (box) { box.classList.add('is-missing'); box.title = why; } };
+  if (need.length) {
+    try {
+      const { urls } = await photoRequest('/audio/sign', { paths: need });
+      Object.entries(urls || {}).forEach(([path, url]) => audioUrlCache.set(path, { url, until: now + 50 * 60 * 1000 }));
+    } catch (err) {
+      els.forEach(a => missing(a, 'Could not load this recording — ' + err.message));
+      return;
+    }
+  }
+  els.forEach(a => {
+    const c = audioUrlCache.get(a.dataset.audio);
+    if (c) a.src = c.url; else missing(a, 'This recording is no longer in the archive');
+  });
+}
 
 function wireMicButtons(root, textarea, after) {
   root.querySelectorAll('.mic-add').forEach(btn => {
     if (btn.dataset.wired) return;
     btn.dataset.wired = '1';
+    btn.dataset.label = btn.innerHTML;
     btn.addEventListener('click', () => {
+      if (btn._pending) { writeOutSpeech(btn, textarea, after, btn._pending); return; }
       if (activeMic && activeMic.btn === btn) { activeMic.rec.stop(); return; }
-      if (activeMic) activeMic.rec.stop();
+      if (activeMic || activeRec) return;   // one microphone at a time
       startDictation(btn, textarea, after);
     });
   });
 }
 
-function startDictation(btn, ta, after) {
-  const rec = new SpeechRec();
-  rec.lang = 'en-GB';
-  rec.continuous = true;
-  rec.interimResults = true;
-  const v = ta.value;
-  const start = ta.selectionStart != null ? ta.selectionStart : v.length;
-  const end = ta.selectionEnd != null ? ta.selectionEnd : start;
-  const before = v.slice(0, start), rest = v.slice(end);
-  let said = '';
-  const label = btn.innerHTML;
-  const render = interim => {
-    const words = [said, interim].filter(Boolean).join(' ');
-    const lead = !words || !before || /\s$/.test(before) ? '' : ' ';
-    const tail = !words || !rest || /^[\s.,;:!?)]/.test(rest) ? '' : ' ';
-    ta.value = before + lead + words + tail + rest;
-    const caret = (before + lead + words).length;
-    try { ta.setSelectionRange(caret, caret); } catch (_) {}
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
-    if (after) after();
+async function startDictation(btn, ta, after) {
+  const at = { start: ta.selectionStart != null ? ta.selectionStart : ta.value.length };
+  at.end = ta.selectionEnd != null ? ta.selectionEnd : at.start;
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (_) {
+    btn.title = 'The microphone is blocked for this site. Allow it in the browser’s site settings.';
+    btn.innerHTML = '<span class="rec-msg">Microphone blocked</span>';
+    setTimeout(() => { btn.innerHTML = btn.dataset.label; }, 3000);
+    return;
+  }
+  const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm']
+    .find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+  const rec = new MediaRecorder(stream, type ? { mimeType: type, audioBitsPerSecond: 48000 } : undefined);
+  const chunks = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const startAt = Date.now();
+  const tick = () => {
+    const ms = Date.now() - startAt;
+    btn.innerHTML = '<i class="ph-light ph-stop-circle" aria-hidden="true"></i><span class="btn-lbl"> Stop</span> <span class="rec-time o-num">' + clock(Math.floor(ms / 1000)) + '</span>';
+    if (ms > SPEAK_MAX_MS && rec.state !== 'inactive') rec.stop();
   };
-  rec.onresult = e => {
-    if (!ta.isConnected) { rec.stop(); return; }   // the note was closed
-    let interim = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      const r = e.results[i];
-      if (r.isFinal) said = [said, r[0].transcript.trim()].filter(Boolean).join(' ');
-      else interim += r[0].transcript;
-    }
-    render(interim.trim());
-  };
-  const finish = msg => {
-    if (activeMic && activeMic.rec === rec) activeMic = null;
-    btn.innerHTML = label;
-    btn.setAttribute('aria-pressed', 'false');
-    btn.classList.remove('is-listening');
-    if (msg) btn.title = msg;
-  };
-  rec.onerror = e => finish(e.error === 'not-allowed' || e.error === 'service-not-allowed'
-    ? 'The microphone is blocked for this site. Allow it in the browser’s site settings.'
-    : e.error === 'no-speech' ? 'Nothing was heard. Tap Speak to try again.' : '');
-  rec.onend = () => finish();
-  try { rec.start(); } catch (_) { finish(); return; }
-  activeMic = { rec, btn };
-  btn.innerHTML = '<i class="ph-light ph-stop-circle" aria-hidden="true"></i> Stop';
-  btn.setAttribute('aria-pressed', 'true');
+  const timer = setInterval(tick, 500);
+  tick();
   btn.classList.add('is-listening');
-  ta.focus();
+  btn.setAttribute('aria-pressed', 'true');
+  activeMic = { btn, rec: { stop: () => { if (rec.state !== 'inactive') rec.stop(); } } };
+  rec.onstop = () => {
+    clearInterval(timer);
+    stream.getTracks().forEach(t => t.stop());
+    activeMic = null;
+    btn.classList.remove('is-listening');
+    btn.setAttribute('aria-pressed', 'false');
+    const blob = new Blob(chunks, { type: (rec.mimeType || type || 'audio/webm') });
+    if (!blob.size || Date.now() - startAt < 700) { btn.innerHTML = btn.dataset.label; return; }
+    writeOutSpeech(btn, ta, after, { blob, at });
+  };
+  rec.start(1000);
+}
+
+async function writeOutSpeech(btn, ta, after, speech) {
+  btn._pending = null;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="rec-msg">Writing it out…</span>';
+  try {
+    const audio = await new Promise((resolve, reject) => {
+      const r = new FileReader();
+      r.onload = () => resolve(r.result);
+      r.onerror = () => reject(new Error('could not read the recording'));
+      r.readAsDataURL(speech.blob);
+    });
+    const { text } = await photoRequest('/audio/transcribe', { audio });
+    if (!text) {
+      btn.innerHTML = '<span class="rec-msg">No words heard</span>';
+      setTimeout(() => { if (!btn._pending) btn.innerHTML = btn.dataset.label; }, 3000);
+      return;
+    }
+    if (!ta.isConnected) {
+      showStatus('Its note had been closed, so the words were not added: ' + text, true);
+    } else {
+      const v = ta.value;
+      const start = Math.min(speech.at.start, v.length), end = Math.min(Math.max(speech.at.end, start), v.length);
+      const before = v.slice(0, start), rest = v.slice(end);
+      const lead = !before || /\s$/.test(before) ? '' : ' ';
+      const tail = !rest || /^[\s.,;:!?)]/.test(rest) ? '' : ' ';
+      ta.value = before + lead + text + tail + rest;
+      const caret = (before + lead + text).length;
+      try { ta.setSelectionRange(caret, caret); } catch (_) {}
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+      if (after) after();
+    }
+    btn.innerHTML = btn.dataset.label;
+    btn.title = 'Speak: tap Stop when done and the words type in where the cursor is';
+  } catch (err) {
+    btn._pending = speech;
+    btn.innerHTML = '<span class="rec-msg">Not written out — tap to try again</span>';
+    btn.title = 'Could not write the speech out — ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 // Wires every "Add photo" button inside root to a textarea: pick one or more
@@ -6731,6 +6932,7 @@ function startDictation(btn, ta, after) {
 // the text where the cursor was, on a line of its own.
 function wirePhotoButtons(root, textarea, after) {
   wireMicButtons(root, textarea, after);
+  wireRecordButtons(root, textarea, after);
   root.querySelectorAll('.photo-add').forEach(btn => {
     if (btn.dataset.wired) return;
     btn.dataset.wired = '1';
@@ -9359,7 +9561,10 @@ function selectTask(t) {
       <div class="task-field">
         <div class="edit-body-head">
           <label class="task-label" for="tdNotes">Notes</label>
-          <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+          <div class="bar-actions">
+            ${micButtonHtml()}${recordButtonHtml()}
+            <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+          </div>
         </div>
         ${bodyLinkPickerHtml()}
         <textarea class="task-textarea" id="tdNotes"
@@ -9561,7 +9766,9 @@ function wireTaskDetail(t) {
       .map(([, text, id]) => findThought(id)
         ? '<button class="task-btn ghost" data-id="' + escapeAttr(id) + '" type="button">' + escapeHtml(text) + '</button>'
         : '<span class="thought-link missing" title="This note is no longer in the archive">' + escapeHtml(text) + '</span>');
-    noteLinksEl.innerHTML = items.length ? '<span class="task-label">Linked</span>' + items.join('') : '';
+    const sounds = [...notesEl.value.matchAll(AUDIO_LINK_RE)].map(([, label, path]) => audioPlayerHtml(escapeHtml(label), path));
+    noteLinksEl.innerHTML = (items.length ? '<span class="task-label">Linked</span>' + items.join('') : '')
+      + (sounds.length ? '<div class="task-sounds"><span class="task-label">Recordings</span>' + sounds.join('') + '</div>' : '');
     noteLinksEl.querySelectorAll('button[data-id]').forEach(btn => btn.addEventListener('click', () => {
       const found = findThought(btn.getAttribute('data-id'));
       if (found) { setViewMode('notes'); selectThought(found); }
@@ -9577,6 +9784,8 @@ function wireTaskDetail(t) {
   const notesChanged = () => { growNotes(); renderNoteLinks(); };
   notesEl.addEventListener('input', notesChanged);
   setupBodyLinkPicker(null, notesEl, notesChanged);
+  wireMicButtons(main, notesEl, notesChanged);
+  wireRecordButtons(main, notesEl, notesChanged);
   renderNoteLinks();
   growNotes();
 

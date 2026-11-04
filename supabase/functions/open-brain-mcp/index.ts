@@ -6,7 +6,7 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
-import { cleanPaths, decodeImage, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS } from "./photos.ts";
+import { AUDIO_BUCKET, audioFormat, cleanAudioPaths, cleanPaths, cleanTranscript, decodeAudio, decodeImage, isAudioPath, newAudioPath, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS, toBase64, TRANSCRIBE_MAX_BYTES, TRANSCRIBE_MODEL } from "./photos.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -547,6 +547,65 @@ async function signPhotos(c: Context): Promise<Response> {
   const urls: Record<string, string> = {};
   for (const d of data || []) if (d.path && d.signedUrl) urls[d.path] = d.signedUrl;
   return photoJson({ urls, expires_in: PHOTO_SIGN_SECONDS });
+}
+
+// Sound recordings: the same two routes for audio (see photos.ts).
+async function uploadAudio(c: Context): Promise<Response> {
+  let sound: unknown;
+  try { sound = (await c.req.json()).audio; } catch { return photoJson({ error: "Send JSON: { audio: <data URL> }." }, 400); }
+  const decoded = decodeAudio(sound);
+  if ("error" in decoded) return photoJson({ error: decoded.error }, 400);
+  const path = newAudioPath(decoded.mime);
+  const { error } = await supabase.storage.from(AUDIO_BUCKET)
+    .upload(path, decoded.bytes, { contentType: decoded.mime, upsert: false });
+  if (error) return photoJson({ error: "Could not store the recording: " + error.message }, 502);
+  return photoJson({ path });
+}
+
+async function signAudio(c: Context): Promise<Response> {
+  let paths: string[] = [];
+  try { paths = cleanAudioPaths((await c.req.json()).paths); } catch { return photoJson({ error: "Send JSON: { paths: [...] }." }, 400); }
+  if (!paths.length) return photoJson({ urls: {} });
+  const { data, error } = await supabase.storage.from(AUDIO_BUCKET).createSignedUrls(paths, PHOTO_SIGN_SECONDS);
+  if (error) return photoJson({ error: "Could not open the recordings: " + error.message }, 502);
+  const urls: Record<string, string> = {};
+  for (const d of data || []) if (d.path && d.signedUrl) urls[d.path] = d.signedUrl;
+  return photoJson({ urls, expires_in: PHOTO_SIGN_SECONDS });
+}
+
+// Writing speech out (see photos.ts): JSON { audio: <data URL> } for speech
+// just recorded, or { path } for a recording already in note-audio. Returns
+// { text }. Nothing is stored here.
+async function transcribeAudio(c: Context): Promise<Response> {
+  let body: Record<string, unknown>;
+  try { body = await c.req.json(); } catch { return photoJson({ error: "Send JSON: { audio: <data URL> } or { path }." }, 400); }
+  let bytes: Uint8Array, format: string;
+  if (typeof body.path === "string") {
+    if (!isAudioPath(body.path)) return photoJson({ error: "That is not a recording in the archive." }, 400);
+    const { data, error } = await supabase.storage.from(AUDIO_BUCKET).download(body.path);
+    if (error || !data) return photoJson({ error: "Could not open the recording." }, 404);
+    bytes = new Uint8Array(await data.arrayBuffer());
+    format = audioFormat(body.path);
+  } else {
+    const decoded = decodeAudio(body.audio);
+    if ("error" in decoded) return photoJson({ error: decoded.error }, 400);
+    bytes = decoded.bytes;
+    format = audioFormat(decoded.mime);
+  }
+  if (bytes.length > TRANSCRIBE_MAX_BYTES) return photoJson({ error: "That is too long to write out in one go (about 15 minutes at most)." }, 400);
+  const r = await fetch(`${OPENROUTER_BASE}/audio/transcriptions`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ model: TRANSCRIBE_MODEL, input_audio: { data: toBase64(bytes), format } }),
+  });
+  const raw = await r.text();
+  let out: Record<string, unknown> = {};
+  try { out = JSON.parse(raw); } catch { /* reported below */ }
+  if (!r.ok || typeof out.text !== "string") {
+    const why = (out.error as { message?: string } | undefined)?.message || raw.slice(0, 200) || `HTTP ${r.status}`;
+    return photoJson({ error: "The speech could not be written out: " + why }, 502);
+  }
+  return photoJson({ text: cleanTranscript(out.text) });
 }
 
 async function readPhoto(c: Context): Promise<Response> {
@@ -2611,6 +2670,15 @@ app.all("*", async (c) => {
   }
   if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/photos/sign")) {
     return signPhotos(c);
+  }
+  if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/audio/upload")) {
+    return uploadAudio(c);
+  }
+  if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/audio/sign")) {
+    return signAudio(c);
+  }
+  if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/audio/transcribe")) {
+    return transcribeAudio(c);
   }
 
   // Fix: Claude Desktop connectors don't send the Accept header that
