@@ -1155,12 +1155,10 @@
     .graph-full { padding: 10px 10px 8px; }
     .graph-full-head .hint { display: none; }
   }
-  .drawer-graph { display: none; }
-  @media (max-width: 760px) {
-    .drawer-graph { display: block; margin: 12px 14px 10px; padding: 12px 12px 10px; }
-    .drawer-graph .home-graph-canvas { height: 320px; }
-    .drawer-graph .home-graph-more { margin-left: 0; }
-  }
+  /* The phone's stats panel carries the tabbed graph (Links / Map / Explore),
+     since the phone's front screen no longer does. */
+  .stats-graph { margin-bottom: 14px; padding: 12px 12px 10px; }
+  .stats-graph .home-graph-canvas { height: 320px; }
 
   /* The graph is the only view showing structure rather than counts, so it gets
      the height. Everything that is a number or a word list sits two-up beneath
@@ -3285,14 +3283,9 @@ function renderList(items, isSearch) {
   listScroll.innerHTML = '';
   const homeF = showsHomeGraph() && allThoughts.length ? archiveFigures() : null;
   if (mainShowsList()) renderMainList(items, homeF);
-  // The phone's copy of the front-screen graph. The stylesheet shows it only
-  // where the main pane is hidden, so a wide screen never draws it.
-  if (homeF && items.length) {
-    listScroll.insertAdjacentHTML('afterbegin', homeGraphCard(homeF, 'drawer-graph'));
-    wireHomeGraph(listScroll.querySelector('.home-graph'), homeF);
-  }
-  // After the graph, so on the front screen the graph comes first and the
-  // head pins itself once the list scrolls up to it.
+  // The phone's front screen is the note list, with no graph above it
+  // (4 Nov 2026: Stewart wanted the notes straight away on a phone). The graph
+  // stays on the wide front screen; a phone reaches it from the stats button.
   listScroll.insertAdjacentHTML('beforeend', listHeadHtml(items.length));
 
   if (items.length === 0) {
@@ -6842,6 +6835,7 @@ function exploreOpen(id) {
   const t = findThought(id);
   if (!t) return;
   closeGraphFull();
+  if (!statsPanel.hidden) closeStats();
   selectThought(t);
 }
 
@@ -6852,6 +6846,7 @@ function exploreFilter(key) {
   if (!e) return;
   const set = { person: activePeople, topic: activeTopics, source: activeSources }[e.kind];
   closeGraphFull();
+  if (!statsPanel.hidden) closeStats();
   filterToSingleValue(set, e.label);
   revealListOnPhone();
 }
@@ -7361,9 +7356,13 @@ function renderHomeDashboard(f) {
 function openStats() {
   if (!allThoughts.length) return;
   const f = archiveFigures();
-  statsBody.innerHTML = tileRow(f) + graphCard(f) + statsGrid(f);
+  // A phone has no graph on its front screen, so its panel gets the tabbed
+  // one with Explore; a wide screen keeps the plain Links graph here.
+  const phone = isPhone();
+  statsBody.innerHTML = tileRow(f) + (phone ? homeGraphCard(f, 'stats-graph', false) : graphCard(f)) + statsGrid(f);
   statsPanel.hidden = false;
-  drawGraph(f, statsBody.querySelector('#graphCanvas'));
+  if (phone) wireHomeGraph(statsBody.querySelector('.home-graph'), f);
+  else drawGraph(f, statsBody.querySelector('#graphCanvas'));
   wireStatsCharts(statsBody);
 }
 
