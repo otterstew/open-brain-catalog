@@ -6,6 +6,7 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
+import { cleanPaths, decodeImage, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS } from "./photos.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
@@ -518,6 +519,35 @@ const PHOTO_PROMPT = `Transcribe the text in this photo so it can be saved as a 
 - If a word cannot be read, write [?] in its place.
 - If there is no readable text, reply with nothing at all.
 Reply with the text only: no introduction, no comments, no Markdown code fences.`;
+
+// Photos inside notes: see photos.ts. Upload one (JSON { image: <data URL> })
+// and get back its path for ![caption](photo:<path>); or ask for links to show
+// some (JSON { paths: [...] }), which expire after an hour.
+const photoJson = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", ...corsHeaders } });
+
+async function uploadPhoto(c: Context): Promise<Response> {
+  let image: unknown;
+  try { image = (await c.req.json()).image; } catch { return photoJson({ error: "Send JSON: { image: <data URL> }." }, 400); }
+  const decoded = decodeImage(image);
+  if ("error" in decoded) return photoJson({ error: decoded.error }, 400);
+  const path = newPhotoPath(decoded.mime);
+  const { error } = await supabase.storage.from(PHOTO_BUCKET)
+    .upload(path, decoded.bytes, { contentType: decoded.mime, upsert: false });
+  if (error) return photoJson({ error: "Could not store the photo: " + error.message }, 502);
+  return photoJson({ path });
+}
+
+async function signPhotos(c: Context): Promise<Response> {
+  let paths: string[] = [];
+  try { paths = cleanPaths((await c.req.json()).paths); } catch { return photoJson({ error: "Send JSON: { paths: [...] }." }, 400); }
+  if (!paths.length) return photoJson({ urls: {} });
+  const { data, error } = await supabase.storage.from(PHOTO_BUCKET).createSignedUrls(paths, PHOTO_SIGN_SECONDS);
+  if (error) return photoJson({ error: "Could not open the photos: " + error.message }, 502);
+  const urls: Record<string, string> = {};
+  for (const d of data || []) if (d.path && d.signedUrl) urls[d.path] = d.signedUrl;
+  return photoJson({ urls, expires_in: PHOTO_SIGN_SECONDS });
+}
 
 async function readPhoto(c: Context): Promise<Response> {
   const json = (body: unknown, status = 200) =>
@@ -2571,6 +2601,12 @@ app.all("*", async (c) => {
 
   if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/read-photo")) {
     return readPhoto(c);
+  }
+  if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/photos/upload")) {
+    return uploadPhoto(c);
+  }
+  if (c.req.method === "POST" && new URL(c.req.url).pathname.endsWith("/photos/sign")) {
+    return signPhotos(c);
   }
 
   // Fix: Claude Desktop connectors don't send the Accept header that
