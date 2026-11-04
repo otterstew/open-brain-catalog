@@ -1628,7 +1628,7 @@ function buildServer(): McpServer {
     {
       title: "Update Thought",
       description:
-        "Edit an existing thought's content and/or metadata fields (type, title, author, published_date, updated_date, source_name, source_url, topics, people). Only the fields you provide are changed — everything else is left as-is. If content is provided, its extracted_links are recomputed (deterministically, via regex — this does NOT re-run AI extraction, so it won't silently rewrite your topics/type/author).",
+        "Edit an existing thought's content and/or metadata fields (type, title, author, published_date, updated_date, source_name, source_url, topics, people, color). Only the fields you provide are changed — everything else is left as-is. If content is provided, its extracted_links are recomputed (deterministically, via regex — this does NOT re-run AI extraction, so it won't silently rewrite your topics/type/author).",
       annotations: {
         readOnlyHint: false,
         openWorldHint: false,
@@ -1649,9 +1649,12 @@ function buildServer(): McpServer {
         source_url: z.string().nullable().optional().describe("New source URL (pass null to clear)"),
         topics: z.array(z.string()).optional().describe("Replacement topics array"),
         people: z.array(z.string()).optional().describe("Replacement people array"),
+        color: z.enum(["heather", "sea", "teal", "moss", "ochre", "blossom"])
+          .nullable().optional()
+          .describe("The note's card colour in the catalog's card view (pass null to clear). Display only; it means nothing else."),
       },
     },
-    async ({ id, content, type, title, author, published_date, updated_date, source_name, source_url, topics, people }) => {
+    async ({ id, content, type, title, author, published_date, updated_date, source_name, source_url, topics, people, color }) => {
       try {
         const { data: existing, error: fetchError } = await supabase
           .from("thoughts")
@@ -1676,6 +1679,7 @@ function buildServer(): McpServer {
         if (source_url !== undefined) meta.source_url = source_url;
         if (topics !== undefined) meta.topics = topics;
         if (people !== undefined) meta.people = people;
+        if (color !== undefined) { if (color === null) delete meta.color; else meta.color = color; }
 
         const update: Record<string, unknown> = { metadata: canonicalizeMetadata(meta) };
         const newContent = content !== undefined ? content : existing.content;

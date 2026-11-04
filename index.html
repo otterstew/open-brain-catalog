@@ -2312,6 +2312,42 @@ a.o-card:hover{filter:brightness(.98)}
   .body-link { color: var(--accent-deep); border-bottom-color: color-mix(in oklab, var(--accent) 35%, transparent); }
   .body-link:hover, .thought-link:hover { border-bottom-color: var(--accent); }
 
+  /* ---------- card view (notes as a grid of soft-coloured cards) ---------- */
+  .lh-views { display: inline-flex; flex-shrink: 0; margin-left: auto; background: var(--stone); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
+  .lh-views + .lh-top { margin-left: 0; }
+  .lh-views button { border: 0; background: transparent; color: var(--ink-2); font-family: var(--mono); font-size: 10.5px; padding: 3px 8px; border-radius: 6px; cursor: pointer; }
+  .lh-views button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+  .lh-views button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .results--cards { max-width: 1080px; }
+  .note-cards { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+  button.o-card { border: 0; font: inherit; text-align: left; cursor: pointer; }
+  .note-card { min-height: 170px; transition: filter .15s; }
+  .note-card:hover { filter: brightness(.97); }
+  .note-card.is-on { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .note-card .o-card__title { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+  .note-card-type { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); }
+  .note-card-dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  .note-card .o-meta { font-size: var(--t-xs); color: var(--ink-3); }
+  .note-cards-more { margin-top: var(--s5); }
+  .colour-filter { display: flex; flex-wrap: wrap; gap: var(--s2); margin: 0 0 var(--s4); }
+  .colour-chip { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+  .colour-chip .o-num { color: var(--ink-3); }
+  .colour-swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--tint); }
+  .colour-pick { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+  .colour-dot { width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
+    background: color-mix(in oklab, var(--tint), var(--paper) 40%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 12%, transparent); }
+  .colour-dot[data-colour=""] { background: var(--paper); }
+  .colour-dot[aria-pressed="true"] { outline: 2px solid var(--ink); outline-offset: 2px; }
+  @media (max-width: 760px) {
+    .list-scroll .results--cards { padding: var(--s3) var(--s3) var(--s6); }
+    .list-scroll .results--cards .results-head { display: none; }
+    .note-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s2); }
+    .note-card { min-height: 140px; padding: var(--s3); }
+    .note-card .o-card__title { font-size: 1.1rem; }
+    .note-card .o-card__text { -webkit-line-clamp: 3; }
+    .colour-dot { width: 32px; height: 32px; }
+  }
+
   /* ---------- day view (calendar in the journal drawer, day in main) ---------- */
   .day-cal { margin: var(--s3) var(--s3) var(--s4); padding: var(--s4); background: var(--paper); border-radius: var(--r-lg); }
   .day-cal-head { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); }
@@ -2691,6 +2727,14 @@ function typeStyle(t) {
   return UNFILED;
 }
 
+// A note's own colour, for the card view (4 Nov 2026, after Craft and
+// Supernotes). Stored as metadata.color; display only, it means nothing else.
+const NOTE_COLOURS = ['heather', 'sea', 'teal', 'moss', 'ochre', 'blossom'];
+const NOTE_COLOUR_NAMES = { heather: 'Heather', sea: 'Sea', teal: 'Teal', moss: 'Moss', ochre: 'Ochre', blossom: 'Blossom' };
+let cardView = (() => { try { return localStorage.getItem('ob.cardView') === '1'; } catch (_) { return false; } })();
+let colourFilter = null;
+let cardLimit = 60;
+
 let allThoughts = [];   // full list, from last successful list fetch
 // Changelog entries and work orders are notes the machine writes about its own
 // housekeeping — a fifth of the archive. The server leaves them out of every
@@ -3046,6 +3090,7 @@ function normalizeThought(raw) {
     title: m.title || null,
     published_date: m.published_date || null,
     updated_date: m.updated_date || null,
+    color: NOTE_COLOURS.includes(m.color) ? m.color : null,
     shelved: !!raw.shelved,
     extracted_links: Array.isArray(m.extracted_links) ? m.extracted_links : [],
     linked_thought_ids: Array.isArray(m.linked_thought_ids) ? m.linked_thought_ids : [],
@@ -3592,11 +3637,84 @@ function describeFilters() {
   return parts.join(' · ');
 }
 
+function setCardView(on) {
+  cardView = on;
+  cardLimit = 60;
+  try { localStorage.setItem('ob.cardView', on ? '1' : '0'); } catch (_) {}
+  if (!isPhone() && !mainShowsList()) showEmptyState();
+  else renderList(displayed, searchMode);
+}
+
+function cardSnippet(t) {
+  let text = (t.content || '').replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, '$1').replace(/[#>*_`]|^\s*[-+]\s(\[[ xX]\]\s)?/gm, '')
+    .replace(/\s+/g, ' ').trim();
+  const title = (t.title || '').trim();
+  if (title && text.toLowerCase().startsWith(title.toLowerCase())) text = text.slice(title.length).replace(/^[\s.:,;–—-]+/, '');
+  return text.slice(0, 300);
+}
+
+function noteCardGrid(items) {
+  const counts = {};
+  items.forEach(t => { if (t.color) counts[t.color] = (counts[t.color] || 0) + 1; });
+  if (colourFilter && !counts[colourFilter]) colourFilter = null;
+  const pool = colourFilter ? items.filter(t => t.color === colourFilter) : items;
+  const shown = pool.slice(0, cardLimit);
+
+  const wrap = document.createElement('div');
+  wrap.className = 'results results--cards';
+  const filters = describeFilters();
+  const swatches = NOTE_COLOURS.filter(c => counts[c]).map(c =>
+    `<button type="button" class="o-chip colour-chip" data-colour="${c}" aria-pressed="${colourFilter === c}" title="${NOTE_COLOUR_NAMES[c]} notes">
+      <span class="colour-swatch" style="--tint:var(--${c})"></span>${NOTE_COLOUR_NAMES[c]} <span class="o-num">${counts[c]}</span></button>`).join('');
+  wrap.innerHTML = `
+    <div class="results-head">
+      <span class="results-count">${pool.length} note${pool.length === 1 ? '' : 's'}</span>
+      <span class="results-filters">${escapeHtml(filters || 'Everything in the drawer')}</span>
+    </div>
+    ${swatches ? `<div class="colour-filter">${swatches}</div>` : ''}
+    <div class="o-cards note-cards"></div>`;
+  const grid = wrap.querySelector('.note-cards');
+  shown.forEach(t => {
+    const style = typeStyle(t.type);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'o-card note-card' + (selectedIndex === t.id ? ' is-on' : '');
+    if (t.color) card.dataset.tint = t.color;
+    const snippet = cardSnippet(t);
+    card.innerHTML = `
+      <span class="note-card-type"><span class="note-card-dot" style="background:${style.color}"></span>${escapeHtml(style.label)}${isPinned(t) ? ' · pinned' : ''}</span>
+      <span class="o-card__title">${escapeHtml(t.title || snippet.slice(0, 80) || 'Untitled')}</span>
+      ${t.title && snippet ? `<span class="o-card__text">${escapeHtml(snippet)}</span>` : ''}
+      <span class="o-meta o-num">${escapeHtml(formatDate(t.created_at))}</span>`;
+    card.addEventListener('click', () => {
+      if (editingId && t.id !== editingId) openReference(t);
+      else if (!editingId) selectThought(t);
+    });
+    grid.appendChild(card);
+  });
+  if (pool.length > shown.length) {
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'o-btn note-cards-more';
+    more.textContent = `Show ${Math.min(60, pool.length - shown.length)} more`;
+    more.addEventListener('click', () => { cardLimit += 60; wrap.replaceWith(noteCardGrid(items)); });
+    wrap.appendChild(more);
+  }
+  wrap.querySelectorAll('.colour-chip').forEach(b => b.addEventListener('click', () => {
+    colourFilter = colourFilter === b.dataset.colour ? null : b.dataset.colour;
+    cardLimit = 60;
+    wrap.replaceWith(noteCardGrid(items));
+  }));
+  return wrap;
+}
+
 function renderMainList(items, homeF) {
   // The untouched front screen shows the archive at a glance: the same cards
   // as the stats panel. The drawer already lists every note, so a second copy
   // of that list here only pushed the charts out of sight. Once a filter or a
   // search narrows things, the main pane goes back to listing the matches.
+  if (cardView) { main.innerHTML = ''; main.appendChild(noteCardGrid(items)); return; }
   if (homeF) { renderHomeDashboard(homeF); return; }
   const shown = items.slice(0, RESULTS_SHOWN);
   const filters = describeFilters();
@@ -3677,6 +3795,9 @@ function listHeadHtml(n) {
   if (activeSources.size) named(activeSources, valueCounts('source'));
   return '<div class="list-head" id="listHead">' +
     '<span class="lh-count">' + n + ' note' + (n === 1 ? '' : 's') + '</span>' + chips.join('') +
+    '<span class="lh-views" role="group" aria-label="Show notes as">' +
+    '<button type="button" data-lh-view="list" aria-pressed="' + !cardView + '">List</button>' +
+    '<button type="button" data-lh-view="cards" aria-pressed="' + cardView + '">Cards</button></span>' +
     '<button type="button" class="lh-top" data-lh-top>' + (chips.length ? 'Filters' : 'Search &amp; filter') +
     ' <span aria-hidden="true">↑</span></button></div>';
 }
@@ -3684,6 +3805,8 @@ function listHeadHtml(n) {
 listScroll.addEventListener('click', (e) => {
   const c = e.target.closest('[data-lh]');
   if (c) { const undo = listHeadActs[+c.dataset.lh]; if (undo) undo(); return; }
+  const v = e.target.closest('[data-lh-view]');
+  if (v) { setCardView(v.dataset.lhView === 'cards'); return; }
   if (e.target.closest('[data-lh-top]')) listScroll.parentElement.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
@@ -3751,6 +3874,9 @@ function renderList(items, isSearch) {
   // (4 Nov 2026: Stewart wanted the notes straight away on a phone). The graph
   // stays on the wide front screen; a phone reaches it from the stats button.
   listScroll.insertAdjacentHTML('beforeend', listHeadHtml(items.length));
+  // On a phone the cards take the list's place; on a wide screen they fill
+  // the main pane and the drawer keeps its list.
+  if (cardView && isPhone() && items.length) { listScroll.appendChild(noteCardGrid(items)); return; }
 
   if (items.length === 0) {
     const status = document.createElement('div');
@@ -4100,6 +4226,9 @@ function selectThought(t, mark) {
         <div class="field-row"><span class="field-label">Source</span><span class="field-value">${sourceHtml}</span></div>
         <div class="field-row"><span class="field-label">Tags</span><span class="field-value">${tagsHtml}</span></div>
         <div class="field-row"><span class="field-label">URL</span><span class="field-value">${urlHtml}</span></div>
+        <div class="field-row"><span class="field-label">Colour</span><span class="field-value"><span class="colour-pick" id="colourPick" role="group" aria-label="Card colour">${
+          [''].concat(NOTE_COLOURS).map(c => `<button type="button" class="colour-dot" data-colour="${c}" aria-pressed="${(t.color || '') === c}" title="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" aria-label="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" style="--tint:var(--${c || 'paper'})"></button>`).join('')
+        }</span></span></div>
       </div>
       ${peopleHtml}
       ${linksHtml}
@@ -4135,6 +4264,23 @@ function selectThought(t, mark) {
   const deletableId = t.realId;
 
   editBtn.addEventListener('click', () => startEdit(t));
+  document.querySelectorAll('#colourPick .colour-dot').forEach(b => b.addEventListener('click', async () => {
+    const before = t.color || null;
+    const next = b.dataset.colour || null;
+    if (before === next) return;
+    const set = c => {
+      t.color = c;
+      document.querySelectorAll('#colourPick .colour-dot').forEach(x => x.setAttribute('aria-pressed', String((c || '') === x.dataset.colour)));
+    };
+    set(next);
+    try {
+      // Colour is display only, so it does not stamp updated_date.
+      await callTool('update_thought', { id: t.realId || t.id, color: next });
+    } catch (err) {
+      set(before);
+      showStatus('Could not save the colour — ' + err.message, true);
+    }
+  }));
   document.getElementById('writeBtn').addEventListener('click', () => openWritingView(t));
   document.getElementById('exportBtn').addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
