@@ -5,7 +5,7 @@
 // carrying the access key, and stale notes would be worse than none.
 // Bump SHELL_VERSION whenever the shell files change: the browser only re-runs
 // install when this script's bytes differ, and the cache name goes with it.
-const SHELL_VERSION = 133;
+const SHELL_VERSION = 134;
 const CACHE = 'open-brain-shell-v' + SHELL_VERSION;
 const SHELL = [
   './',
@@ -72,7 +72,10 @@ self.addEventListener('fetch', (event) => {
       // (fetch(req, init) throws), and the throw would silently serve the cache.
       fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' })
         .then((res) => {
-          if (res && res.ok) {
+          // A page opened from the phone's share menu carries what was shared
+          // in its address (?share-text=...). Never keep a copy under that
+          // address: it would leave the shared text sitting in the cache.
+          if (res && res.ok && !/[?&]share-/.test(req.url)) {
             const copy = res.clone();
             caches.open(CACHE).then((c) => c.put(req, copy));
           }

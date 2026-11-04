@@ -8429,7 +8429,68 @@ document.getElementById('taskAddInput').addEventListener('keydown', ev => {
 // the morning Telegram briefing links here instead of listing every late task
 // (15 Oct 2026). The hash is dropped once used, so a refresh opens as normal.
 // Run after loadAll, whose notes list would otherwise be drawn over the tasks.
+// ---------- shared from the phone's share menu ----------
+// manifest.webmanifest lists the catalog as a share target (4 Nov 2026), so
+// pressing Share in Chrome, Photos or any app and choosing the catalog opens
+// /index.html?share-title=…&share-text=…&share-url=…. What was shared is lifted
+// out of the address at once (so a refresh or the back button cannot file it
+// twice) and kept in sessionStorage, so it survives the unlock screen. It opens
+// the import panel filled in; nothing is saved until "Save as new note".
+const SHARE_STORAGE = 'open-brain-pending-share';
+let pendingShare = null;
+(function readShare() {
+  const q = new URLSearchParams(location.search);
+  const got = { title: q.get('share-title') || '', text: q.get('share-text') || '',
+                url: q.get('share-url') || '' };
+  if (got.title || got.text || got.url) {
+    pendingShare = got;
+    try { sessionStorage.setItem(SHARE_STORAGE, JSON.stringify(got)); } catch (_) {}
+    ['share-title', 'share-text', 'share-url'].forEach(k => q.delete(k));
+    const rest = q.toString();
+    history.replaceState(history.state, '', location.pathname + (rest ? '?' + rest : '') + location.hash);
+  } else {
+    try { pendingShare = JSON.parse(sessionStorage.getItem(SHARE_STORAGE) || 'null'); } catch (_) {}
+  }
+})();
+
+function openSharedNote() {
+  if (!pendingShare) return false;
+  const share = pendingShare;
+  pendingShare = null;
+  try { sessionStorage.removeItem(SHARE_STORAGE); } catch (_) {}
+  let title = share.title.trim();
+  let text = share.text.trim();
+  let url = share.url.trim();
+  // Most Android apps, Chrome included, send the link inside the text rather
+  // than as the url, so take it from there when the url is empty.
+  if (!url) {
+    const m = /https?:\/\/\S+/.exec(text);
+    if (m) url = m[0].replace(/[).,;]+$/, '');
+  }
+  // Don't repeat the link: drop it from the text if it is only there as the link.
+  if (url && text.replace(url, '').trim() === '') text = '';
+  const body = (url && text.indexOf(url) === -1) ? [text, url].filter(Boolean).join('\n\n') : text || url;
+
+  closeImport();
+  importPanel.hidden = false;
+  importFileName.textContent = 'Shared from another app';
+  importMeta = detectArticleMeta(body);
+  importText.value = body;
+  prefillImportFields(body, false);
+  if (title && title !== url) importField('importTitle').value = title;
+  if (url) {
+    importField('importUrl').value = url;
+    if (!importField('importSource').value) {
+      try { importField('importSource').value = new URL(url).hostname.replace(/^www\./, ''); } catch (_) {}
+    }
+  }
+  updateImportCount();
+  setImportStatus('Check it over, then press "Save as new note". Nothing is saved until you do.');
+  return true;
+}
+
 function openFromLink() {
+  if (openSharedNote()) return;
   if (location.hash !== '#tasks') return;
   history.replaceState(history.state, '', location.pathname + location.search);
   setViewMode('tasks');
