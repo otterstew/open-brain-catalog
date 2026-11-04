@@ -2331,6 +2331,27 @@ a.o-card:hover{filter:brightness(.98)}
             border-radius: var(--r-md); white-space: pre-wrap; overflow-wrap: anywhere; }
   .md-code-in { font-family: var(--mono); font-size: .9em; }
   .md-hr { line-height: 1; }
+  .md-photo { display: block; margin: var(--s2) 0; }
+  .md-photo-img { display: block; max-width: 100%; max-height: 80vh; height: auto; border-radius: var(--r-md);
+                  background: var(--stone); min-height: 120px; min-width: 160px; }
+  .md-photo-img[src] { min-height: 0; min-width: 0; }
+  .md-photo-cap { display: block; margin-top: var(--s2); font-size: var(--t-sm); color: var(--ink-2); }
+  .md-photo.is-missing .md-photo-img { display: none; }
+  .md-photo.is-missing::before { content: "Photo not available"; display: block; padding: var(--s4); border-radius: var(--r-md);
+                  background: var(--stone); color: var(--ink-3); font-size: var(--t-sm); }
+  .ref-panel-content .md-photo-img { max-height: 40vh; }
+
+  /* ---------- export: print shows only the note ---------- */
+  #printNote { display: none; }
+  .ex-meta { color: var(--ink-2); font-size: var(--t-sm); }
+  .ex-foot { margin-top: var(--s7); font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); }
+  @media print {
+    html.printing-note body > :not(#printNote) { display: none !important; }
+    html.printing-note #printNote { display: block; }
+    html.printing-note, html.printing-note body { background: none; height: auto; overflow: visible; }
+    #printNote .o-note { max-width: none; padding: 0; }
+    #printNote .md-photo-img { max-height: 60vh; break-inside: avoid; }
+  }
 
   /* ---------- writing view (Otter .o-write) ---------- */
   html.wv-on, html.wv-on body { overflow: hidden; }
@@ -2792,6 +2813,9 @@ function renderInline(line) {
   const kept = [];
   const keep = html => '\u0001' + (kept.push(html) - 1) + '\u0002';
   let html = escapeHtml(line);
+  html = html.replace(PHOTO_LINK_RE, (_m, alt, path) => keep(
+    '<span class="md-photo"><img class="md-photo-img" data-photo="' + path + '" alt="' + alt.replace(/"/g, '&quot;') + '" loading="lazy">' +
+    (alt && alt !== 'Photo' ? '<span class="md-photo-cap">' + alt + '</span>' : '') + '</span>'));
   html = html.replace(/`([^`]+)`/g, (_m, code) =>
     keep('<span class="o-md">`</span><code class="md-code-in">' + code + '</code><span class="o-md">`</span>'));
   html = html.replace(THOUGHT_LINK_RE, (_m, text, id) => keep(findThought(id)
@@ -4002,6 +4026,9 @@ function selectThought(t, mark) {
         <span class="index-card-type" style="color:${style.color}">${style.label}</span>
         <div class="index-card-head-right">
           <span class="index-card-date" title="Date captured">${formatDate(t.created_at)}</span>
+          <button class="icon-btn" id="exportBtn" title="Export: web page or PDF" aria-label="Export this note as a web page or PDF">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>
+          </button>
           <button class="icon-btn" id="writeBtn" title="Writing view: just the note" aria-label="Open in the writing view">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M9 21H3v-6"></path><path d="M21 3l-7 7"></path><path d="M3 21l7-7"></path></svg>
           </button>
@@ -4062,6 +4089,28 @@ function selectThought(t, mark) {
 
   editBtn.addEventListener('click', () => startEdit(t));
   document.getElementById('writeBtn').addEventListener('click', () => openWritingView(t));
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    cardConfirm.style.display = 'flex';
+    cardConfirm.innerHTML = `
+      <span class="confirm-text">Export this note</span>
+      <button class="confirm-cancel" type="button" data-x="cancel">Cancel</button>
+      <button class="confirm-cancel" type="button" data-x="pdf">Print or save as PDF</button>
+      <button class="compose-save" type="button" data-x="html">Save as web page</button>`;
+    const textEl = cardConfirm.querySelector('.confirm-text');
+    cardConfirm.querySelectorAll('[data-x]').forEach(b => b.addEventListener('click', async () => {
+      const what = b.dataset.x;
+      if (what === 'cancel') { cardConfirm.style.display = 'none'; cardConfirm.innerHTML = ''; return; }
+      b.disabled = true;
+      textEl.textContent = what === 'html' ? 'Putting the page together…' : 'Opening print…';
+      try {
+        if (what === 'html') await exportNoteAsPage(t); else await printNote(t);
+        cardConfirm.style.display = 'none'; cardConfirm.innerHTML = '';
+      } catch (err) {
+        b.disabled = false;
+        textEl.textContent = 'Could not export — ' + err.message;
+      }
+    }));
+  });
 
   wireTopButtons();
 
@@ -4615,6 +4664,7 @@ function startEdit(t, anchorOffset) {
             <label class="edit-body-label" for="editContent">Body</label>
             <div class="bar-actions">
               <button class="link-add-toggle top-btn" type="button">↑ Top</button>
+              ${photoButtonHtml()}
               <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
             </div>
           </div>
@@ -4688,6 +4738,7 @@ function startEdit(t, anchorOffset) {
   wireTagSuggestions('editTags', 'editTagAdd', 'editTagOptions', 'editTagCommon');
   autoGrow();
   setupBodyLinkPicker(t, bodyEl, autoGrow);
+  wirePhotoButtons(main, bodyEl, autoGrow);
   wireTopButtons();
   if (anchorOffset != null) {
     // After layout, or the textarea has not grown to its full height yet.
@@ -4778,6 +4829,114 @@ function startEdit(t, anchorOffset) {
   }
 }
 
+/* ---------- export a note (4 Nov 2026) ----------
+   A single note out of the archive, photos included: as one self-contained web
+   page (the photos written into the file, so it opens anywhere, offline, for
+   good) or through the browser's print, which also saves a PDF. Both use the
+   same Otter page: greige, typewriter, serif title. Links to other notes mean
+   nothing outside the archive, so they become plain words. */
+function noteArticleHtml(t) {
+  const when = new Date(t.created_at);
+  const dateline = isNaN(when.getTime()) ? ''
+    : when.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const meta = [t.author, t.source].filter(Boolean).map(escapeHtml).join(' · ');
+  const tags = t.topics.length ? t.topics.map(x => '#' + escapeHtml(x)).join('  ') : '';
+  return `<article class="o-note ex-note">
+      <div class="o-dateline">${escapeHtml(dateline)}</div>
+      <h1>${escapeHtml(t.title || 'Untitled note')}</h1>
+      ${meta ? `<p class="ex-meta">${meta}</p>` : ''}
+      <div class="md">${renderBodyHtml(t.content)}</div>
+      <footer class="ex-foot">
+        ${tags ? `<p>${tags}</p>` : ''}
+        ${t.source_url ? `<p><a href="${escapeAttr(t.source_url)}">${escapeHtml(t.source_url)}</a></p>` : ''}
+        <p>From Stew's 2nd Brain · exported ${escapeHtml(formatDateInput(todayISO()))}</p>
+      </footer>
+    </article>`;
+}
+
+// The article as nodes, with note links flattened and photos given links (or,
+// for the saved page, the photo itself as a data URL).
+async function noteArticleNode(t, inlinePhotos) {
+  const box = document.createElement('div');
+  box.innerHTML = noteArticleHtml(t);
+  box.querySelectorAll('.thought-link').forEach(a => a.replaceWith(document.createTextNode(a.textContent)));
+  const imgs = [...box.querySelectorAll('img[data-photo]')];
+  if (imgs.length) {
+    const paths = [...new Set(imgs.map(i => i.dataset.photo))];
+    const { urls } = await photoRequest('/photos/sign', { paths });
+    for (const img of imgs) {
+      const url = urls && urls[img.dataset.photo];
+      img.dataset.ready = '1';
+      if (!url) { img.closest('.md-photo').classList.add('is-missing'); continue; }
+      if (!inlinePhotos) { img.src = url; img.loading = 'eager'; continue; }
+      const blob = await (await fetch(url)).blob();
+      img.src = await new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => resolve(r.result);
+        r.onerror = () => reject(new Error('could not read a photo'));
+        r.readAsDataURL(blob);
+      });
+      img.removeAttribute('loading');
+    }
+    imgs.forEach(i => { i.removeAttribute('data-photo'); i.removeAttribute('data-ready'); });
+  }
+  return box.firstElementChild;
+}
+
+// Otter itself, plus the Markdown and export rules, read from this page so the
+// saved file always matches the app.
+function exportCss() {
+  const all = [...document.querySelectorAll('style')].map(s => s.textContent).join('\n');
+  const otter = all.slice(all.indexOf('/* otter:start'), all.indexOf('/* otter:end */') + 15);
+  const md = all.slice(all.indexOf('/* ---------- Markdown, shown Bear'), all.indexOf('/* ---------- writing view (Otter .o-write)'));
+  return otter + '\n' + md + `
+  body { margin: 0; background: var(--ground); }
+  .ex-note { padding-top: var(--s8); padding-bottom: var(--s8); }
+  .ex-meta { color: var(--ink-2); font-size: var(--t-sm); margin: calc(-1 * var(--s3)) 0 var(--s6); }
+  .ex-foot { margin-top: var(--s7); font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); }
+  .ex-foot p { margin: 0 0 var(--s2); } .ex-foot a { color: var(--ink-3); overflow-wrap: anywhere; }
+  .md a { color: var(--accent-deep); }
+  @media print { body { background: none; } .ex-note { padding: 0; max-width: none; } .md-photo-img { max-height: 60vh; break-inside: avoid; } }`;
+}
+
+function exportFileName(t) {
+  const slug = (t.title || 'note').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'note';
+  return slug + '.html';
+}
+
+async function exportNoteAsPage(t) {
+  const article = await noteArticleNode(t, true);
+  const page = '<!doctype html>\n<html lang="en-GB" data-hue="heather"><head><meta charset="utf-8">' +
+    '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+    '<title>' + escapeHtml(t.title || 'Note') + '</title>' +
+    '<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>' +
+    '<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">' +
+    '<style>' + exportCss() + '</style></head><body>' + article.outerHTML + '</body></html>';
+  const url = URL.createObjectURL(new Blob([page], { type: 'text/html' }));
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = exportFileName(t);
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+// Print shows only the note: it is laid on the page in #printNote and every
+// other part of the app is hidden for the print (see the print rules).
+async function printNote(t) {
+  const article = await noteArticleNode(t, false);
+  let holder = document.getElementById('printNote');
+  if (!holder) { holder = document.createElement('div'); holder.id = 'printNote'; document.body.appendChild(holder); }
+  holder.replaceChildren(article);
+  await Promise.all([...holder.querySelectorAll('img')].map(img => img.complete ? null
+    : new Promise(r => { img.onload = img.onerror = r; })));
+  const done = () => { document.documentElement.classList.remove('printing-note'); holder.replaceChildren(); window.removeEventListener('afterprint', done); };
+  window.addEventListener('afterprint', done);
+  document.documentElement.classList.add('printing-note');
+  window.print();
+}
+
 /* ---------- writing view ----------
    Just the note, on the greige ground in the typewriter face (Otter's .o-write,
    Stewart's wish after iA Writer and Kim Klassen, 4 Nov 2026). The options slide
@@ -4830,6 +4989,7 @@ function openWritingView(t, startWriting) {
       <button type="button" data-wv="close">Close</button>
       <button type="button" data-wv="mode">Write</button>
       <button type="button" data-wv="focus" aria-pressed="false" hidden>Focus</button>
+      <button type="button" class="photo-add" data-wv="photo" hidden>Add photo</button>
       <span class="o-bar__spacer"></span>
       <span class="wv-status o-meta" aria-live="polite"></span>
       <button type="button" data-wv="save" hidden>Save</button>
@@ -4889,6 +5049,7 @@ function openWritingView(t, startWriting) {
     edit.hidden = !writing;
     focusBtn.hidden = !writing;
     saveBtn.hidden = !writing;
+    $('[data-wv="photo"]').hidden = !writing;
     modeBtn.textContent = writing ? 'Read' : 'Write';
     if (writing) { paint(); ta.focus({ preventScroll: true }); }
     else renderRead();
@@ -4970,6 +5131,7 @@ function openWritingView(t, startWriting) {
   modeBtn.addEventListener('click', () => setMode(!writing));
   focusBtn.addEventListener('click', () => setFocus(!focusOn));
   saveBtn.addEventListener('click', save);
+  wirePhotoButtons(view, ta);
 
   // A tap shows or hides the options on a touch screen. While writing, the
   // text takes taps for the cursor, so there the strip along the top does it.
@@ -5043,7 +5205,10 @@ function showComposer(prefill, parentId, opts) {
       <div class="index-card-body">
         <div class="edit-body-head">
           <label class="edit-body-label" for="composeText">Body</label>
-          <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+          <div class="bar-actions">
+            ${photoButtonHtml()}
+            <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+          </div>
         </div>
         ${bodyLinkPickerHtml()}
         <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought…">${escapeHtml(prefill || '')}</textarea>
@@ -5063,6 +5228,7 @@ function showComposer(prefill, parentId, opts) {
   const saveBtn = field('composeSave');
   const cancelBtn = field('composeCancel');
   setupBodyLinkPicker(null, textEl, () => {});
+  wirePhotoButtons(card, textEl);
 
   // With six fields as well as the body there is now real work to lose, so the
   // composer takes part in the same unsaved-changes guard as the editor.
@@ -5944,18 +6110,18 @@ importInput.addEventListener('change', () => {
 // is saved until Save is pressed.
 const PHOTO_LONG_SIDE = 2000;   // enough for small print; keeps the upload under ~1 MB
 
-function shrinkPhoto(file) {
+function shrinkPhoto(file, longSide = PHOTO_LONG_SIDE, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file);
     const img = new Image();
     img.onload = () => {
       URL.revokeObjectURL(url);
-      const scale = Math.min(1, PHOTO_LONG_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+      const scale = Math.min(1, longSide / Math.max(img.naturalWidth, img.naturalHeight));
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(img.naturalWidth * scale);
       canvas.height = Math.round(img.naturalHeight * scale);
       canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
+      resolve(canvas.toDataURL('image/jpeg', quality));
     };
     img.onerror = () => {
       URL.revokeObjectURL(url);
@@ -5988,6 +6154,127 @@ async function readPhotoText(image) {
     throw new Error(typeof payload.error === 'string' ? payload.error : 'HTTP ' + response.status);
   }
   return String(payload.text || '');
+}
+
+/* ---------- photos inside notes (4 Nov 2026) ----------
+   A photo lives in the private "note-photos" bucket and in the note's text as
+   ![caption](photo:2026/11/<uuid>.jpg). The server uploads it and hands out
+   links that expire after an hour (photos.ts); nothing here is public. Photos
+   are shrunk before upload so a phone picture does not bloat storage. */
+const NOTE_PHOTO_LONG_SIDE = 1600;
+const PHOTO_LINK_RE = /!\[([^\]\n]{0,200})\]\(photo:(\d{4}\/\d{2}\/[0-9a-f-]{36}\.(?:jpg|webp|png))\)/g;
+
+async function photoRequest(route, body) {
+  let response;
+  try {
+    response = await fetch(MCP_URL + route, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-brain-key': mcpAccessKey },
+      body: JSON.stringify(body),
+    });
+  } catch (err) {
+    throw new Error('could not reach the archive server (' + err.message + ')');
+  }
+  let payload = {};
+  try { payload = await response.json(); } catch (_) {}
+  if (payload.error && (payload.error.code === -32001 || /unauthor/i.test(payload.error.message || ''))) {
+    setAccessKey('');
+    showUnlock('That key was rejected. Check it and try again.');
+    throw new Error('the archive rejected the access key');
+  }
+  if (!response.ok || payload.error) {
+    throw new Error(typeof payload.error === 'string' ? payload.error : 'HTTP ' + response.status);
+  }
+  return payload;
+}
+
+async function uploadNotePhoto(file) {
+  const image = await shrinkPhoto(file, NOTE_PHOTO_LONG_SIDE, 0.82);
+  const { path } = await photoRequest('/photos/upload', { image });
+  if (!path) throw new Error('the archive did not say where the photo went');
+  return path;
+}
+
+// Every <img data-photo> that appears anywhere gets a short-lived link, asked
+// for in one batch and remembered for 50 minutes (the links last an hour).
+const photoUrlCache = new Map();   // path -> { url, until }
+let photoTimer = null;
+async function hydratePhotos() {
+  const imgs = [...document.querySelectorAll('img[data-photo]:not([data-ready])')];
+  if (!imgs.length || !mcpAccessKey) return;
+  imgs.forEach(i => { i.dataset.ready = '1'; });
+  const now = Date.now();
+  const need = [...new Set(imgs.map(i => i.dataset.photo))]
+    .filter(path => { const c = photoUrlCache.get(path); return !c || c.until < now; });
+  const missing = (img, why) => {
+    const box = img.closest('.md-photo');
+    if (box) { box.classList.add('is-missing'); box.title = why; }
+  };
+  if (need.length) {
+    try {
+      const { urls } = await photoRequest('/photos/sign', { paths: need });
+      Object.entries(urls || {}).forEach(([path, url]) => photoUrlCache.set(path, { url, until: now + 50 * 60 * 1000 }));
+    } catch (err) {
+      imgs.forEach(i => missing(i, 'Could not load this photo — ' + err.message));
+      return;
+    }
+  }
+  imgs.forEach(i => {
+    const c = photoUrlCache.get(i.dataset.photo);
+    if (c) i.src = c.url; else missing(i, 'This photo is no longer in the archive');
+  });
+}
+new MutationObserver(() => { clearTimeout(photoTimer); photoTimer = setTimeout(hydratePhotos, 30); })
+  .observe(document.body, { childList: true, subtree: true });
+
+const photoButtonHtml = () => '<button class="link-add-toggle photo-add" type="button">Add photo</button>';
+
+// Wires every "Add photo" button inside root to a textarea: pick one or more
+// photos (the phone offers the camera too), upload each, and put its line in
+// the text where the cursor was, on a line of its own.
+function wirePhotoButtons(root, textarea, after) {
+  root.querySelectorAll('.photo-add').forEach(btn => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.multiple = true;
+    input.hidden = true;
+    btn.after(input);
+    btn.addEventListener('click', () => input.click());
+    input.addEventListener('change', async () => {
+      const files = [...(input.files || [])];
+      input.value = '';
+      if (!files.length) return;
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.title = '';
+      let at = textarea.selectionStart != null ? textarea.selectionEnd : textarea.value.length;
+      try {
+        for (let i = 0; i < files.length; i++) {
+          btn.textContent = files.length > 1 ? 'Adding ' + (i + 1) + ' of ' + files.length + '…' : 'Adding photo…';
+          const path = await uploadNotePhoto(files[i]);
+          const v = textarea.value;
+          const before = v.slice(0, at), rest = v.slice(at);
+          const lead = !before ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+          const tail = rest.startsWith('\n\n') ? '' : rest.startsWith('\n') ? '\n' : '\n\n';
+          const line = '![Photo](photo:' + path + ')';
+          textarea.value = before + lead + line + tail + rest;
+          at = (before + lead + line).length;
+          textarea.setSelectionRange(at, at);
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        if (after) after();
+      } catch (err) {
+        btn.title = 'Could not add the photo — ' + err.message;
+        alert('Could not add the photo — ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = label;
+      }
+    });
+  });
 }
 
 async function importFromPhoto(file) {
