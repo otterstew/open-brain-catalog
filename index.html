@@ -23,8 +23,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/light/style.css">
 <style>
-/* otter:start v2 — Otter design language. Source: ~/.claude/skills/otter-design/otter.css
+/* otter:start v2.1 — Otter design language. Source: ~/.claude/skills/otter-design/otter.css
    Paste this block whole into an app's <style>. Re-sync by replacing everything
    between otter:start and otter:end. App-specific CSS goes after otter:end.
    Also needed in <head>:
@@ -291,6 +292,94 @@ a.o-card:hover{filter:brightness(.98)}
 .o-actionbar{position:sticky; bottom:0; display:flex; gap:var(--s3); padding:var(--s3) var(--s4) calc(var(--s3) + env(safe-area-inset-bottom));
   background:color-mix(in oklab,var(--ground),transparent 6%); backdrop-filter:blur(8px)}
 .o-actionbar .o-btn{flex:1}
+
+/* ══ v2.1 (Review 2, 4 Nov 2026): pieces for apps with several functions ══ */
+
+/* ── App frame with a rail: the functions down the left (all five planners).
+   .o-app > .o-rail + .o-main (+ .o-side for a timeline). On the phone the rail
+   hides and .o-tabbar (five items) sits at the bottom. ── */
+.o-app{display:grid; grid-template-columns:232px minmax(0,1fr); min-height:100vh}
+.o-app--split{grid-template-columns:232px minmax(0,1fr) 300px}
+.o-rail{background:var(--ground); padding:var(--s5) var(--s3); display:flex; flex-direction:column; gap:2px}
+.o-rail .o-wordmark{padding:0 var(--s3) var(--s4); font-size:1.5rem}
+.o-rail__group{font-size:var(--t-xs); color:var(--ink-3); padding:var(--s4) var(--s3) var(--s1)}
+.o-rail__item{display:flex; align-items:center; gap:var(--s3); padding:7px var(--s3); min-height:36px; border:0; border-radius:var(--r-sm);
+  background:none; font:inherit; font-size:var(--t-sm); color:var(--ink-2); text-decoration:none; text-align:left; cursor:pointer}
+.o-rail__item i{font-size:20px}
+.o-rail__item .o-num{margin-left:auto; font-size:var(--t-xs); color:var(--ink-3)}
+.o-rail__item:hover{background:var(--stone); color:var(--ink)}
+.o-rail__item.is-current,.o-rail__item[aria-current]{background:var(--paper); color:var(--ink)}
+.o-rail__item.is-current i,.o-rail__item[aria-current] i{color:var(--accent)}
+.o-main{background:var(--paper); padding:var(--s6) var(--s6) var(--s7); min-width:0}
+.o-side{background:var(--ground); padding:var(--s5) var(--s4); min-width:0}
+.o-tabbar{display:none}
+@media (max-width:760px){
+  .o-app,.o-app--split{grid-template-columns:1fr}
+  .o-rail,.o-side--desk{display:none}
+  .o-main{padding:var(--s5) var(--s4) 96px}
+  .o-tabbar{display:flex; position:fixed; left:0; right:0; bottom:0; z-index:20; justify-content:space-around;
+    background:var(--ground); padding:var(--s2) var(--s2) calc(var(--s3) + env(safe-area-inset-bottom))}
+  .o-tabbar a,.o-tabbar button{display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; min-width:56px; min-height:44px;
+    border:0; background:none; font:inherit; font-size:var(--t-xs); color:var(--ink-3); text-decoration:none; cursor:pointer}
+  .o-tabbar i{font-size:24px}
+  .o-tabbar .is-current,.o-tabbar [aria-current]{color:var(--ink)}
+  .o-tabbar .is-current i,.o-tabbar [aria-current] i{color:var(--accent)}
+}
+
+/* ── Capture: one field for anything, with photo and mic buttons (Todoist's
+   Write · Attach · Speak). Add .is-listening while the mic is on. ── */
+.o-capture{display:flex; align-items:center; gap:var(--s2); background:var(--ground); border-radius:var(--r-md); padding:var(--s2) var(--s2) var(--s2) var(--s4); min-height:52px}
+.o-capture input,.o-capture textarea{flex:1; min-width:0; border:0; background:none; font:inherit; color:var(--ink); padding:var(--s2) 0; resize:none}
+.o-capture input:focus,.o-capture textarea:focus{outline:none}
+.o-capture:focus-within{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.o-capture__btn{display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:var(--r-sm); background:none; color:var(--ink-2); cursor:pointer; font-size:22px}
+.o-capture__btn:hover{background:var(--stone); color:var(--ink)}
+.o-capture.is-listening{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.o-capture.is-listening .o-capture__mic{background:var(--accent); color:var(--on-ink)}
+
+/* ── Task row: round tick, the words, quiet meta, a time in mono on the right (Sunsama). ── */
+.o-tasks{list-style:none; margin:0; padding:0}
+.o-task{display:flex; align-items:flex-start; gap:var(--s3); padding:var(--s3) 0; min-height:44px}
+.o-task + .o-task{box-shadow:0 -1px 0 var(--stone)}
+.o-task__tick{flex:none; width:20px; height:20px; margin-top:2px; border:0; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--ink-3);
+  background:none; color:transparent; display:grid; place-items:center; font-size:13px; cursor:pointer}
+.o-task__tick:hover{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.o-task.is-done .o-task__tick{background:var(--accent); box-shadow:none; color:var(--on-ink)}
+.o-task__main{flex:1; min-width:0}
+.o-task__title{display:block}
+.o-task.is-done .o-task__title{color:var(--ink-3); text-decoration:line-through; text-decoration-color:var(--ink-dim)}
+.o-task__meta{display:block; margin-top:2px; font-size:var(--t-xs); color:var(--ink-3)}
+.o-task__time{flex:none; padding-top:3px; font-family:var(--mono); font-size:var(--t-xs); color:var(--ink-3)}
+.o-task__time.is-due{color:var(--accent-deep)}
+
+/* ── Day timeline: hours down the side. Events from calendar feeds in stone; planned
+   blocks in a soft tint (data-tint); "now" in the accent. Position blocks with
+   top/height from (hour - first hour) × --hour. ── */
+.o-day{position:relative; --hour:52px}
+.o-day__hour{height:var(--hour); display:flex; gap:var(--s2); font-family:var(--mono); font-size:var(--t-xs); color:var(--ink-3)}
+.o-day__hour::after{content:""; flex:1; height:1px; margin-top:.6em; background:var(--stone)}
+.o-day__block{position:absolute; left:44px; right:0; padding:5px var(--s2); border-radius:var(--r-sm); overflow:hidden;
+  font-size:var(--t-xs); line-height:1.35; background:var(--stone); color:var(--ink); --tint:var(--stone)}
+.o-day__block b{display:block; font-weight:400; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.o-day__block small{display:block; font-size:inherit; color:var(--ink-2)}
+.o-day__block[data-tint]{background:color-mix(in oklab,var(--tint),var(--paper) 78%)}
+.o-day__block[data-tint="heather"]{--tint:var(--heather)} .o-day__block[data-tint="sea"]{--tint:var(--sea)} .o-day__block[data-tint="teal"]{--tint:var(--teal)}
+.o-day__block[data-tint="moss"]{--tint:var(--moss)} .o-day__block[data-tint="ochre"]{--tint:var(--ochre)} .o-day__block[data-tint="blossom"]{--tint:var(--blossom)}
+.o-day__now{position:absolute; left:36px; right:0; height:2px; background:var(--accent)}
+.o-day__now::before{content:""; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--accent)}
+
+/* ── Suggestion: a helper's proposal waiting for a yes. Nothing is filed until Stewart taps.
+   .o-suggest > __said (with .o-meta) + __to (icon + one <span> of words) + __acts; .is-filed after. ── */
+.o-suggest{background:var(--ground); border-radius:var(--r-md); padding:var(--s4)}
+.o-suggest + .o-suggest{margin-top:var(--s3)}
+.o-suggest__said{margin:0 0 var(--s3)}
+.o-suggest__said .o-meta{display:block; margin-bottom:var(--s1)}
+.o-suggest__to{display:flex; align-items:flex-start; gap:var(--s2); margin-bottom:var(--s3); font-size:var(--t-sm)}
+.o-suggest__to i{flex:none; margin-top:1px; font-size:18px; color:var(--accent)}
+.o-suggest__to > span{flex:1; min-width:0}
+.o-suggest__acts{display:flex; flex-wrap:wrap; gap:var(--s2)}
+.o-suggest.is-filed{opacity:.55}
+.o-suggest.is-filed .o-suggest__acts{display:none}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important; animation:none!important}}
 /* otter:end */
@@ -2313,6 +2402,53 @@ a.o-card:hover{filter:brightness(.98)}
   .body-link { color: var(--accent-deep); border-bottom-color: color-mix(in oklab, var(--accent) 35%, transparent); }
   .body-link:hover, .thought-link:hover { border-bottom-color: var(--accent); }
 
+  /* ---------- rail and tab bar (Otter v2.1) ---------- */
+  .app { grid-template-columns: 216px 380px minmax(0, 1fr); }
+  .app.ref-open { grid-template-columns: 216px 380px minmax(0, 1fr) 320px; }
+  .ob-rail { height: 100%; overflow-y: auto; box-sizing: border-box; padding-top: 22px; }
+  .ob-rail__mark { font-size: 1.6rem; font-weight: 500; padding-bottom: var(--s5); }
+  .ob-rail__mark em { font-style: italic; }
+  .o-rail__item { width: 100%; text-align: left; font: inherit; font-size: var(--t-sm); background: none; color: var(--ink-2); cursor: pointer; }
+  .o-rail__item.is-on i { color: var(--accent); }
+  .o-rail__item.is-on .ob-rail__label::after { content: ' · on'; color: var(--ink-3); }
+  .drawer-title, .header-actions, .mode-row { display: none !important; }
+  .drawer-title-row { display: none; }
+  .more-screen { width: 100%; max-width: 720px; padding: var(--s4) 0 var(--s8); }
+  .more-title { font-family: var(--serif); font-weight: 500; font-size: 2.25rem; margin: 0 0 var(--s5); }
+  .more-screen .o-stone i { font-size: 24px; color: var(--ink-2); }
+  @media (min-width: 761px) and (max-width: 1180px) {
+    .app { grid-template-columns: 64px 340px minmax(0, 1fr); }
+    .app.ref-open { grid-template-columns: 64px 340px minmax(0, 1fr) 300px; }
+    .ob-rail { padding-left: var(--s2); padding-right: var(--s2); }
+    .ob-rail__label, .o-rail__item .o-num, .o-rail__group { display: none; }
+    .ob-rail .ob-rail__mark { display: none; }
+    .o-rail__item { justify-content: center; padding: 8px 0; }
+    .o-rail__group + .o-rail__item, .o-rail__item[data-go="newBtn"], .o-rail__item[data-go="statsBtn"], .o-rail__item[data-go="workBtn"] { margin-top: var(--s4); }
+  }
+  @media (max-width: 760px) {
+    .app, .app.detail-open, .app.ref-open { grid-template-columns: minmax(0, 1fr); }
+    .drawer-title-row { display: flex; }
+    .drawer-title { display: block !important; }
+    .app { height: calc(100dvh - var(--tabbar-h, 72px)); }
+    html.work-mode .app { height: calc(100dvh - var(--tabbar-h, 72px) - 36px); }
+    .ob-tabbar { box-shadow: 0 -1px 0 color-mix(in srgb, var(--ink) 6%, transparent); }
+    .ob-tabbar button { flex: 1; }
+    html:has(.wv) .ob-tabbar, html.kb-open .ob-tabbar { display: none; }
+    .more-screen { padding: var(--s5) var(--s4) var(--s8); }
+  }
+
+  .mic-add i { font-size: 15px; vertical-align: -2px; }
+  .wv .o-write__bar button { white-space: nowrap; }
+  .wv .mic-add { display: inline-flex; align-items: center; gap: 4px; }
+  @media (max-width: 480px) {
+    .wv .o-write__bar { gap: var(--s3); }
+    .wv .mic-add i { display: none; }
+  }
+  .mic-add.is-listening { background: var(--accent); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
+  .mic-add.is-listening i { animation: mic-pulse 1.2s ease-in-out infinite; }
+  @keyframes mic-pulse { 50% { opacity: .4; } }
+  @media (prefers-reduced-motion: reduce) { .mic-add.is-listening i { animation: none; } }
+
   /* ---------- work mode ---------- */
   .work-ticker[hidden] { display: none; }
   .work-ticker { height: 36px; box-sizing: border-box; align-items: center; justify-content: space-between; }
@@ -2617,6 +2753,27 @@ a.o-card:hover{filter:brightness(.98)}
 
 <div class="app" id="app">
 
+  <!-- The functions down the left (Otter v2.1, Review 2). Every item stands in
+       for an existing control: it clicks that control, so behaviour and ids stay
+       where they were. On a phone the rail hides and the tab bar takes over. -->
+  <nav class="o-rail ob-rail" id="rail" aria-label="Sections">
+    <span class="o-wordmark ob-rail__mark">Stew's 2nd <em>Brain</em></span>
+    <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" title="Notes"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
+    <button type="button" class="o-rail__item" data-go="modeJournal" data-view="journal" title="Journal"><i class="ph-light ph-book-open-text"></i><span class="ob-rail__label">Journal</span></button>
+    <button type="button" class="o-rail__item" data-go="modeTasks" data-view="tasks" title="Tasks"><i class="ph-light ph-check-square"></i><span class="ob-rail__label">Tasks</span><span class="o-num" id="railTasksN"></span></button>
+    <div class="o-rail__group">Add</div>
+    <button type="button" class="o-rail__item" data-go="newBtn" title="New note"><i class="ph-light ph-plus-circle"></i><span class="ob-rail__label">New note</span></button>
+    <button type="button" class="o-rail__item" data-go="importBtn" title="Import a file"><i class="ph-light ph-upload-simple"></i><span class="ob-rail__label">Import a file</span></button>
+    <button type="button" class="o-rail__item" data-go="photoBtn" title="Photograph text"><i class="ph-light ph-camera"></i><span class="ob-rail__label">Photograph text</span></button>
+    <div class="o-rail__group">Look</div>
+    <button type="button" class="o-rail__item" data-go="statsBtn" title="The shape of the archive"><i class="ph-light ph-chart-bar"></i><span class="ob-rail__label">Statistics</span></button>
+    <div class="o-rail__group">This device</div>
+    <button type="button" class="o-rail__item" data-go="workBtn" data-mirror="workBtn" title="Work mode"><i class="ph-light ph-briefcase"></i><span class="ob-rail__label">Work mode</span></button>
+    <button type="button" class="o-rail__item" data-go="themeBtn" data-mirror="themeBtn" title="Colours"><i class="ph-light ph-circle-half"></i><span class="ob-rail__label">Colours</span></button>
+    <button type="button" class="o-rail__item" data-go="refreshBtn" title="Refresh from archive"><i class="ph-light ph-arrows-clockwise"></i><span class="ob-rail__label">Refresh</span></button>
+    <button type="button" class="o-rail__item" data-go="lockBtn" title="Forget the access key on this device"><i class="ph-light ph-lock"></i><span class="ob-rail__label">Lock</span></button>
+  </nav>
+
   <div class="drawer">
     <div class="drawer-header">
       <div class="drawer-title-row">
@@ -2731,6 +2888,14 @@ a.o-card:hover{filter:brightness(.98)}
   <div class="ref-panel" id="refPanel"></div>
 
 </div>
+
+<nav class="o-tabbar ob-tabbar" id="tabbar" aria-label="Sections">
+  <button type="button" data-go="modeNotes" data-view="notes"><i class="ph-light ph-notebook"></i>Notes</button>
+  <button type="button" data-go="modeJournal" data-view="journal"><i class="ph-light ph-book-open-text"></i>Journal</button>
+  <button type="button" data-go="newBtn" data-view="new"><i class="ph-light ph-plus-circle"></i>New</button>
+  <button type="button" data-go="modeTasks" data-view="tasks"><i class="ph-light ph-check-square"></i>Tasks</button>
+  <button type="button" data-go="more" data-view="more"><i class="ph-light ph-dots-three"></i>More</button>
+</nav>
 
 <script>
 // Talks directly to your Open Brain MCP server (Supabase edge function) — no
@@ -5243,6 +5408,7 @@ function openWritingView(t, startWriting) {
       <button type="button" data-wv="mode">Write</button>
       <button type="button" data-wv="focus" aria-pressed="false" hidden>Focus</button>
       <button type="button" class="photo-add" data-wv="photo" hidden>Add photo</button>
+      ${SpeechRec ? '<button type="button" class="mic-add" data-wv="mic" aria-pressed="false" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i> Speak</button>' : ''}
       <span class="o-bar__spacer"></span>
       <span class="wv-status o-meta" aria-live="polite"></span>
       <button type="button" data-wv="save" hidden>Save</button>
@@ -5303,6 +5469,7 @@ function openWritingView(t, startWriting) {
     focusBtn.hidden = !writing;
     saveBtn.hidden = !writing;
     $('[data-wv="photo"]').hidden = !writing;
+    if ($('[data-wv="mic"]')) { $('[data-wv="mic"]').hidden = !writing; if (!writing && activeMic) activeMic.rec.stop(); }
     modeBtn.textContent = writing ? 'Read' : 'Write';
     if (writing) { paint(); ta.focus({ preventScroll: true }); }
     else renderRead();
@@ -6485,12 +6652,85 @@ async function hydratePhotos() {
 new MutationObserver(() => { clearTimeout(photoTimer); photoTimer = setTimeout(hydratePhotos, 30); })
   .observe(document.body, { childList: true, subtree: true });
 
-const photoButtonHtml = () => '<button class="link-add-toggle photo-add" type="button">Add photo</button>';
+const photoButtonHtml = () => '<button class="link-add-toggle photo-add" type="button">Add photo</button>' + micButtonHtml();
+
+// ---------- speaking into a note (4 Nov 2026, Otter v2.1 capture) ----------
+// The browser's own speech recognition, in British English: words type in at
+// the cursor as they are spoken, the unsettled ones replaced as they settle.
+// Where the browser has none (Firefox, some in-app browsers) there is no mic.
+const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition || null;
+const micButtonHtml = () => SpeechRec
+  ? '<button class="link-add-toggle mic-add" type="button" aria-pressed="false" title="Speak: words type in where the cursor is"><i class="ph-light ph-microphone" aria-hidden="true"></i> Speak</button>'
+  : '';
+let activeMic = null;
+
+function wireMicButtons(root, textarea, after) {
+  root.querySelectorAll('.mic-add').forEach(btn => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', () => {
+      if (activeMic && activeMic.btn === btn) { activeMic.rec.stop(); return; }
+      if (activeMic) activeMic.rec.stop();
+      startDictation(btn, textarea, after);
+    });
+  });
+}
+
+function startDictation(btn, ta, after) {
+  const rec = new SpeechRec();
+  rec.lang = 'en-GB';
+  rec.continuous = true;
+  rec.interimResults = true;
+  const v = ta.value;
+  const start = ta.selectionStart != null ? ta.selectionStart : v.length;
+  const end = ta.selectionEnd != null ? ta.selectionEnd : start;
+  const before = v.slice(0, start), rest = v.slice(end);
+  let said = '';
+  const label = btn.innerHTML;
+  const render = interim => {
+    const words = [said, interim].filter(Boolean).join(' ');
+    const lead = !words || !before || /\s$/.test(before) ? '' : ' ';
+    const tail = !words || !rest || /^[\s.,;:!?)]/.test(rest) ? '' : ' ';
+    ta.value = before + lead + words + tail + rest;
+    const caret = (before + lead + words).length;
+    try { ta.setSelectionRange(caret, caret); } catch (_) {}
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    if (after) after();
+  };
+  rec.onresult = e => {
+    if (!ta.isConnected) { rec.stop(); return; }   // the note was closed
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      const r = e.results[i];
+      if (r.isFinal) said = [said, r[0].transcript.trim()].filter(Boolean).join(' ');
+      else interim += r[0].transcript;
+    }
+    render(interim.trim());
+  };
+  const finish = msg => {
+    if (activeMic && activeMic.rec === rec) activeMic = null;
+    btn.innerHTML = label;
+    btn.setAttribute('aria-pressed', 'false');
+    btn.classList.remove('is-listening');
+    if (msg) btn.title = msg;
+  };
+  rec.onerror = e => finish(e.error === 'not-allowed' || e.error === 'service-not-allowed'
+    ? 'The microphone is blocked for this site. Allow it in the browser’s site settings.'
+    : e.error === 'no-speech' ? 'Nothing was heard. Tap Speak to try again.' : '');
+  rec.onend = () => finish();
+  try { rec.start(); } catch (_) { finish(); return; }
+  activeMic = { rec, btn };
+  btn.innerHTML = '<i class="ph-light ph-stop-circle" aria-hidden="true"></i> Stop';
+  btn.setAttribute('aria-pressed', 'true');
+  btn.classList.add('is-listening');
+  ta.focus();
+}
 
 // Wires every "Add photo" button inside root to a textarea: pick one or more
 // photos (the phone offers the camera too), upload each, and put its line in
 // the text where the cursor was, on a line of its own.
 function wirePhotoButtons(root, textarea, after) {
+  wireMicButtons(root, textarea, after);
   root.querySelectorAll('.photo-add').forEach(btn => {
     if (btn.dataset.wired) return;
     btn.dataset.wired = '1';
@@ -9752,6 +9992,7 @@ function setViewMode(mode) {
   document.getElementById('taskAddRow').hidden = !tasks;
   document.getElementById('journalRow').hidden = !journal;
   chipRow.hidden = journal;
+  if (typeof syncNav === 'function') syncNav();
   // The "Kind of note" label belongs to the note chips only.
   document.getElementById('chipRowLabel').style.display = notes ? '' : 'none';
   document.querySelector('.facet-bar').hidden = !notes;
@@ -9876,6 +10117,108 @@ function openFromLink() {
   setViewMode('tasks');
 }
 
+// ---------- the rail and the phone's tab bar ----------
+// Each item clicks the control it stands for. "More" opens a screen of the
+// rest on a phone, so the bar keeps to five.
+const MORE_ITEMS = [
+  ['importBtn', 'ph-upload-simple', 'Import a file', 'A PDF, text or Markdown file becomes a note'],
+  ['photoBtn', 'ph-camera', 'Photograph text', 'A page or a sign, read into a new note'],
+  ['statsBtn', 'ph-chart-bar', 'Statistics', 'The shape of the archive'],
+  ['workBtn', 'ph-briefcase', 'Work mode', 'Only work notes, for sharing your screen'],
+  ['themeBtn', 'ph-circle-half', 'Colours', 'Follow the device, or always light or dark'],
+  ['refreshBtn', 'ph-arrows-clockwise', 'Refresh', 'Fetch the archive again'],
+  ['lockBtn', 'ph-lock', 'Lock', 'Forget the access key on this device'],
+];
+
+function showMoreScreen() {
+  if (!confirmLeavingEdit()) return;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  const items = MORE_ITEMS.filter(([id]) => {
+    const el = document.getElementById(id);
+    return el && !(el.hidden && id !== 'importBtn' && id !== 'statsBtn');
+  });
+  main.innerHTML = `
+    <div class="more-screen">
+      <h1 class="more-title"><em>More</em></h1>
+      <div class="o-stones">${items.map(([id, icon, label, sub]) => `
+        <button type="button" class="o-stone" data-go="${id}">
+          <i class="ph-light ${icon}" aria-hidden="true"></i>
+          <span class="o-stone__main"><span class="o-stone__title">${label}${id === 'workBtn' && workMode ? ' is on' : ''}</span><span class="o-stone__sub">${escapeHtml(id === 'themeBtn' ? ((document.getElementById('themeBtn').title || '').replace(/^Colours:\s*/, '').replace(/^./, c => c.toUpperCase()) || sub) : sub)}</span></span>
+        </button>`).join('')}
+      </div>
+    </div>`;
+  main.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
+    const id = b.dataset.go;
+    // Statistics and the colours button work from the notes view.
+    if (id === 'statsBtn' && viewMode !== 'notes') setViewMode('notes');
+    document.getElementById(id).click();
+    if (id === 'themeBtn') showMoreScreen();
+  }));
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  syncNav('more');
+}
+
+let navOverride = null;   // 'more' while the More screen shows
+function syncNav(override) {
+  navOverride = override || null;
+  const current = navOverride || viewMode;
+  document.querySelectorAll('#rail [data-view], #tabbar [data-view]').forEach(b => {
+    if (b.dataset.view === current) b.setAttribute('aria-current', 'page');
+    else b.removeAttribute('aria-current');
+  });
+  const pressed = document.getElementById('workBtn').getAttribute('aria-pressed') === 'true';
+  document.querySelectorAll('#rail [data-mirror="workBtn"]').forEach(b => b.classList.toggle('is-on', pressed));
+}
+
+document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.addEventListener('click', () => {
+  const id = b.dataset.go;
+  if (id === 'more') { showMoreScreen(); return; }
+  const fromBar = !!b.closest('#tabbar');
+  if (fromBar && /^mode/.test(id)) {
+    // Tapping the section you are in goes back to its list.
+    if (b.dataset.view === viewMode && !navOverride) { if (!confirmLeavingEdit()) return; app.classList.remove('detail-open'); }
+  }
+  if (id === 'newBtn' && viewMode !== 'notes') setViewMode('notes');
+  const target = document.getElementById(id);
+  if (target) target.click();
+  if (fromBar && /^mode/.test(id) && navOverride) { app.classList.remove('detail-open'); showEmptyState(); }
+  syncNav();
+}));
+
+// Whatever replaces the More screen (a note, a list) takes "More" off.
+new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen')) syncNav(); })
+  .observe(main, { childList: true });
+// The bar's height, so the page above it ends where the bar begins.
+(() => {
+  const bar = document.getElementById('tabbar');
+  const set = () => document.documentElement.style.setProperty('--tabbar-h', (bar.offsetHeight || 0) + 'px');
+  if (window.ResizeObserver) new ResizeObserver(set).observe(bar);
+  set();
+})();
+// While typing on a phone the keyboard needs the room the bar takes.
+document.addEventListener('focusin', e => {
+  if (isPhone() && e.target.matches('textarea, input[type=text], input:not([type])')) document.documentElement.classList.add('kb-open');
+});
+document.addEventListener('focusout', () => document.documentElement.classList.remove('kb-open'));
+syncNav();
+
+// The tasks count and the colours label follow their originals.
+(() => {
+  const n = document.getElementById('modeTasksN');
+  const r = document.getElementById('railTasksN');
+  const copy = () => { r.textContent = n.textContent.replace(/[^0-9]/g, ''); };
+  new MutationObserver(copy).observe(n, { childList: true, characterData: true, subtree: true });
+  copy();
+  const theme = document.getElementById('themeBtn');
+  const railTheme = document.querySelector('#rail [data-mirror="themeBtn"]');
+  const copyTheme = () => { railTheme.title = theme.title; };
+  new MutationObserver(copyTheme).observe(theme, { attributes: true, attributeFilter: ['title'] });
+  copyTheme();
+})();
+
 // ---------- work mode switches ----------
 (() => {
   const btn = document.getElementById('workBtn');
@@ -9889,10 +10232,14 @@ function openFromLink() {
     location.replace(location.pathname);
   };
   btn.setAttribute('aria-pressed', String(workMode));
+  syncNav();
   if (workMode) {
     document.documentElement.classList.add('work-mode');
     ticker.hidden = false;
-    ['modeJournal', 'modeTasks'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+    ['modeJournal', 'modeTasks'].forEach(id => {
+      document.getElementById(id).style.display = 'none';
+      document.querySelectorAll('[data-go="' + id + '"]').forEach(b => { b.style.display = 'none'; });
+    });
     btn.title = 'Work mode is on';
   }
   const openLeave = () => { panel.hidden = false; keyIn.value = ''; err.textContent = ''; keyIn.focus(); };
