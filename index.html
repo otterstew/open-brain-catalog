@@ -353,7 +353,7 @@ a.o-card:hover{filter:brightness(.98)}
 
   .header-actions {
     display: flex;
-    gap: 6px;
+    gap: 2px;
     flex-shrink: 0;
   }
 
@@ -377,7 +377,7 @@ a.o-card:hover{filter:brightness(.98)}
     background: none;
     border: 1px solid transparent;
     color: var(--ink-2);
-    width: 30px;
+    width: 28px;
     height: 30px;
     border-radius: var(--r-sm);
     cursor: pointer;
@@ -1979,6 +1979,7 @@ a.o-card:hover{filter:brightness(.98)}
       box-shadow: none;
     }
     .index-card-head { padding: 16px 16px 0; }
+    .note-colour-row { padding: var(--s3) 16px var(--s2); }
     .index-card-body { padding: 16px 16px 22px; }
     .index-card-foot { padding: 12px 16px 16px; }
   }
@@ -2312,6 +2313,21 @@ a.o-card:hover{filter:brightness(.98)}
   .body-link { color: var(--accent-deep); border-bottom-color: color-mix(in oklab, var(--accent) 35%, transparent); }
   .body-link:hover, .thought-link:hover { border-bottom-color: var(--accent); }
 
+  /* ---------- work mode ---------- */
+  .work-ticker[hidden] { display: none; }
+  .work-ticker { height: 36px; box-sizing: border-box; align-items: center; justify-content: space-between; }
+  .work-ticker button { border: 0; background: transparent; color: inherit; font: inherit; text-transform: none; letter-spacing: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; padding: 0; }
+  html.work-mode .app { height: calc(100vh - 36px); }
+  @media (max-width: 760px) { .work-ticker { padding: 9px var(--s4); } .work-ticker__more { display: none; } .work-ticker > #workLeave { display: inline; } }
+  #workBtn[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+  .work-leave { position: fixed; inset: 0; z-index: 400; background: color-mix(in srgb, var(--ground) 92%, transparent); display: flex; align-items: flex-end; }
+  .work-leave[hidden] { display: none; }
+  .work-leave__inner { width: 100%; max-width: 520px; box-sizing: border-box; padding: var(--s7) var(--s6) var(--s8); }
+  .work-leave__inner h2 { font-family: var(--serif); font-weight: 500; font-size: 2rem; margin: 0 0 var(--s2); }
+  .work-leave__inner .o-field { width: 100%; margin-top: var(--s4); }
+  .work-leave__err { min-height: 1.2em; color: var(--fail); font-size: var(--t-sm); margin: var(--s2) 0; }
+  .work-leave__btns { display: flex; flex-wrap: wrap; gap: var(--s3); }
+
   /* ---------- card view (notes as a grid of soft-coloured cards) ---------- */
   .lh-views { display: inline-flex; flex-shrink: 0; margin-left: auto; background: var(--stone); border-radius: var(--r-sm); padding: 2px; gap: 2px; }
   .lh-views + .lh-top { margin-left: 0; }
@@ -2334,6 +2350,12 @@ a.o-card:hover{filter:brightness(.98)}
   .colour-chip .o-num { color: var(--ink-3); }
   .colour-swatch { width: 10px; height: 10px; border-radius: 50%; background: var(--tint); }
   .colour-pick { display: inline-flex; flex-wrap: wrap; gap: 8px; }
+  .note-colour-row { display: flex; align-items: center; flex-wrap: wrap; gap: var(--s3); padding: var(--s3) 28px var(--s2); }
+  .note-colour-label { font-size: var(--t-xs); color: var(--ink-3); }
+  .colour-filter { align-items: center; }
+  .colour-filter-label, .colour-filter-hint { font-size: var(--t-xs); color: var(--ink-3); }
+  .colour-filter-hint { flex-basis: 100%; }
+  .colour-chip:disabled { opacity: .45; cursor: default; }
   .colour-dot { width: 24px; height: 24px; border-radius: 50%; border: 0; padding: 0; cursor: pointer;
     background: color-mix(in oklab, var(--tint), var(--paper) 40%); box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 12%, transparent); }
   .colour-dot[data-colour=""] { background: var(--paper); }
@@ -2576,6 +2598,23 @@ a.o-card:hover{filter:brightness(.98)}
   </form>
 </div>
 
+<div class="work-ticker o-ticker" id="workTicker" hidden>
+  <span>Work mode<span class="work-ticker__more"> · work notes only</span></span>
+  <button type="button" id="workLeave">Leave work mode</button>
+</div>
+<div class="work-leave" id="workLeavePanel" hidden>
+  <form class="work-leave__inner" id="workLeaveForm" autocomplete="off">
+    <h2>Leave <em>work</em> mode</h2>
+    <p class="o-meta">Type the archive key to show personal notes again.</p>
+    <input class="o-field" id="workLeaveKey" type="password" autocomplete="off" aria-label="Archive key" />
+    <p class="work-leave__err" id="workLeaveErr" role="alert"></p>
+    <div class="work-leave__btns">
+      <button type="button" class="o-btn" id="workLeaveCancel">Stay in work mode</button>
+      <button type="submit" class="o-btn o-btn--primary">Show personal notes</button>
+    </div>
+  </form>
+</div>
+
 <div class="app" id="app">
 
   <div class="drawer">
@@ -2598,6 +2637,9 @@ a.o-card:hover{filter:brightness(.98)}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
           </button>
           <input type="file" id="photoInput" hidden accept="image/*" capture="environment" />
+          <button class="refresh-btn" id="workBtn" type="button" title="Work mode: show only work notes, for screen-sharing" aria-label="Work mode" aria-pressed="false">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg>
+          </button>
           <button class="refresh-btn" id="themeBtn" type="button" title="Colours: follow this device" aria-label="Colours: follow this device">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M12 3a9 9 0 0 1 0 18z" fill="currentColor"></path></svg>
           </button>
@@ -3101,7 +3143,8 @@ function parseJsonThoughts(text) {
   let raw;
   try { raw = JSON.parse(text); } catch (_) { raw = []; }
   if (!Array.isArray(raw)) raw = [];
-  return raw.map(normalizeThought);
+  const notes = raw.map(normalizeThought);
+  return workMode ? notes.filter(isWorkNote) : notes;
 }
 
 function findThought(id) {
@@ -3287,6 +3330,18 @@ function noteThoughts() {
   return allThoughts.filter(inNotesView);
 }
 
+// Work mode (4 Nov 2026, after Craft's spaces): for screen-sharing at work.
+// While it is on, only notes on the Work & AI side ever enter the page: the
+// filter sits in parseJsonThoughts, where every list and search arrives, so
+// nothing personal is in memory to show by accident. It fails closed: until
+// the tag headings have loaded, no note counts as work. The Journal and Tasks
+// are hidden. It stays on, per device, until the archive key is typed.
+const workMode = (() => { try { return localStorage.getItem('ob.workMode') === '1'; } catch (_) { return false; } })();
+if (workMode) activeSide = 'work';
+function isWorkNote(t) {
+  return headingSides.size > 0 && noteSides(t).has('work');
+}
+
 function onActiveSide(t) {
   if (activeSide === 'all' || !headingSides.size) return true;
   return noteSides(t).has(activeSide);
@@ -3295,7 +3350,7 @@ function onActiveSide(t) {
 function renderSideSwitch() {
   const box = document.getElementById('sideSwitch');
   if (!box) return;
-  box.hidden = !headingSides.size || viewMode !== 'notes';
+  box.hidden = workMode || !headingSides.size || viewMode !== 'notes';
   box.querySelectorAll('button[data-side]').forEach(b =>
     b.setAttribute('aria-pressed', b.dataset.side === activeSide ? 'true' : 'false'));
 }
@@ -3664,15 +3719,17 @@ function noteCardGrid(items) {
   const wrap = document.createElement('div');
   wrap.className = 'results results--cards';
   const filters = describeFilters();
-  const swatches = NOTE_COLOURS.filter(c => counts[c]).map(c =>
-    `<button type="button" class="o-chip colour-chip" data-colour="${c}" aria-pressed="${colourFilter === c}" title="${NOTE_COLOUR_NAMES[c]} notes">
-      <span class="colour-swatch" style="--tint:var(--${c})"></span>${NOTE_COLOUR_NAMES[c]} <span class="o-num">${counts[c]}</span></button>`).join('');
+  const anyColoured = NOTE_COLOURS.some(c => counts[c]);
+  const swatches = `<span class="colour-filter-label">Show colour</span>` + NOTE_COLOURS.map(c =>
+    `<button type="button" class="o-chip colour-chip" data-colour="${c}" aria-pressed="${colourFilter === c}" ${counts[c] ? '' : 'disabled'} title="${counts[c] ? 'Only ' + NOTE_COLOUR_NAMES[c].toLowerCase() + ' notes' : 'No ' + NOTE_COLOUR_NAMES[c].toLowerCase() + ' notes yet'}">
+      <span class="colour-swatch" style="--tint:var(--${c})"></span>${NOTE_COLOUR_NAMES[c]} <span class="o-num">${counts[c] || 0}</span></button>`).join('')
+    + (anyColoured ? '' : `<span class="colour-filter-hint">Open a note and pick a card colour under its title.</span>`);
   wrap.innerHTML = `
     <div class="results-head">
       <span class="results-count">${pool.length} note${pool.length === 1 ? '' : 's'}</span>
       <span class="results-filters">${escapeHtml(filters || 'Everything in the drawer')}</span>
     </div>
-    ${swatches ? `<div class="colour-filter">${swatches}</div>` : ''}
+    <div class="colour-filter">${swatches}</div>
     <div class="o-cards note-cards"></div>`;
   const grid = wrap.querySelector('.note-cards');
   shown.forEach(t => {
@@ -4213,6 +4270,12 @@ function selectThought(t, mark) {
           </button>
         </div>
       </div>
+      <div class="note-colour-row">
+        <span class="note-colour-label">Card colour</span>
+        <span class="colour-pick" id="colourPick" role="group" aria-label="Card colour">${
+          [''].concat(NOTE_COLOURS).map(c => `<button type="button" class="colour-dot" data-colour="${c}" aria-pressed="${(t.color || '') === c}" title="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" aria-label="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" style="--tint:var(--${c || 'paper'})"></button>`).join('')
+        }</span>
+      </div>
       <button class="card-meta-toggle" id="cardMetaToggle" type="button" aria-expanded="false" aria-controls="cardMeta">
         <span>Details, links &amp; tags</span>
         <span class="facet-toggle-caret" aria-hidden="true">▾</span>
@@ -4226,9 +4289,6 @@ function selectThought(t, mark) {
         <div class="field-row"><span class="field-label">Source</span><span class="field-value">${sourceHtml}</span></div>
         <div class="field-row"><span class="field-label">Tags</span><span class="field-value">${tagsHtml}</span></div>
         <div class="field-row"><span class="field-label">URL</span><span class="field-value">${urlHtml}</span></div>
-        <div class="field-row"><span class="field-label">Colour</span><span class="field-value"><span class="colour-pick" id="colourPick" role="group" aria-label="Card colour">${
-          [''].concat(NOTE_COLOURS).map(c => `<button type="button" class="colour-dot" data-colour="${c}" aria-pressed="${(t.color || '') === c}" title="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" aria-label="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" style="--tint:var(--${c || 'paper'})"></button>`).join('')
-        }</span></span></div>
       </div>
       ${peopleHtml}
       ${linksHtml}
@@ -5592,9 +5652,14 @@ async function loadAll() {
     // and went on quietly hiding two thirds of it once it passed 300: a filter
     // showed one Meditation note where fifteen existed. All 313 notes are about
     // 2 MB and a second to fetch (24 Sep 2026); revisit if that stops being true.
+    if (workMode && !headingSides.size) await loadTopicHeadings();
     const text = await callTool('list_thoughts',
       { limit: 1000, format: 'json', include_shelved: showShelved });
     allThoughts = parseJsonThoughts(text);
+    if (workMode && !headingSides.size) {
+      showStatus('Work mode could not load the tag headings, so it is showing no notes.', true, loadAll);
+      return;
+    }
     loadTopicHeadings();
     activeTypes = new Set();
     activeTopics = new Set();
@@ -9674,6 +9739,7 @@ function renderTaskFilters() {
 }
 
 function setViewMode(mode) {
+  if (workMode) mode = 'notes';   // the Journal and Tasks are personal
   viewMode = mode;
   const notes = mode === 'notes';
   const journal = mode === 'journal';
@@ -9809,6 +9875,37 @@ function openFromLink() {
   history.replaceState(history.state, '', location.pathname + location.search);
   setViewMode('tasks');
 }
+
+// ---------- work mode switches ----------
+(() => {
+  const btn = document.getElementById('workBtn');
+  const ticker = document.getElementById('workTicker');
+  const panel = document.getElementById('workLeavePanel');
+  const keyIn = document.getElementById('workLeaveKey');
+  const err = document.getElementById('workLeaveErr');
+  const setMode = on => {
+    try { localStorage.setItem('ob.workMode', on ? '1' : '0'); } catch (_) {}
+    // A fresh page, so nothing from the other mode stays in memory or history.
+    location.replace(location.pathname);
+  };
+  btn.setAttribute('aria-pressed', String(workMode));
+  if (workMode) {
+    document.documentElement.classList.add('work-mode');
+    ticker.hidden = false;
+    ['modeJournal', 'modeTasks'].forEach(id => { document.getElementById(id).style.display = 'none'; });
+    btn.title = 'Work mode is on';
+  }
+  const openLeave = () => { panel.hidden = false; keyIn.value = ''; err.textContent = ''; keyIn.focus(); };
+  btn.addEventListener('click', () => { if (workMode) openLeave(); else setMode(true); });
+  document.getElementById('workLeave').addEventListener('click', openLeave);
+  document.getElementById('workLeaveCancel').addEventListener('click', () => { panel.hidden = true; });
+  panel.addEventListener('keydown', e => { if (e.key === 'Escape') panel.hidden = true; });
+  document.getElementById('workLeaveForm').addEventListener('submit', e => {
+    e.preventDefault();
+    if (keyIn.value.trim() && keyIn.value.trim() === (mcpAccessKey || '').trim()) setMode(false);
+    else { err.textContent = 'That is not the archive key.'; keyIn.select(); }
+  });
+})();
 
 if (mcpAccessKey) loadAll().then(openFromLink);
 
