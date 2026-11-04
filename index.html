@@ -2312,6 +2312,53 @@ a.o-card:hover{filter:brightness(.98)}
   .body-link { color: var(--accent-deep); border-bottom-color: color-mix(in oklab, var(--accent) 35%, transparent); }
   .body-link:hover, .thought-link:hover { border-bottom-color: var(--accent); }
 
+  /* ---------- day view (calendar in the journal drawer, day in main) ---------- */
+  .day-cal { margin: var(--s3) var(--s3) var(--s4); padding: var(--s4); background: var(--paper); border-radius: var(--r-lg); }
+  .day-cal-head { display: flex; align-items: center; gap: var(--s2); margin-bottom: var(--s3); }
+  .day-cal-month { flex: 1; font-family: var(--serif); font-size: 1.25rem; font-weight: 500; }
+  .day-cal-nav { width: 36px; height: 36px; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--ink-2); font: inherit; font-size: 1.25rem; cursor: pointer; }
+  .day-cal-nav:hover { background: var(--stone); color: var(--ink); }
+  .day-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+  .day-cal-wd { font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); text-align: center; padding-bottom: 2px; }
+  .day-cal-day { position: relative; aspect-ratio: 1; min-height: 32px; border: 0; border-radius: var(--r-xs); background: var(--stone); color: var(--ink-2); font-family: var(--mono); font-size: var(--t-xs); cursor: pointer; padding: 0; }
+  .day-cal-day.lv1 { background: color-mix(in srgb, var(--accent) 18%, var(--stone)); }
+  .day-cal-day.lv2 { background: color-mix(in srgb, var(--accent) 34%, var(--stone)); color: var(--ink); }
+  .day-cal-day.lv3 { background: color-mix(in srgb, var(--accent) 55%, var(--stone)); color: var(--ink); }
+  .day-cal-day.lv4 { background: color-mix(in srgb, var(--accent) 78%, var(--stone)); color: var(--paper); }
+  .day-cal-day.is-future { opacity: .45; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .day-cal-day.lv1 { background: color-mix(in srgb, var(--accent) 32%, var(--stone)); } }
+  :root[data-theme="dark"] .day-cal-day.lv1 { background: color-mix(in srgb, var(--accent) 32%, var(--stone)); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .day-cal-day.lv2 { background: color-mix(in srgb, var(--accent) 52%, var(--stone)); } }
+  :root[data-theme="dark"] .day-cal-day.lv2 { background: color-mix(in srgb, var(--accent) 52%, var(--stone)); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .day-cal-day.lv3 { background: color-mix(in srgb, var(--accent) 72%, var(--stone)); } }
+  :root[data-theme="dark"] .day-cal-day.lv3 { background: color-mix(in srgb, var(--accent) 72%, var(--stone)); }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .day-cal-day.lv4 { background: color-mix(in srgb, var(--accent) 92%, var(--stone)); } }
+  :root[data-theme="dark"] .day-cal-day.lv4 { background: color-mix(in srgb, var(--accent) 92%, var(--stone)); }
+  .day-cal-day.is-today span { font-weight: 700; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+  .day-cal-day.lv4.is-today span { color: inherit; }
+  .day-cal-day.has-entry::after { content: ''; position: absolute; left: 50%; bottom: 4px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ink); }
+  .day-cal-day.lv4.has-entry::after { background: currentColor; }
+  .day-cal-day.is-on { outline: 2px solid var(--ink); outline-offset: 1px; }
+  .day-cal-day:hover { filter: brightness(.95); }
+  .day-cal-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+  .day-view { width: 100%; max-width: 720px; box-sizing: border-box; margin: 0 auto; padding: 0 0 var(--s8); }
+  .day-steps { display: flex; gap: var(--s2); margin: 0 0 var(--s3) calc(-1 * var(--s3)); }
+  .day-title { font-family: var(--serif); font-weight: 500; font-size: clamp(2rem, 5vw, 2.75rem); line-height: 1.1; margin: 0 0 var(--s6); }
+  .day-entry { background: var(--paper); border-radius: var(--r-lg); padding: var(--s5) var(--s6); margin-bottom: var(--s7); }
+  .day-entry--empty { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s4); }
+  .day-entry--empty p { margin: 0; }
+  .day-entry-actions { margin-top: var(--s4); }
+  .day-section { font-family: var(--serif); font-weight: 500; font-size: 1.4rem; margin: var(--s7) 0 var(--s3); display: flex; align-items: baseline; gap: var(--s3); }
+  .day-section .o-num { font-size: var(--t-sm); color: var(--ink-3); }
+  .day-stone-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; align-self: flex-start; margin-top: 10px; }
+  .day-nothing { margin-top: var(--s6); }
+  @media (max-width: 640px) {
+    .day-view { padding: var(--s5) var(--s4) var(--s8); }
+    .day-entry { padding: var(--s4); }
+    .day-cal-day { aspect-ratio: auto; height: 38px; }
+  }
+
   /* ---------- Markdown, shown Bear's way ----------
      Formatted, with every mark kept but faded (.o-md). Display only. */
   .md { font-size: var(--t-lg); line-height: 1.75; }
@@ -9168,6 +9215,7 @@ async function loadJournal() {
 function renderJournalList() {
   listScroll.innerHTML = '';
   if (!journalLoaded) return;
+  listScroll.appendChild(renderDayCalendar());
 
   if (!allJournal.length) {
     const status = document.createElement('div');
@@ -9227,6 +9275,180 @@ function renderJournalList() {
       listScroll.appendChild(row);
     });
   });
+}
+
+// ---------- the day view (4 Nov 2026) ----------
+// A month of days above the journal list, each tinted by how much was filed or
+// edited that day, with a dot where there is a journal entry. A day opens in
+// the main pane: its entry, then the notes filed and edited that day. Built from
+// what is already loaded (the archive and the journal), so it asks the server
+// for nothing.
+let calMonth = null;      // 'YYYY-MM' shown in the calendar
+let dayViewIso = null;    // the day open in the main pane, if any
+
+function localDay(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const pad = n => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+}
+
+function dayActivity() {
+  const days = new Map();
+  const get = iso => { if (!days.has(iso)) days.set(iso, { filed: [], edited: [], journal: null }); return days.get(iso); };
+  const seen = new Set();
+  allThoughts.concat(allJournal).forEach(t => {
+    if (!t || seen.has(t.id)) return;
+    seen.add(t.id);
+    const isJournal = (t.topics || []).includes(JOURNAL_TOPIC) || allJournal.includes(t);
+    if (isJournal) return;
+    const filed = localDay(t.created_at);
+    if (filed) get(filed).filed.push(t);
+    if (t.updated_date && t.updated_date !== filed) get(t.updated_date).edited.push(t);
+  });
+  allJournal.forEach(t => { const iso = journalDate(t); if (iso && !get(iso).journal) get(iso).journal = t; });
+  return days;
+}
+
+function renderDayCalendar() {
+  const today = todayISO();
+  if (!calMonth) calMonth = (dayViewIso || today).slice(0, 7);
+  const [y, m] = calMonth.split('-').map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1));
+  const daysIn = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const lead = (first.getUTCDay() + 6) % 7;   // Monday first
+  const act = dayActivity();
+  const pad = n => String(n).padStart(2, '0');
+
+  const wrap = document.createElement('div');
+  wrap.className = 'day-cal';
+  const label = first.toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' });
+  let cells = '';
+  for (let i = 0; i < lead; i++) cells += '<span class="day-cal-pad"></span>';
+  for (let d = 1; d <= daysIn; d++) {
+    const iso = calMonth + '-' + pad(d);
+    const a = act.get(iso);
+    const n = a ? a.filed.length + a.edited.length : 0;
+    const level = n === 0 ? 0 : n < 2 ? 1 : n < 4 ? 2 : n < 8 ? 3 : 4;
+    const bits = [];
+    if (a && a.journal) bits.push('journal entry');
+    if (a && a.filed.length) bits.push(a.filed.length + ' filed');
+    if (a && a.edited.length) bits.push(a.edited.length + ' edited');
+    const cls = 'day-cal-day lv' + level
+      + (iso === today ? ' is-today' : '')
+      + (iso === dayViewIso ? ' is-on' : '')
+      + (a && a.journal ? ' has-entry' : '')
+      + (iso > today ? ' is-future' : '');
+    cells += `<button type="button" class="${cls}" data-day="${iso}" title="${escapeAttr(formatDateInput(iso) + (bits.length ? ' · ' + bits.join(', ') : ''))}"><span>${d}</span></button>`;
+  }
+  wrap.innerHTML = `
+    <div class="day-cal-head">
+      <span class="day-cal-month">${escapeHtml(label)}</span>
+      <button type="button" class="day-cal-nav" data-step="-1" aria-label="Previous month">‹</button>
+      <button type="button" class="day-cal-nav" data-step="1" aria-label="Next month">›</button>
+    </div>
+    <div class="day-cal-grid">
+      ${['M','T','W','T','F','S','S'].map(w => `<span class="day-cal-wd">${w}</span>`).join('')}
+      ${cells}
+    </div>`;
+  wrap.querySelectorAll('.day-cal-nav').forEach(b => b.addEventListener('click', () => {
+    const d = new Date(Date.UTC(y, m - 1 + Number(b.dataset.step), 1));
+    calMonth = d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1);
+    const fresh = renderDayCalendar();
+    wrap.replaceWith(fresh);
+  }));
+  wrap.querySelectorAll('.day-cal-day').forEach(b => b.addEventListener('click', () => showDayView(b.dataset.day)));
+  return wrap;
+}
+
+function dayStoneHtml(t, when) {
+  const style = typeStyle(t.type);
+  let sub = (t.content || '').replace(/[#>*_`\[\]]/g, '').replace(/\s+/g, ' ').trim();
+  const title = (t.title || '').trim() || sub.slice(0, 80) || 'Untitled';
+  if (sub.toLowerCase().startsWith(title.toLowerCase())) sub = sub.slice(title.length).replace(/^[\s.:,;–—-]+/, '');
+  return `<button type="button" class="o-stone day-stone" data-id="${escapeAttr(t.id)}">
+      <span class="day-stone-dot" style="background:${style.color}"></span>
+      <span class="o-stone__main">
+        <span class="o-stone__title">${escapeHtml(title)}</span>
+        <span class="o-stone__sub">${escapeHtml(style.label || t.type || '')}${sub ? ' · ' + escapeHtml(sub.slice(0, 140)) : ''}</span>
+      </span>
+    </button>`;
+}
+
+function showDayView(iso) {
+  if (!confirmLeavingEdit()) return;
+  dayViewIso = iso;
+  calMonth = iso.slice(0, 7);
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  const a = dayActivity().get(iso) || { filed: [], edited: [], journal: null };
+  const d = new Date(iso + 'T00:00:00Z');
+  const weekday = d.toLocaleDateString(undefined, { weekday: 'long', timeZone: 'UTC' });
+  const date = d.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+  const today = todayISO();
+  const rel = iso === today ? 'Today' : iso === localDay(Date.now() - 864e5) ? 'Yesterday' : '';
+
+  let entry;
+  if (a.journal) {
+    entry = `<div class="day-entry">
+        <div class="note-text md">${renderBodyHtml(a.journal.content)}</div>
+        <div class="day-entry-actions">
+          <button type="button" class="o-btn o-btn--sm" data-open="${escapeAttr(a.journal.id)}">Open entry</button>
+        </div>
+      </div>`;
+  } else if (iso === today) {
+    entry = `<div class="day-entry day-entry--empty">
+        <p class="o-meta">No entry yet today.</p>
+        <button type="button" class="o-btn o-btn--primary" id="dayWriteToday">Write today’s entry</button>
+      </div>`;
+  } else {
+    entry = `<div class="day-entry day-entry--empty"><p class="o-meta">No journal entry for this day.</p></div>`;
+  }
+
+  const section = (label, items) => items.length ? `
+      <h3 class="day-section">${label} <span class="o-num">${items.length}</span></h3>
+      <div class="o-stones">${items.map(t => dayStoneHtml(t)).join('')}</div>` : '';
+  const nothing = !a.filed.length && !a.edited.length
+    ? '<p class="o-meta day-nothing">Nothing was filed or edited on this day.</p>' : '';
+
+  main.innerHTML = `
+    <div class="day-view">
+      <div class="day-head">
+        <div class="day-steps">
+          <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-step="-1" aria-label="Day before">‹ Day before</button>
+          ${iso < today ? '<button type="button" class="o-btn o-btn--quiet o-btn--sm" data-step="1" aria-label="Day after">Day after ›</button>' : ''}
+        </div>
+        <h1 class="day-title">${rel ? `<em>${rel}</em>, ` : `<em>${escapeHtml(weekday)}</em> `}${escapeHtml(rel ? weekday + ' ' + date : date)}</h1>
+      </div>
+      ${entry}
+      ${section('Filed this day', a.filed)}
+      ${section('Edited this day', a.edited)}
+      ${nothing}
+    </div>`;
+
+  main.querySelectorAll('[data-id], [data-open]').forEach(b => b.addEventListener('click', () => {
+    const t = findThought(b.dataset.id || b.dataset.open) || allJournal.find(j => j.id === (b.dataset.id || b.dataset.open));
+    if (t) { dayViewIso = null; selectThought(t); }
+  }));
+  main.querySelectorAll('.day-steps [data-step]').forEach(b => b.addEventListener('click', () => {
+    const n = new Date(iso + 'T00:00:00Z');
+    n.setUTCDate(n.getUTCDate() + Number(b.dataset.step));
+    showDayView(n.toISOString().slice(0, 10));
+  }));
+  const w = document.getElementById('dayWriteToday');
+  if (w) w.addEventListener('click', openTodaysJournal);
+
+  const back = document.createElement('button');
+  back.className = 'back-btn';
+  back.textContent = '← Back to drawer';
+  back.addEventListener('click', () => app.classList.remove('detail-open'));
+  main.prepend(back);
+
+  main.scrollTop = 0;
+  renderList(displayed, searchMode);
+  app.classList.add('detail-open');
 }
 
 // Waits for the list rather than guessing: deciding "no entry today" from a
@@ -9318,6 +9540,8 @@ function setViewMode(mode) {
   document.getElementById('taskAddRow').hidden = !tasks;
   document.getElementById('journalRow').hidden = !journal;
   chipRow.hidden = journal;
+  // The "Kind of note" label belongs to the note chips only.
+  document.getElementById('chipRowLabel').style.display = notes ? '' : 'none';
   document.querySelector('.facet-bar').hidden = !notes;
   if (!notes) document.getElementById('facetPanel').hidden = true;
   renderSideSwitch();
