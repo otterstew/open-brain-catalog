@@ -49,6 +49,9 @@ jobs:
       - name: Test the Inbox's Sorter clean-up
         run: deno run --no-config supabase/functions/open-brain-mcp/tests/inbox_test.ts
 
+      - name: Test what Today may show of each calendar event
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/calendar_test.ts
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest

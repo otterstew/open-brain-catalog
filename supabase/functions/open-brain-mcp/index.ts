@@ -6,6 +6,7 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
+import { calendarDay, londonToday } from "./calendar.ts";
 import { fallbackSuggestion, FILED_AS, type InboxRow, normaliseSuggestion, SORTER_MODEL, sorterPrompt, type Suggestion } from "./inbox.ts";
 import { AUDIO_BUCKET, audioFormat, cleanAudioPaths, cleanPaths, cleanTranscript, decodeAudio, decodeImage, isAudioPath, newAudioPath, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS, toBase64, TRANSCRIBE_MAX_BYTES, TRANSCRIBE_MODEL } from "./photos.ts";
 
@@ -2681,6 +2682,34 @@ function buildServer(): McpServer {
       if (error) return { content: [{ type: "text" as const, text: `Could not settle it: ${error.message}` }], isError: true };
       if (!data?.length) return { content: [{ type: "text" as const, text: `No waiting inbox item with id ${id} (already filed?).` }] };
       return { content: [{ type: "text" as const, text: filed_as === "dropped" ? "Dropped from the inbox." : `Filed as a ${filed_as}.` }] };
+    }
+  );
+
+  // --- Calendars for the Today view (5 Nov 2026; see calendar.ts) ---
+  server.registerTool(
+    "calendar_day",
+    {
+      title: "Calendar Day",
+      description:
+        "Stewart's calendar for one day, from his personal Google calendars, with his work calendar shown only as plain 'Work' busy blocks (no titles or people, so it is safe on a shared screen). Used by the catalog's Today view.",
+      annotations: { readOnlyHint: true, openWorldHint: true },
+      inputSchema: {
+        date: z.string().optional().describe("YYYY-MM-DD; defaults to today in London"),
+        format: z.enum(["text", "json"]).optional().describe("\"text\" (default) or \"json\", used by the Open Brain Catalog GUI."),
+      },
+    },
+    async ({ date, format }) => {
+      const day = date && /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : londonToday();
+      try {
+        const out = await calendarDay(day);
+        if (format === "json") return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
+        const time = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+        const lines = out.events.map((e) => e.all_day ? `- All day: ${e.title}` : `- ${time(e.start)}–${time(e.end)} ${e.title}${e.where ? ` (${e.where})` : ""}`);
+        const text = `${day}: ${out.events.length ? "\n" + lines.join("\n") : "nothing in the calendar."}${out.problems.length ? "\n\nProblems: " + out.problems.join("; ") : ""}`;
+        return { content: [{ type: "text" as const, text }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Could not read the calendar: ${(err as Error).message}` }], isError: true };
+      }
     }
   );
 
