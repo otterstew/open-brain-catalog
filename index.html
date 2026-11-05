@@ -2464,6 +2464,33 @@ a.o-card:hover{filter:brightness(.98)}
   .today-hours .o-day__block.is-work { background: color-mix(in oklab, var(--stone), var(--paper) 20%); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--stone); }
   .today-hours .o-day__block small { margin-top: 1px; }
   .today-cal-note:empty { display: none; }
+  .today-hours .o-day__block.is-plan { background: color-mix(in oklab, var(--heather), var(--paper) 78%); }
+  .today-plan { margin-bottom: var(--s3); }
+  /* The Morning plan (5 Nov 2026): a helper that suggests, Stewart confirms. */
+  .plan-screen { width: 100%; max-width: 720px; padding: var(--s4) 0 var(--s8); }
+  .plan-screen .o-dateline { margin-bottom: var(--s2); }
+  .plan-lede { margin: var(--s2) 0 var(--s6); max-width: 52ch; }
+  .plan-screen section { margin-bottom: var(--s7); }
+  .plan-h { font-family: var(--serif); font-weight: 500; font-size: 1.375rem; margin: 0 0 var(--s3); }
+  .plan-windows { display: grid; gap: var(--s2); margin-bottom: var(--s3); }
+  .plan-window { display: flex; align-items: center; gap: var(--s2); }
+  .plan-window__x { flex: none; width: 44px; height: 44px; display: inline-grid; place-items: center; border: 0; background: none; color: var(--ink-2); border-radius: var(--r-md); cursor: pointer; font-size: 20px; }
+  .plan-window__x:hover { background: var(--stone); color: var(--ink); }
+  .plan-time { width: 7.5em; flex: 0 1 auto; min-height: 44px; font-family: var(--mono); background: var(--paper); }
+  .plan-tasks { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--s2); }
+  .plan-task { display: flex; align-items: center; gap: var(--s3); background: var(--paper); border-radius: var(--r-md); padding: var(--s2) var(--s3); }
+  .plan-task.is-on { background: color-mix(in oklab, var(--accent), var(--paper) 88%); }
+  .plan-task__pick { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--s3); min-height: 44px; cursor: pointer; }
+  .plan-task__pick input { width: 20px; height: 20px; flex: none; accent-color: var(--accent); }
+  .plan-task__main { min-width: 0; display: grid; }
+  .plan-task__title { overflow-wrap: anywhere; }
+  .plan-task__mins { flex: none; min-height: 40px; border: 0; border-radius: var(--r-sm); background: var(--stone); color: var(--ink); font: inherit; font-size: var(--t-sm); padding: 0 var(--s2); }
+  .plan-task__mins:disabled { opacity: .45; }
+  .plan-blocks { list-style: none; margin: var(--s3) 0; padding: 0; display: grid; gap: var(--s2); }
+  .plan-blocks li { display: flex; gap: var(--s3); align-items: baseline; }
+  .plan-blocks__time { flex: none; color: var(--ink-2); min-width: 7.5em; }
+  .plan-unfit { margin: 0 0 var(--s3); }
+  .plan-status:empty { display: none; }
   .today-cal-note { margin-top: var(--s3); }
   .ob-tab-icon { position: relative; display: inline-flex; }
   .ob-tab-n { position: absolute; top: -4px; left: 16px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
@@ -2492,7 +2519,8 @@ a.o-card:hover{filter:brightness(.98)}
     .today-tabs { display: flex; }
     .today-grid { display: block; }
     .today-grid[data-show="tasks"] .today-hours, .today-grid[data-show="hours"] .today-tasks { display: none; }
-    .today-h { display: none; }
+    .today-screen .today-h { display: none; }
+    .plan-screen { padding: var(--s5) var(--s4) var(--s8); }
   }
 
   /* ---------- 5 Nov 2026: a quieter front screen ----------
@@ -2900,6 +2928,8 @@ a.o-card:hover{filter:brightness(.98)}
     <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" title="Notes"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
     <button type="button" class="o-rail__item" data-go="modeJournal" data-view="journal" title="Journal"><i class="ph-light ph-book-open-text"></i><span class="ob-rail__label">Journal</span></button>
     <button type="button" class="o-rail__item" data-go="modeTasks" data-view="tasks" title="Tasks"><i class="ph-light ph-check-square"></i><span class="ob-rail__label">Tasks</span><span class="o-num" id="railTasksN"></span></button>
+    <div class="o-rail__group">Helpers</div>
+    <button type="button" class="o-rail__item" data-go="plan" data-view="plan" title="Morning plan: fit today's tasks around the calendar"><i class="ph-light ph-sun-horizon"></i><span class="ob-rail__label">Morning plan</span></button>
     <div class="o-rail__group">Add</div>
     <button type="button" class="o-rail__item" data-go="newBtn" title="New note"><i class="ph-light ph-plus-circle"></i><span class="ob-rail__label">New note</span></button>
     <button type="button" class="o-rail__item" data-go="importBtn" title="Import a file"><i class="ph-light ph-upload-simple"></i><span class="ob-rail__label">Import a file</span></button>
@@ -3041,7 +3071,7 @@ a.o-card:hover{filter:brightness(.98)}
   <button type="button" data-go="modeNotes" data-view="notes"><i class="ph-light ph-notebook"></i>Notes</button>
   <button type="button" data-go="modeJournal" data-view="journal"><i class="ph-light ph-book-open-text"></i>Journal</button>
   <button type="button" data-go="inbox" data-view="inbox"><span class="ob-tab-icon"><i class="ph-light ph-tray"></i><span class="ob-tab-n o-num" id="tabInboxN" hidden></span></span>Inbox</button>
-  <button type="button" data-go="today" data-view="today" data-also="tasks"><i class="ph-light ph-sun"></i>Today</button>
+  <button type="button" data-go="today" data-view="today" data-also="tasks plan"><i class="ph-light ph-sun"></i>Today</button>
   <button type="button" data-go="more" data-view="more"><i class="ph-light ph-dots-three"></i>More</button>
 </nav>
 
@@ -10570,6 +10600,7 @@ function openFromLink() {
 const MORE_ITEMS = [
   // Shortcuts (5 Nov 2026): a new note with the microphone already on.
   ['modeTasks', 'ph-check-square', 'Tasks', 'Every task, by when it is due'],
+  ['plan', 'ph-sun-horizon', 'Morning plan', 'Fit today’s tasks around the calendar'],
   ['newBtn', 'ph-plus-circle', 'New note', 'A blank note to write in'],
   ['speakNote', 'ph-microphone', 'Speak a note', 'Talk and it types a new note'],
   ['recordNote', 'ph-waveform', 'Record a sound', 'Keep a sound in a new note'],
@@ -10588,6 +10619,7 @@ function showMoreScreen() {
   editingId = null;
   closeReference();
   const items = MORE_ITEMS.filter(([id]) => {
+    if (id === 'plan') return true;
     if (id === 'speakNote') return !!micButtonHtml();
     if (id === 'recordNote') return CAN_RECORD;
     const el = document.getElementById(id);
@@ -10606,6 +10638,7 @@ function showMoreScreen() {
   main.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.go;
     if (id === 'modeTasks') { openAllTasks(); return; }
+    if (id === 'plan') { showPlanScreen(); return; }
     if (id === 'speakNote' || id === 'recordNote') { startNoteWithMic(id === 'speakNote' ? '.mic-add' : '.rec-add'); return; }
     // Statistics and the colours button work from the notes view.
     if ((id === 'statsBtn' || id === 'newBtn') && viewMode !== 'notes') setViewMode('notes');
@@ -10742,7 +10775,7 @@ function showInboxScreen() {
       <div${workMode ? ' hidden' : ''}>
       <p class="o-lede inbox-lede">Put anything here. The Sorter suggests where each one belongs, and nothing is filed until you choose.</p>
       <div class="o-capture inbox-capture">
-        <textarea id="inboxInput" rows="1" placeholder="Type or speak anything" aria-label="Add to the inbox"></textarea>
+        <textarea id="inboxInput" rows="1" placeholder="${matchMedia('(max-width: 480px)').matches ? 'Add anything' : 'Type or speak anything'}" aria-label="Add to the inbox"></textarea>
         <button type="button" class="o-capture__btn photo-add" title="Add a photo" aria-label="Add a photo"><i class="ph-light ph-camera" aria-hidden="true"></i></button>
         ${micButtonHtml() ? '<button type="button" class="o-capture__btn o-capture__mic mic-add" aria-pressed="false" aria-label="Speak" title="Speak: tap Stop when done"><i class="ph-light ph-microphone" aria-hidden="true"></i></button>' : ''}
         <button type="button" class="o-capture__btn inbox-send" aria-label="Add to the inbox" title="Add to the inbox (Enter)"><i class="ph-light ph-arrow-up" aria-hidden="true"></i></button>
@@ -10920,6 +10953,7 @@ function showTodayScreen() {
       <div class="today-grid" data-show="tasks">
         <section class="today-tasks" aria-label="To do today">
           <h2 class="today-h">To do</h2>
+          <button type="button" class="o-btn o-btn--sm today-plan"><i class="ph-light ph-sun-horizon" aria-hidden="true"></i><span>Plan my day</span></button>
           <div class="o-capture today-add">
             <input id="todayAdd" type="text" placeholder="Add a task for today" aria-label="Add a task for today" enterkeyhint="done">
           </div>
@@ -10945,6 +10979,7 @@ function showTodayScreen() {
     if (b.dataset.todayTab === 'hours') scrollTodayToNow();
   }));
   main.querySelector('.today-all').addEventListener('click', openAllTasks);
+  main.querySelector('.today-plan').addEventListener('click', showPlanScreen);
   const add = document.getElementById('todayAdd');
   add.addEventListener('keydown', e => {
     if (e.key !== 'Enter' || e.isComposing) return;
@@ -11048,10 +11083,13 @@ const clockOf = iso => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digi
 async function loadTodayCalendar() {
   const note = main.querySelector('.today-cal-note');
   try {
-    const text = await callTool('calendar_day', { date: todayISO(), format: 'json' });
+    const [text, planText] = await Promise.all([
+      callTool('calendar_day', { date: todayISO(), format: 'json' }),
+      callTool('get_day_plan', { date: todayISO(), format: 'json' }).catch(() => '{"blocks":[]}'),
+    ]);
     let day; try { day = JSON.parse(text); } catch (_) { throw new Error(text.slice(0, 160)); }
     if (!main.querySelector('.today-screen')) return;
-    drawDay(day.events || []);
+    drawDay((day.events || []).concat(planEvents(planText)));
     const n = (day.events || []).length;
     note.textContent = (day.problems || []).length
       ? 'Some of the calendar could not be read: ' + day.problems.join('; ')
@@ -11059,6 +11097,19 @@ async function loadTodayCalendar() {
   } catch (err) {
     if (note) note.textContent = 'Could not read the calendar — ' + err.message;
   }
+}
+
+// The saved Morning plan as timeline entries, tinted (things Stewart planned)
+// beside the plain calendar ones.
+function planEvents(text) {
+  let blocks = [];
+  try { blocks = JSON.parse(text).blocks || []; } catch (_) { return []; }
+  const today = todayISO();
+  return blocks.map(b => {
+    const s = new Date(today + 'T' + b.start + ':00');
+    const e = new Date(s.getTime() + b.minutes * 60000);
+    return { start: s.toISOString(), end: e.toISOString(), all_day: false, title: b.title, where: null, calendar: 'plan' };
+  });
 }
 
 function drawDay(events) {
@@ -11103,8 +11154,8 @@ function drawDay(events) {
     const height = Math.max((x.end - x.start) / 60 * hourPx - 2, 22);
     const width = `calc((100% - 44px) / ${x.cols})`;
     const left = `calc(44px + (100% - 44px) / ${x.cols} * ${x.col})`;
-    const work = x.e.calendar === 'work';
-    return `<div class="o-day__block${work ? ' is-work' : ''}" style="top:${top}px; height:${height}px; left:${left}; width:${width}; right:auto">
+    const work = x.e.calendar === 'work', plan = x.e.calendar === 'plan';
+    return `<div class="o-day__block${work ? ' is-work' : ''}${plan ? ' is-plan' : ''}"${plan ? ' data-tint="heather"' : ''} style="top:${top}px; height:${height}px; left:${left}; width:${width}; right:auto">
       <b>${escapeHtml(x.e.title)}</b><small class="o-num">${escapeHtml(clockOf(x.e.start))}–${escapeHtml(clockOf(x.e.end))}${x.e.where ? ' · ' + escapeHtml(x.e.where) : ''}</small>
     </div>`;
   }).join('');
@@ -11131,14 +11182,267 @@ function scrollTodayToNow() {
   if (line && !line.hidden) line.scrollIntoView({ block: 'center' });
 }
 
-let navOverride = null;   // 'more', 'inbox' or 'today' while that screen shows
+// ---------- the Morning plan (5 Nov 2026, Otter build order step 4) ----------
+// A helper with a plain name: it picks today's tasks (overdue and due today
+// ticked to start with), fits them into free time around the calendar and
+// shows the result. Nothing is saved until Stewart presses Save plan.
+// Hours, his choice: weekdays before 09:00 and 17:30 to 22:00 (his work
+// calendar only shows meetings, not the working day); weekends 08:00 to
+// 22:00. They can be changed on the day before saving.
+const PLAN_DURATIONS = [15, 30, 45, 60, 90, 120];
+const hm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const toMin = s => { const m = /^(\d{1,2}):(\d{2})/.exec(s || ''); return m ? +m[1] * 60 + +m[2] : null; };
+
+function defaultPlanHours(date) {
+  const weekend = date.getDay() === 0 || date.getDay() === 6;
+  return weekend ? [{ start: 8 * 60, end: 22 * 60 }] : [{ start: 7 * 60, end: 9 * 60 }, { start: 17 * 60 + 30, end: 22 * 60 }];
+}
+
+// Free time: the hours, less anything in the calendar, from now on.
+// Pure, so the test can check it: windows and busy are minutes of the day.
+function freeTime(windows, busy, nowMin) {
+  let free = windows.map(w => ({ start: Math.max(w.start, nowMin || 0), end: w.end })).filter(w => w.end - w.start >= 5);
+  for (const b of busy) {
+    const next = [];
+    for (const f of free) {
+      if (b.end <= f.start || b.start >= f.end) { next.push(f); continue; }
+      if (b.start > f.start) next.push({ start: f.start, end: b.start });
+      if (b.end < f.end) next.push({ start: b.end, end: f.end });
+    }
+    free = next.filter(f => f.end - f.start >= 5);
+  }
+  return free.sort((a, b) => a.start - b.start);
+}
+
+// First fit, in the order chosen: each item takes the earliest free stretch
+// long enough for it. Returns what fitted (with times) and what did not.
+function fitPlan(free, items) {
+  const gaps = free.map(f => ({ ...f }));
+  const placed = [], unfit = [];
+  for (const it of items) {
+    const g = gaps.find(x => x.end - x.start >= it.minutes);
+    if (!g) { unfit.push(it); continue; }
+    placed.push({ ...it, start: g.start, end: g.start + it.minutes });
+    g.start += it.minutes;
+  }
+  placed.sort((a, b) => a.start - b.start);
+  return { placed, unfit };
+}
+
+let planState = null;
+
+function roundUpNow() {
+  const n = new Date();
+  return Math.ceil((n.getHours() * 60 + n.getMinutes()) / 5) * 5;
+}
+
+async function showPlanScreen() {
+  if (!confirmLeavingEdit()) return;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  const now = new Date();
+  const dateline = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  main.innerHTML = `
+    <div class="plan-screen">
+      <div class="o-dateline">${escapeHtml(dateline)} · Jersey</div>
+      <h1 class="more-title">Morning <em>plan</em></h1>
+      ${workMode ? personalHiddenHtml('The Morning plan') : `
+      <p class="o-lede plan-lede">Choose what to do today. The plan fits it around your calendar, and nothing is saved until you say so.</p>
+      <section class="plan-hours" aria-label="Hours to plan in">
+        <h2 class="plan-h">Hours</h2>
+        <div class="plan-windows"></div>
+        <button type="button" class="o-btn o-btn--quiet o-btn--sm plan-add-hours">Add hours</button>
+      </section>
+      <section class="plan-choose" aria-label="Tasks to do today">
+        <h2 class="plan-h">Choose</h2>
+        <ul class="plan-tasks"><li class="o-meta">Looking at what needs doing…</li></ul>
+      </section>
+      <section class="plan-result" aria-label="The suggested plan" aria-live="polite"></section>`}
+    </div>`;
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  syncNav('plan');
+  if (workMode) return;
+
+  const today = todayISO();
+  planState = { date: today, windows: defaultPlanHours(now), busy: [], tasks: [], chosen: new Map(), saved: [], showAll: false };
+  main.querySelector('.plan-add-hours').addEventListener('click', () => {
+    const last = planState.windows[planState.windows.length - 1];
+    const start = last ? Math.min(last.end, 23 * 60) : 18 * 60;
+    planState.windows.push({ start, end: Math.min(start + 60, 24 * 60 - 5) });
+    renderPlanHours(); renderPlanResult();
+  });
+  renderPlanHours();
+  try {
+    const [tasksText, calText, planText] = await Promise.all([
+      callTool('list_tasks', { format: 'json', owner: 'me', limit: 200 }),
+      callTool('calendar_day', { date: today, format: 'json' }).catch(() => '{"events":[],"problems":["The calendar could not be read."]}'),
+      callTool('get_day_plan', { date: today, format: 'json' }).catch(() => '{"blocks":[]}'),
+    ]);
+    if (!main.querySelector('.plan-screen')) return;
+    const raw = JSON.parse(tasksText);
+    const cal = JSON.parse(calText);
+    const saved = (JSON.parse(planText).blocks || []);
+    planState.saved = saved;
+    planState.problems = cal.problems || [];
+    planState.busy = (cal.events || []).filter(e => !e.all_day).map(e => {
+      const s = new Date(e.start), en = new Date(e.end);
+      return { start: s.toLocaleDateString('en-CA') < today ? 0 : minutesOf(e.start),
+               end: en.toLocaleDateString('en-CA') > today ? 24 * 60 : minutesOf(e.end) };
+    });
+    // Due soonest first, then the ones already decided on (next) before the
+    // ones only captured (inbox).
+    planState.tasks = (Array.isArray(raw) ? raw : []).map(normalizeTask)
+      .filter(t => t.status === 'next' || t.status === 'inbox')
+      .sort((a, b) => (a.due_date || '9999').localeCompare(b.due_date || '9999') ||
+        (a.status === 'next' ? 0 : 1) - (b.status === 'next' ? 0 : 1) || a.title.localeCompare(b.title));
+    const savedFor = new Map(saved.filter(b => b.task_id).map(b => [b.task_id, b.minutes]));
+    for (const t of planState.tasks) {
+      if (savedFor.has(t.id)) planState.chosen.set(t.id, savedFor.get(t.id));
+      else if (!saved.length && t.due_date && t.due_date <= today) planState.chosen.set(t.id, 30);
+    }
+    renderPlanTasks();
+    renderPlanResult();
+  } catch (err) {
+    const list = main.querySelector('.plan-tasks');
+    if (list) list.innerHTML = '<li class="o-meta">Could not load the tasks or the calendar — ' + escapeHtml(err.message) + '</li>';
+  }
+}
+
+function renderPlanHours() {
+  const box = main.querySelector('.plan-windows');
+  if (!box) return;
+  box.innerHTML = planState.windows.map((w, i) => `
+    <div class="plan-window" data-i="${i}">
+      <input class="o-field plan-time" type="time" step="300" value="${hm(w.start)}" aria-label="From" data-k="start">
+      <span class="o-meta">to</span>
+      <input class="o-field plan-time" type="time" step="300" value="${hm(Math.min(w.end, 24 * 60 - 1))}" aria-label="To" data-k="end">
+      <button type="button" class="plan-window__x" data-remove aria-label="Remove these hours" title="Remove these hours"><i class="ph-light ph-x" aria-hidden="true"></i></button>
+    </div>`).join('') || '<p class="o-meta">No hours to plan in. Add some below.</p>';
+  box.querySelectorAll('.plan-window').forEach(row => {
+    const i = +row.dataset.i;
+    row.querySelectorAll('input').forEach(inp => inp.addEventListener('change', () => {
+      const v = toMin(inp.value);
+      if (v == null) return;
+      planState.windows[i][inp.dataset.k] = v;
+      renderPlanResult();
+    }));
+    row.querySelector('[data-remove]').addEventListener('click', () => {
+      planState.windows.splice(i, 1);
+      renderPlanHours(); renderPlanResult();
+    });
+  });
+}
+
+function renderPlanTasks() {
+  const list = main.querySelector('.plan-tasks');
+  if (!list) return;
+  const today = todayISO();
+  if (!planState.tasks.length) {
+    list.innerHTML = '<li class="o-meta">No open tasks. Add some in Tasks or the Inbox, then come back.</li>';
+    return;
+  }
+  const LIMIT = 12;
+  const shown = planState.showAll ? planState.tasks
+    : planState.tasks.filter((t, i) => i < LIMIT || planState.chosen.has(t.id));
+  list.innerHTML = shown.map(t => {
+    const on = planState.chosen.has(t.id);
+    const mins = planState.chosen.get(t.id) || 30;
+    const due = t.due_date ? (t.due_date < today ? dueLabel(t.due_date, today).text : t.due_date === today ? 'Due today' : 'Due ' + dueLabel(t.due_date, today).text) : (t.status === 'inbox' ? 'Not sorted yet' : '');
+    return `<li class="plan-task${on ? ' is-on' : ''}" data-id="${escapeAttr(t.id)}">
+      <label class="plan-task__pick">
+        <input type="checkbox" ${on ? 'checked' : ''} aria-label="Plan “${escapeAttr(t.title)}” today">
+        <span class="plan-task__main"><span class="plan-task__title">${escapeHtml(t.title)}</span>
+          <span class="o-task__meta">${escapeHtml([due, t.project].filter(Boolean).join(' · '))}</span></span>
+      </label>
+      <select class="plan-task__mins" aria-label="How long" ${on ? '' : 'disabled'}>
+        ${PLAN_DURATIONS.map(d => `<option value="${d}"${d === mins ? ' selected' : ''}>${d < 60 ? d + ' min' : (d / 60) + (d === 60 ? ' hour' : ' hours')}</option>`).join('')}
+      </select>
+    </li>`;
+  }).join('') + (planState.tasks.length > shown.length
+    ? `<li><button type="button" class="o-btn o-btn--quiet o-btn--sm plan-more">Show all ${planState.tasks.length} open tasks</button></li>` : '');
+  list.querySelectorAll('.plan-task').forEach(row => {
+    const id = row.dataset.id;
+    const box = row.querySelector('input[type=checkbox]');
+    const sel = row.querySelector('select');
+    box.addEventListener('change', () => {
+      if (box.checked) planState.chosen.set(id, +sel.value); else planState.chosen.delete(id);
+      row.classList.toggle('is-on', box.checked);
+      sel.disabled = !box.checked;
+      renderPlanResult();
+    });
+    sel.addEventListener('change', () => { if (planState.chosen.has(id)) { planState.chosen.set(id, +sel.value); renderPlanResult(); } });
+  });
+  const more = list.querySelector('.plan-more');
+  if (more) more.addEventListener('click', () => { planState.showAll = true; renderPlanTasks(); });
+}
+
+function currentPlan() {
+  const items = planState.tasks.filter(t => planState.chosen.has(t.id))
+    .map(t => ({ task_id: t.id, title: t.title, minutes: planState.chosen.get(t.id) }));
+  const isToday = planState.date === todayISO();
+  const free = freeTime(planState.windows, planState.busy, isToday ? roundUpNow() : 0);
+  return fitPlan(free, items);
+}
+
+function renderPlanResult() {
+  const box = main.querySelector('.plan-result');
+  if (!box || !planState) return;
+  const { placed, unfit } = currentPlan();
+  const savedNote = planState.saved.length
+    ? `<p class="o-meta">You saved a plan of ${planState.saved.length} block${planState.saved.length === 1 ? '' : 's'} for today; saving again replaces it.</p>` : '';
+  const problems = (planState.problems || []).length
+    ? `<p class="o-meta">The calendar could not all be read, so check the times: ${escapeHtml(planState.problems.join('; '))}</p>` : '';
+  if (!placed.length && !unfit.length) {
+    box.innerHTML = `<h2 class="plan-h">The plan</h2>${savedNote}<p class="o-meta">Tick what you want to do today and the plan appears here.</p>
+      ${planState.saved.length ? '<div class="o-suggest__acts"><button type="button" class="o-btn o-btn--quiet o-btn--sm plan-clear">Clear today’s plan</button></div>' : ''}`;
+  } else {
+    box.innerHTML = `
+      <h2 class="plan-h">The plan</h2>
+      ${savedNote}${problems}
+      <div class="o-suggest plan-suggest">
+        <div class="o-suggest__to"><i class="ph-light ph-sun-horizon" aria-hidden="true"></i><span>Morning plan suggests:</span></div>
+        <ol class="plan-blocks">${placed.map(p => `<li><span class="o-num plan-blocks__time">${hm(p.start)}–${hm(p.end)}</span> ${escapeHtml(p.title)}</li>`).join('')}</ol>
+        ${unfit.length ? `<p class="o-meta plan-unfit">Did not fit in the hours: ${unfit.map(u => escapeHtml(u.title)).join(', ')}. Shorten them, add hours, or leave them for another day.</p>` : ''}
+        <div class="o-suggest__acts">
+          <button type="button" class="o-btn o-btn--primary o-btn--sm plan-save"${placed.length ? '' : ' disabled'}>Save plan</button>
+          ${planState.saved.length ? '<button type="button" class="o-btn o-btn--quiet o-btn--sm plan-clear">Clear today’s plan</button>' : ''}
+        </div>
+        <p class="o-meta plan-status" aria-live="polite"></p>
+      </div>`;
+  }
+  const save = box.querySelector('.plan-save');
+  if (save) save.addEventListener('click', () => savePlan(placed));
+  const clear = box.querySelector('.plan-clear');
+  if (clear) clear.addEventListener('click', () => savePlan([]));
+}
+
+async function savePlan(placed) {
+  const status = main.querySelector('.plan-status');
+  main.querySelectorAll('.plan-save, .plan-clear').forEach(b => { b.disabled = true; });
+  if (status) status.textContent = 'Saving…';
+  try {
+    const res = await callTool('save_day_plan', {
+      date: planState.date,
+      blocks: placed.map(p => ({ start: hm(p.start), minutes: p.minutes, title: p.title, task_id: p.task_id || null })),
+    });
+    if (/^Not saved|^Could not/.test(res)) throw new Error(res);
+    showTodayScreen();
+  } catch (err) {
+    main.querySelectorAll('.plan-save, .plan-clear').forEach(b => { b.disabled = false; });
+    if (status) status.textContent = 'Could not save the plan — ' + err.message;
+  }
+}
+
+let navOverride = null;   // 'more', 'inbox', 'today' or 'plan' while that screen shows
 function syncNav(override) {
   navOverride = override || null;
   const current = navOverride || viewMode;
   document.querySelectorAll('#rail [data-view], #tabbar [data-view]').forEach(b => {
     // On the phone the task list sits under Today, which took its place in
     // the bar, so Today stays lit while the tasks show.
-    if (b.dataset.view === current || b.dataset.also === current) b.setAttribute('aria-current', 'page');
+    if (b.dataset.view === current || (b.dataset.also || '').split(' ').includes(current)) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
   const pressed = document.getElementById('workBtn').getAttribute('aria-pressed') === 'true';
@@ -11150,6 +11454,7 @@ document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.a
   if (id === 'more') { showMoreScreen(); return; }
   if (id === 'inbox') { showInboxScreen(); return; }
   if (id === 'today') { showTodayScreen(); return; }
+  if (id === 'plan') { showPlanScreen(); return; }
   const fromBar = !!b.closest('#tabbar');
   if (fromBar && /^mode/.test(id)) {
     // Tapping the section you are in goes back to its list.
@@ -11158,12 +11463,15 @@ document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.a
   if (id === 'newBtn' && viewMode !== 'notes') setViewMode('notes');
   const target = document.getElementById(id);
   if (target) target.click();
-  if (fromBar && /^mode/.test(id) && navOverride) { app.classList.remove('detail-open'); showEmptyState(); }
+  // Leaving the More, Inbox, Today or Morning plan screen for the section the
+  // list is already in (Notes from the Inbox, say) changes no mode, so clear
+  // the screen here; on the rail as well as the bar (5 Nov 2026).
+  if (/^mode/.test(id) && main.querySelector('.more-screen, .inbox-screen, .today-screen, .plan-screen')) { app.classList.remove('detail-open'); showEmptyState(); }
   syncNav();
 }));
 
 // Whatever replaces the More screen (a note, a list) takes "More" off.
-new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen, .inbox-screen, .today-screen')) syncNav(); })
+new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen, .inbox-screen, .today-screen, .plan-screen')) syncNav(); })
   .observe(main, { childList: true });
 // The bar's height, so the page above it ends where the bar begins.
 (() => {
