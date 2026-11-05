@@ -2416,6 +2416,32 @@ a.o-card:hover{filter:brightness(.98)}
   .more-screen { width: 100%; max-width: 720px; padding: var(--s4) 0 var(--s8); }
   .more-title { font-family: var(--serif); font-weight: 500; font-size: 2.25rem; margin: 0 0 var(--s5); }
   .more-screen .o-stone i { font-size: 24px; color: var(--ink-2); }
+  /* The Inbox (5 Nov 2026): one capture field, then each item with the Sorter's suggestion. */
+  .inbox-screen { width: 100%; max-width: 720px; padding: var(--s4) 0 var(--s8); }
+  .inbox-lede { font-size: var(--t-md); margin: calc(-1 * var(--s3)) 0 var(--s5); }
+  .inbox-capture { background: var(--paper); align-items: flex-end; }
+  .inbox-capture textarea { height: calc(1.5em + 2 * var(--s2)); max-height: 240px; line-height: 1.5; align-self: center; overflow: hidden; }
+  .inbox-capture textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .inbox-capture .mic-add.is-listening { display: inline-flex; align-items: center; white-space: nowrap; width: auto; padding: 0 var(--s3); gap: var(--s1); font-size: var(--t-sm); background: var(--accent); color: var(--on-ink); }
+  .inbox-capture .mic-add.is-listening i { font-size: 18px; }
+  .inbox-capture .photo-add .btn-lbl, .inbox-capture .mic-add:not(.is-listening) .btn-lbl { display: none; }
+  .inbox-send { color: var(--accent-deep); }
+  .inbox-add-status { min-height: 1.4em; margin: var(--s2) 0 var(--s5); }
+  .inbox-list .o-suggest { background: var(--paper); transition: opacity .4s; }
+  .inbox-text { font-size: var(--t-md); margin-bottom: var(--s2); overflow-wrap: anywhere; }
+  .inbox-text .md-p { margin: 0 0 var(--s2); }
+  .inbox-text .md-p:last-child { margin-bottom: 0; }
+  .inbox-why { margin: calc(-1 * var(--s2)) 0 var(--s3) calc(18px + var(--s2)); }
+  .inbox-title-row { display: flex; align-items: center; gap: var(--s3); margin-bottom: var(--s3); }
+  .inbox-title-row .o-label { flex: none; min-width: 3.5em; }
+  .inbox-title { min-height: 40px; padding: var(--s2) var(--s3); }
+  .inbox-status { margin: var(--s2) 0 0; }
+  .inbox-status:empty { display: none; }
+  .inbox-item.is-busy { opacity: .7; }
+  .inbox-empty { padding: var(--s5) 0; max-width: 46ch; }
+  .ob-tab-icon { position: relative; display: inline-flex; }
+  .ob-tab-n { position: absolute; top: -4px; left: 16px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+    background: var(--accent); color: var(--on-ink); font-size: 10px; line-height: 16px; text-align: center; }
   @media (min-width: 761px) and (max-width: 1180px) {
     .app { grid-template-columns: 64px 340px minmax(0, 1fr); }
     .app.ref-open { grid-template-columns: 64px 340px minmax(0, 1fr) 300px; }
@@ -2435,6 +2461,7 @@ a.o-card:hover{filter:brightness(.98)}
     .ob-tabbar button { flex: 1; }
     html:has(.wv) .ob-tabbar, html.kb-open .ob-tabbar { display: none; }
     .more-screen { padding: var(--s5) var(--s4) var(--s8); }
+    .inbox-screen { padding: var(--s5) var(--s4) var(--s8); }
   }
 
   /* ---------- 5 Nov 2026: a quieter front screen ----------
@@ -2837,6 +2864,7 @@ a.o-card:hover{filter:brightness(.98)}
   <nav class="o-rail ob-rail" id="rail" aria-label="Sections">
     <span class="o-wordmark ob-rail__mark">Stew's 2nd <em>Brain</em></span>
     <button type="button" class="o-rail__item ob-search-go" data-search-open title="Search by meaning"><i class="ph-light ph-magnifying-glass"></i><span class="ob-rail__label">Search</span></button>
+    <button type="button" class="o-rail__item" data-go="inbox" data-view="inbox" title="Inbox: put anything here, sort it later"><i class="ph-light ph-tray"></i><span class="ob-rail__label">Inbox</span><span class="o-num" id="railInboxN"></span></button>
     <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" title="Notes"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
     <button type="button" class="o-rail__item" data-go="modeJournal" data-view="journal" title="Journal"><i class="ph-light ph-book-open-text"></i><span class="ob-rail__label">Journal</span></button>
     <button type="button" class="o-rail__item" data-go="modeTasks" data-view="tasks" title="Tasks"><i class="ph-light ph-check-square"></i><span class="ob-rail__label">Tasks</span><span class="o-num" id="railTasksN"></span></button>
@@ -2980,7 +3008,7 @@ a.o-card:hover{filter:brightness(.98)}
 <nav class="o-tabbar ob-tabbar" id="tabbar" aria-label="Sections">
   <button type="button" data-go="modeNotes" data-view="notes"><i class="ph-light ph-notebook"></i>Notes</button>
   <button type="button" data-go="modeJournal" data-view="journal"><i class="ph-light ph-book-open-text"></i>Journal</button>
-  <button type="button" data-go="newBtn" data-view="new"><i class="ph-light ph-plus-circle"></i>New</button>
+  <button type="button" data-go="inbox" data-view="inbox"><span class="ob-tab-icon"><i class="ph-light ph-tray"></i><span class="ob-tab-n o-num" id="tabInboxN" hidden></span></span>Inbox</button>
   <button type="button" data-go="modeTasks" data-view="tasks"><i class="ph-light ph-check-square"></i>Tasks</button>
   <button type="button" data-go="more" data-view="more"><i class="ph-light ph-dots-three"></i>More</button>
 </nav>
@@ -10509,6 +10537,7 @@ function openFromLink() {
 // rest on a phone, so the bar keeps to five.
 const MORE_ITEMS = [
   // Shortcuts (5 Nov 2026): a new note with the microphone already on.
+  ['newBtn', 'ph-plus-circle', 'New note', 'A blank note to write in'],
   ['speakNote', 'ph-microphone', 'Speak a note', 'Talk and it types a new note'],
   ['recordNote', 'ph-waveform', 'Record a sound', 'Keep a sound in a new note'],
   ['importBtn', 'ph-upload-simple', 'Import a file', 'A PDF, text or Markdown file becomes a note'],
@@ -10529,7 +10558,7 @@ function showMoreScreen() {
     if (id === 'speakNote') return !!micButtonHtml();
     if (id === 'recordNote') return CAN_RECORD;
     const el = document.getElementById(id);
-    return el && !(el.hidden && id !== 'importBtn' && id !== 'statsBtn');
+    return el && !(el.hidden && id !== 'importBtn' && id !== 'statsBtn' && id !== 'newBtn');
   });
   main.innerHTML = `
     <div class="more-screen">
@@ -10545,7 +10574,7 @@ function showMoreScreen() {
     const id = b.dataset.go;
     if (id === 'speakNote' || id === 'recordNote') { startNoteWithMic(id === 'speakNote' ? '.mic-add' : '.rec-add'); return; }
     // Statistics and the colours button work from the notes view.
-    if (id === 'statsBtn' && viewMode !== 'notes') setViewMode('notes');
+    if ((id === 'statsBtn' || id === 'newBtn') && viewMode !== 'notes') setViewMode('notes');
     document.getElementById(id).click();
     if (id === 'themeBtn') showMoreScreen();
   }));
@@ -10567,7 +10596,259 @@ function startNoteWithMic(sel) {
   syncNav();
 }
 
-let navOverride = null;   // 'more' while the More screen shows
+// ---------- the Inbox and its Sorter (5 Nov 2026, Otter build order step 2) ----------
+// One way in for everything: type, speak or add a photo, and it waits here.
+// The Sorter (a server helper) suggests where each item belongs: a task, a
+// line in today's journal, or a note. Nothing is filed until Stewart taps.
+let inboxItems = [];
+let inboxLoaded = false;
+const INBOX_KIND = {
+  task:    { icon: 'ph-check-square',      word: 'a task',              button: 'File as task' },
+  journal: { icon: 'ph-book-open-text',    word: 'today’s journal',     button: 'Add to journal' },
+  note:    { icon: 'ph-notebook',          word: 'a note',              button: 'File as note' },
+};
+
+function setInboxCount() {
+  const n = inboxItems.length;
+  const rail = document.getElementById('railInboxN');
+  if (rail) rail.textContent = n ? String(n) : '';
+  const tab = document.getElementById('tabInboxN');
+  if (tab) { tab.textContent = n ? String(n) : ''; tab.hidden = !n; }
+}
+
+async function loadInbox() {
+  const text = await callTool('list_inbox', { format: 'json' });
+  let rows;
+  try { rows = JSON.parse(text); } catch { throw new Error(text.slice(0, 200)); }
+  inboxItems = Array.isArray(rows) ? rows : [];
+  inboxLoaded = true;
+  setInboxCount();
+}
+
+function refreshInboxCount() {
+  if (!mcpAccessKey) return;
+  loadInbox().then(() => { if (main.querySelector('.inbox-screen')) renderInboxList(); }).catch(() => {});
+}
+
+function inboxWhen(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const today = todayISO();
+  const day = d.toLocaleDateString('en-CA');
+  const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  if (day === today) return time;
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ', ' + time;
+}
+
+const INBOX_SOURCE = { catalog: 'Typed here', telegram: 'From Telegram', claude: 'From Claude', mcp: 'From Claude' };
+
+function inboxItemHtml(item) {
+  const s = item.suggestion || null;
+  const kind = (s && INBOX_KIND[s.kind]) ? s.kind : null;
+  const k = kind && INBOX_KIND[kind];
+  let to;
+  if (!s) {
+    to = '<span>The Sorter is still reading this one.</span>';
+  } else {
+    const due = s.kind === 'task' && s.due_date ? ', due ' + escapeHtml(dueLabel(s.due_date, todayISO()).text) : '';
+    const project = s.kind === 'task' && s.project ? ' in ' + escapeHtml(s.project) : '';
+    const tags = s.kind === 'note' && s.tags && s.tags.length ? ', tagged ' + s.tags.map(escapeHtml).join(', ') : '';
+    to = `<span>${s.by === 'fallback' ? 'A guess (the Sorter could not be reached)' : 'Sorter suggests'}: ${k.word}${project}${due}${tags}</span>`;
+  }
+  const others = Object.keys(INBOX_KIND).filter(x => x !== kind)
+    .map(x => `<button type="button" class="o-btn o-btn--quiet o-btn--sm" data-act="file" data-kind="${x}">${INBOX_KIND[x].button.replace(/^File as /, 'As ').replace(/^Add to journal$/, 'To journal')}</button>`).join('');
+  return `
+    <div class="o-suggest inbox-item" data-id="${escapeAttr(item.id)}">
+      <div class="o-suggest__said">
+        <div class="inbox-text md">${renderBodyHtml(item.content)}</div>
+        <span class="o-meta">${escapeHtml(INBOX_SOURCE[item.source] || item.source || '')} · <span class="o-num">${escapeHtml(inboxWhen(item.created_at))}</span></span>
+      </div>
+      <div class="o-suggest__to"><i class="ph-light ${k ? k.icon : 'ph-hourglass'}" aria-hidden="true"></i>${to}</div>
+      ${s && s.why ? `<p class="inbox-why o-meta">${escapeHtml(s.why)}</p>` : ''}
+      ${s ? `<label class="inbox-title-row"><span class="o-label">${kind === 'task' ? 'Task' : kind === 'journal' ? 'About' : 'Title'}</span>
+        <input class="o-field inbox-title" type="text" value="${escapeAttr(s.title || '')}" aria-label="Title"></label>` : ''}
+      <div class="o-suggest__acts">
+        ${k ? `<button type="button" class="o-btn o-btn--sm" data-act="file" data-kind="${kind}">${k.button}</button>` : ''}
+        ${others}
+        <span class="o-bar__spacer"></span>
+        <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-act="drop">Not needed</button>
+      </div>
+      <p class="inbox-status o-meta" aria-live="polite"></p>
+    </div>`;
+}
+
+function renderInboxList() {
+  const box = main.querySelector('.inbox-list');
+  if (!box) return;
+  if (!inboxLoaded) { box.innerHTML = '<p class="o-meta">Opening the inbox…</p>'; return; }
+  if (!inboxItems.length) {
+    box.innerHTML = '<p class="inbox-empty o-meta">Nothing waiting. Anything you add above lands here, with the Sorter’s suggestion of where it belongs.</p>';
+    return;
+  }
+  box.innerHTML = inboxItems.map(inboxItemHtml).join('');
+  box.querySelectorAll('.inbox-item').forEach(card => {
+    card.querySelectorAll('[data-act]').forEach(b => b.addEventListener('click', () => {
+      if (b.dataset.act === 'drop') settleInbox(card, 'dropped');
+      else fileInboxItem(card, b.dataset.kind);
+    }));
+  });
+  hydratePhotos();
+  hydrateAudio();
+}
+
+function showInboxScreen() {
+  if (!confirmLeavingEdit()) return;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  main.innerHTML = `
+    <div class="inbox-screen">
+      <h1 class="more-title"><em>Inbox</em></h1>
+      <p class="o-lede inbox-lede">Put anything here. The Sorter suggests where each one belongs, and nothing is filed until you choose.</p>
+      <div class="o-capture inbox-capture">
+        <textarea id="inboxInput" rows="1" placeholder="Type or speak anything" aria-label="Add to the inbox"></textarea>
+        <button type="button" class="o-capture__btn photo-add" title="Add a photo" aria-label="Add a photo"><i class="ph-light ph-camera" aria-hidden="true"></i></button>
+        ${micButtonHtml() ? '<button type="button" class="o-capture__btn o-capture__mic mic-add" aria-pressed="false" aria-label="Speak" title="Speak: tap Stop when done"><i class="ph-light ph-microphone" aria-hidden="true"></i></button>' : ''}
+        <button type="button" class="o-capture__btn inbox-send" aria-label="Add to the inbox" title="Add to the inbox (Enter)"><i class="ph-light ph-arrow-up" aria-hidden="true"></i></button>
+      </div>
+      <p class="inbox-add-status o-meta" aria-live="polite"></p>
+      <div class="inbox-list"></div>
+    </div>`;
+  const input = document.getElementById('inboxInput');
+  const grow = () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 240) + 'px';
+    input.style.overflowY = input.scrollHeight > 240 ? 'auto' : 'hidden';
+  };
+  input.addEventListener('input', grow);
+  wirePhotoButtons(main.querySelector('.inbox-capture'), input, grow);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); addToInbox(); }
+  });
+  main.querySelector('.inbox-send').addEventListener('click', addToInbox);
+  renderInboxList();
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  syncNav('inbox');
+  loadInbox().then(renderInboxList).catch(err => {
+    const box = main.querySelector('.inbox-list');
+    if (box) box.innerHTML = '<p class="o-meta inbox-error">Could not open the inbox — ' + escapeHtml(err.message) + '</p>';
+  });
+}
+
+async function addToInbox() {
+  const input = document.getElementById('inboxInput');
+  const status = main.querySelector('.inbox-add-status');
+  if (!input) return;
+  const content = input.value.trim();
+  if (!content) { input.focus(); return; }
+  input.disabled = true;
+  status.textContent = 'Adding…';
+  try {
+    const res = await callTool('add_to_inbox', { content, source: 'catalog' });
+    if (!/id: [0-9a-f-]{36}/.test(res)) throw new Error(res);
+    input.value = '';
+    input.style.height = '';
+    status.textContent = 'Added. The Sorter is reading it.';
+    await loadInbox();
+    renderInboxList();
+    status.textContent = '';
+  } catch (err) {
+    status.textContent = 'Could not add it — ' + err.message + '. What you typed is still here.';
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+// Today's journal entry: add the words to the end of it, or start it (from the
+// template, as the Journal's own "Today" button does) with the words at the end.
+async function addToTodaysJournal(text) {
+  const today = todayISO();
+  const notes = parseJsonThoughts(await callTool('list_thoughts', { topic: JOURNAL_TOPIC, limit: 1000, format: 'json' }));
+  const template = notes.find(isJournalTemplate);
+  const entry = notes.filter(t => !isJournalTemplate(t)).find(t => journalDate(t) === today);
+  if (entry) {
+    await callTool('update_thought', { id: entry.realId || entry.id, content: entry.content.trimEnd() + '\n\n' + text });
+    return entry.realId || entry.id;
+  }
+  const body = (template ? template.content : DEFAULT_JOURNAL_TEMPLATE).trimEnd() + '\n\n' + text;
+  const res = await callTool('capture_thought', { content: body, published_date: today });
+  const m = /id: ([0-9a-f-]{36})/.exec(res);
+  if (!m) throw new Error(res);
+  await callTool('update_thought', { id: m[1], title: 'Journal ' + formatDateInput(today), topics: [JOURNAL_TOPIC] });
+  return m[1];
+}
+
+async function fileInboxItem(card, kind) {
+  const item = inboxItems.find(x => x.id === card.dataset.id);
+  if (!item || card.classList.contains('is-busy')) return;
+  const s = item.suggestion || {};
+  const titleEl = card.querySelector('.inbox-title');
+  const title = (titleEl && titleEl.value.trim()) || s.title || item.content.split('\n')[0].slice(0, 80);
+  const status = card.querySelector('.inbox-status');
+  card.classList.add('is-busy');
+  card.querySelectorAll('button, input').forEach(b => { b.disabled = true; });
+  status.textContent = 'Filing…';
+  try {
+    let id = null;
+    if (kind === 'task') {
+      const args = { title, status: 'next', source: 'inbox' };
+      if (item.content.trim() !== title) args.notes = item.content;
+      if (s.kind === 'task' && s.due_date) args.due_date = s.due_date;
+      if (s.kind === 'task' && s.project) args.project = s.project;
+      const res = await callTool('create_task', args);
+      const m = /id: ([0-9a-f-]{36})/.exec(res);
+      if (!m) throw new Error(res);
+      id = m[1];
+    } else if (kind === 'journal') {
+      // Starts with the time it was captured, so it reads as a line in the day
+      // rather than as the answer to the template's last question.
+      const at = new Date(item.created_at);
+      const stamp = isNaN(at) ? '' : at.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) + ' — ';
+      id = await addToTodaysJournal(stamp + item.content.trim());
+    } else {
+      const res = await callTool('capture_thought', { content: item.content });
+      const m = /id: ([0-9a-f-]{36})/.exec(res);
+      if (!m) throw new Error(res);
+      id = m[1];
+      const extra = { id, title };
+      if (s.kind === 'note' && s.tags && s.tags.length) extra.topics = s.tags;
+      if (s.kind === 'note' && s.note_type) extra.type = s.note_type;
+      await callTool('update_thought', extra).catch(() => {});
+    }
+    await settleInbox(card, kind, id);
+  } catch (err) {
+    card.classList.remove('is-busy');
+    card.querySelectorAll('button, input').forEach(b => { b.disabled = false; });
+    status.textContent = 'Could not file it — ' + err.message;
+  }
+}
+
+async function settleInbox(card, filedAs, filedId) {
+  const id = card.dataset.id;
+  const status = card.querySelector('.inbox-status');
+  try {
+    const args = { id, filed_as: filedAs };
+    if (filedId) args.filed_id = filedId;
+    await callTool('settle_inbox_item', args);
+  } catch (err) {
+    // Filed, but still listed: say so rather than file it twice.
+    status.textContent = (filedAs === 'dropped' ? 'Could not remove it' : 'Filed, but it is still in the inbox') + ' — ' + err.message;
+    return;
+  }
+  inboxItems = inboxItems.filter(x => x.id !== id);
+  setInboxCount();
+  card.classList.add('is-filed');
+  card.querySelector('.o-suggest__to').innerHTML = filedAs === 'dropped'
+    ? '<i class="ph-light ph-trash" aria-hidden="true"></i><span>Taken out of the inbox.</span>'
+    : `<i class="ph-light ${INBOX_KIND[filedAs].icon}" aria-hidden="true"></i><span>Filed as ${INBOX_KIND[filedAs].word === 'today’s journal' ? 'part of today’s journal' : INBOX_KIND[filedAs].word}.</span>`;
+  status.textContent = '';
+  if (filedAs === 'task' && typeof loadTasks === 'function') loadTasks(true);
+  setTimeout(() => { if (card.isConnected) { card.remove(); if (!inboxItems.length) renderInboxList(); } }, 1600);
+}
+
+let navOverride = null;   // 'more' or 'inbox' while that screen shows
 function syncNav(override) {
   navOverride = override || null;
   const current = navOverride || viewMode;
@@ -10582,6 +10863,7 @@ function syncNav(override) {
 document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.addEventListener('click', () => {
   const id = b.dataset.go;
   if (id === 'more') { showMoreScreen(); return; }
+  if (id === 'inbox') { showInboxScreen(); return; }
   const fromBar = !!b.closest('#tabbar');
   if (fromBar && /^mode/.test(id)) {
     // Tapping the section you are in goes back to its list.
@@ -10595,7 +10877,7 @@ document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.a
 }));
 
 // Whatever replaces the More screen (a note, a list) takes "More" off.
-new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen')) syncNav(); })
+new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen, .inbox-screen')) syncNav(); })
   .observe(main, { childList: true });
 // The bar's height, so the page above it ends where the bar begins.
 (() => {
@@ -10696,7 +10978,7 @@ syncNav();
   });
 })();
 
-if (mcpAccessKey) loadAll().then(openFromLink);
+if (mcpAccessKey) loadAll().then(openFromLink).then(refreshInboxCount);
 
 else showUnlock();
 
