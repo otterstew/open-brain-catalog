@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
 import { calendarDay, londonToday } from "./calendar.ts";
+import { checkPlan, isDay, type PlanBlockIn } from "./plan.ts";
 import { fallbackSuggestion, FILED_AS, type InboxRow, normaliseSuggestion, SORTER_MODEL, sorterPrompt, type Suggestion } from "./inbox.ts";
 import { AUDIO_BUCKET, audioFormat, cleanAudioPaths, cleanPaths, cleanTranscript, decodeAudio, decodeImage, isAudioPath, newAudioPath, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS, toBase64, TRANSCRIBE_MAX_BYTES, TRANSCRIBE_MODEL } from "./photos.ts";
 
@@ -2710,6 +2711,60 @@ function buildServer(): McpServer {
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Could not read the calendar: ${(err as Error).message}` }], isError: true };
       }
+    }
+  );
+
+  // --- The Morning plan's saved blocks (5 Nov 2026; see plan.ts) ---
+  server.registerTool(
+    "get_day_plan",
+    {
+      title: "Get Day Plan",
+      description: "The blocks of time Stewart planned for a day with the Morning plan (start time, minutes, title, and the task each is for).",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        date: z.string().optional().describe("YYYY-MM-DD; defaults to today in London"),
+        format: z.enum(["text", "json"]).optional().describe("\"text\" (default) or \"json\", used by the Open Brain Catalog GUI."),
+      },
+    },
+    async ({ date, format }) => {
+      const day = date && isDay(date) ? date : londonToday();
+      const { data, error } = await supabase.from("plan_blocks")
+        .select("start_time, minutes, title, task_id").eq("day", day).order("start_time");
+      if (error) return { content: [{ type: "text" as const, text: `Could not read the plan: ${error.message}` }], isError: true };
+      const blocks = (data || []).map((r: { start_time: string; minutes: number; title: string; task_id: string | null }) =>
+        ({ start: r.start_time.slice(0, 5), minutes: r.minutes, title: r.title, task_id: r.task_id }));
+      if (format === "json") return { content: [{ type: "text" as const, text: JSON.stringify({ date: day, blocks }) }] };
+      if (!blocks.length) return { content: [{ type: "text" as const, text: `No plan for ${day}.` }] };
+      return { content: [{ type: "text" as const, text: `Plan for ${day}:\n` + blocks.map((b) => `- ${b.start} for ${b.minutes} min: ${b.title}`).join("\n") }] };
+    }
+  );
+
+  server.registerTool(
+    "save_day_plan",
+    {
+      title: "Save Day Plan",
+      description: "Replace a day's plan with these blocks, once Stewart has confirmed them in the Morning plan. An empty list clears the day. Only call this with blocks he chose.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false, idempotentHint: true },
+      inputSchema: {
+        date: z.string().describe("YYYY-MM-DD"),
+        blocks: z.array(z.object({
+          start: z.string().describe("HH:MM, local time"),
+          minutes: z.number(),
+          title: z.string(),
+          task_id: z.string().nullable().optional(),
+        })).describe("The planned blocks"),
+      },
+    },
+    async ({ date, blocks }) => {
+      const checked = checkPlan(date, blocks as PlanBlockIn[]);
+      if ("problem" in checked) return { content: [{ type: "text" as const, text: `Not saved: ${checked.problem}.` }], isError: true };
+      const del = await supabase.from("plan_blocks").delete().eq("day", date);
+      if (del.error) return { content: [{ type: "text" as const, text: `Could not save the plan: ${del.error.message}` }], isError: true };
+      if (checked.rows.length) {
+        const ins = await supabase.from("plan_blocks").insert(checked.rows);
+        if (ins.error) return { content: [{ type: "text" as const, text: `Could not save the plan: ${ins.error.message}` }], isError: true };
+      }
+      return { content: [{ type: "text" as const, text: checked.rows.length ? `Saved ${checked.rows.length} block(s) for ${date}.` : `Cleared the plan for ${date}.` }] };
     }
   );
 

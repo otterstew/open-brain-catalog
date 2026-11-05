@@ -52,6 +52,9 @@ jobs:
       - name: Test what Today may show of each calendar event
         run: deno run --no-config supabase/functions/open-brain-mcp/tests/calendar_test.ts
 
+      - name: Test the Morning plan checks
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/plan_test.ts
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
