@@ -6,6 +6,7 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
+import { fallbackSuggestion, FILED_AS, type InboxRow, normaliseSuggestion, SORTER_MODEL, sorterPrompt, type Suggestion } from "./inbox.ts";
 import { AUDIO_BUCKET, audioFormat, cleanAudioPaths, cleanPaths, cleanTranscript, decodeAudio, decodeImage, isAudioPath, newAudioPath, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS, toBase64, TRANSCRIBE_MAX_BYTES, TRANSCRIBE_MODEL } from "./photos.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -673,6 +674,47 @@ import {
   nextRecurrence,
   formatTask,
 } from "./tasks.ts";
+
+// --- The Inbox's Sorter (see inbox.ts) ---
+// Works out one item's suggestion and stores it. Never throws: when the model
+// cannot be reached the plain fallback is stored instead, marked as such.
+async function sortInboxItem(id: string, content: string): Promise<Suggestion> {
+  let suggestion: Suggestion;
+  try {
+    const [vocab, projectRows] = await Promise.all([
+      loadVocabulary(),
+      supabase.from("tasks").select("project").not("project", "is", null).in("status", ["inbox", "next", "waiting"]).limit(500),
+    ]);
+    const projects = [...new Set(((projectRows.data || []) as { project: string }[]).map((r) => r.project))];
+    const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+    const r = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${OPENROUTER_API_KEY}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: SORTER_MODEL,
+        response_format: { type: "json_object" },
+        messages: [
+          { role: "system", content: sorterPrompt(today, vocab.preferred, projects) },
+          { role: "user", content: content.slice(0, 6000) },
+        ],
+      }),
+    });
+    const d = await r.json();
+    suggestion = normaliseSuggestion(JSON.parse(d.choices[0].message.content), content, projects);
+  } catch (err) {
+    console.warn("sorter failed, using fallback:", (err as Error).message);
+    suggestion = fallbackSuggestion(content);
+  }
+  await supabase.from("inbox").update({ suggestion, suggested_at: new Date().toISOString() }).eq("id", id);
+  return suggestion;
+}
+
+function inBackground(work: Promise<unknown>): void {
+  // deno-lint-ignore no-explicit-any
+  const rt = (globalThis as any).EdgeRuntime;
+  if (rt?.waitUntil) rt.waitUntil(work.catch(() => {}));
+  else work.catch(() => {});
+}
 
 function buildServer(): McpServer {
   const server = new McpServer({
@@ -2550,6 +2592,95 @@ function buildServer(): McpServer {
           isError: true,
         };
       }
+    }
+  );
+
+  // --- The Inbox (5 Nov 2026) ---
+  // Quick captures wait here, unsorted, with the Sorter's suggestion of where
+  // each belongs. Filing is done by the catalog (create_task, capture_thought
+  // or today's journal), which then calls settle_inbox_item.
+  server.registerTool(
+    "add_to_inbox",
+    {
+      title: "Add to Inbox",
+      description:
+        "Drop something into Stewart's Open Brain inbox to be sorted later: a quick line, a spoken note, a photographed page. It is not yet a note or a task. The Sorter suggests where it belongs (a task, today's journal or a note) and Stewart files it with a tap in the catalog. Use this when he asks to 'put it in the inbox' or when something should wait for him to decide.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false, idempotentHint: false },
+      inputSchema: {
+        content: z.string().describe("What was captured, as written or said"),
+        source: z.string().optional().describe("Where it came from, e.g. 'catalog', 'telegram' or 'claude'. Defaults to 'mcp'."),
+      },
+    },
+    async ({ content, source }) => {
+      const text = (content || "").trim();
+      if (!text) return { content: [{ type: "text" as const, text: "Nothing to add: the content is empty." }], isError: true };
+      const { data, error } = await supabase.from("inbox").insert({ content: text, source: source || "mcp" }).select("id").single();
+      if (error) return { content: [{ type: "text" as const, text: `Could not add to the inbox: ${error.message}` }], isError: true };
+      const id = (data as { id: string }).id;
+      inBackground(sortInboxItem(id, text));
+      return { content: [{ type: "text" as const, text: `Added to the inbox. [id: ${id}]` }] };
+    }
+  );
+
+  server.registerTool(
+    "list_inbox",
+    {
+      title: "List Inbox",
+      description:
+        "List what is waiting in Stewart's Open Brain inbox, newest first, each with the Sorter's suggestion (task, journal or note). Filed items are left out.",
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        limit: z.number().optional().describe("Maximum items (default 100)"),
+        format: z.enum(["text", "json"]).optional().describe("\"text\" (default) or \"json\" for full objects, used by the Open Brain Catalog GUI."),
+      },
+    },
+    async ({ limit, format }) => {
+      const { data, error } = await supabase
+        .from("inbox")
+        .select("id, content, source, created_at, suggestion")
+        .is("filed_at", null)
+        .order("created_at", { ascending: false })
+        .limit(Math.min(Math.max(limit || 100, 1), 500));
+      if (error) return { content: [{ type: "text" as const, text: `Could not read the inbox: ${error.message}` }], isError: true };
+      const rows = (data || []) as InboxRow[];
+      // Anything the background sort missed is sorted now, a few at a time.
+      await Promise.all(rows.filter((r) => !r.suggestion).slice(0, 6).map(async (r) => {
+        r.suggestion = await sortInboxItem(r.id, r.content);
+      }));
+      if (format === "json") return { content: [{ type: "text" as const, text: JSON.stringify(rows) }] };
+      if (!rows.length) return { content: [{ type: "text" as const, text: "The inbox is empty." }] };
+      const lines = rows.map((r, i) => {
+        const s = r.suggestion;
+        const to = s ? ` → ${s.kind}: ${s.title}${s.due_date ? `, due ${s.due_date}` : ""}` : "";
+        return `${i + 1}. ${r.content.replace(/\s+/g, " ").slice(0, 160)}${to}\n   [id: ${r.id}] (${r.source}, ${r.created_at.slice(0, 16).replace("T", " ")})`;
+      });
+      return { content: [{ type: "text" as const, text: `${rows.length} waiting in the inbox:\n\n${lines.join("\n\n")}` }] };
+    }
+  );
+
+  server.registerTool(
+    "settle_inbox_item",
+    {
+      title: "Settle Inbox Item",
+      description:
+        "Take an item out of the inbox once it has been filed: say what it became (task, journal or note, with the new id) or 'dropped' when it is not worth keeping. Only call this after the task or note has actually been made, and only when Stewart has chosen.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false, idempotentHint: true },
+      inputSchema: {
+        id: z.string().describe("The inbox item's id"),
+        filed_as: z.enum(FILED_AS).describe("What it became: task, journal, note, or dropped"),
+        filed_id: z.string().optional().describe("The id of the task or note it became"),
+      },
+    },
+    async ({ id, filed_as, filed_id }) => {
+      const { data, error } = await supabase
+        .from("inbox")
+        .update({ filed_as, filed_id: filed_id ?? null, filed_at: new Date().toISOString() })
+        .eq("id", id)
+        .is("filed_at", null)
+        .select("id");
+      if (error) return { content: [{ type: "text" as const, text: `Could not settle it: ${error.message}` }], isError: true };
+      if (!data?.length) return { content: [{ type: "text" as const, text: `No waiting inbox item with id ${id} (already filed?).` }] };
+      return { content: [{ type: "text" as const, text: filed_as === "dropped" ? "Dropped from the inbox." : `Filed as a ${filed_as}.` }] };
     }
   );
 

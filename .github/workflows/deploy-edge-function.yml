@@ -46,6 +46,9 @@ jobs:
       - name: Test how long notes are cut into search pieces
         run: deno run --no-config supabase/functions/open-brain-mcp/tests/chunks_test.ts
 
+      - name: Test the Inbox's Sorter clean-up
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/inbox_test.ts
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
