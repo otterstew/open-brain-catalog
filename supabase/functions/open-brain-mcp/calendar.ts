@@ -6,11 +6,13 @@
 // file is mirrored to a public repo, so the calendar ids live in secrets,
 // CALENDAR_WORK_ID and CALENDAR_PERSONAL_IDS (comma-separated).
 //
-// Work events never leave this file with a title. Stewart screen-shares Open
-// Brain at work, so the work calendar comes back as plain "Work" busy blocks
-// at the right times: no titles, places or people (his choice, 5 Nov 2026).
-// All-day work entries (colleagues' leave, rental holds) are left out, since
-// they are not time he is busy.
+// Work events come back with their titles but no places or people. At first
+// they were plain "Work" busy blocks (his choice, 5 Nov 2026, as he
+// screen-shares Open Brain at work); later that day he asked to see the
+// titles. Today and the Morning plan are hidden in the catalog's work mode,
+// which is what keeps them off a shared screen. All-day work entries
+// (colleagues' leave, rental holds) are still left out, since they are not
+// time he is busy.
 
 export const TIMEZONE = "Europe/London";
 
@@ -46,7 +48,7 @@ export function shapeEvents(raw: RawEvent[], calendar: "personal" | "work"): Day
     if (me?.responseStatus === "declined") continue;
     if (calendar === "work") {
       if (allDay || e.transparency === "transparent") continue;
-      out.push({ start, end, all_day: false, title: "Work", where: null, calendar });
+      out.push({ start, end, all_day: false, title: (e.summary || "").trim() || "Work", where: null, calendar });
     } else {
       out.push({
         start, end, all_day: allDay,

@@ -2692,7 +2692,7 @@ function buildServer(): McpServer {
     {
       title: "Calendar Day",
       description:
-        "Stewart's calendar for one day, from his personal Google calendars, with his work calendar shown only as plain 'Work' busy blocks (no titles or people, so it is safe on a shared screen). Used by the catalog's Today view.",
+        "Stewart's calendar for one day, from his personal Google calendars, with his work calendar's meetings by title only (no places or people; all-day and free entries left out). Used by the catalog's Today view.",
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: {
         date: z.string().optional().describe("YYYY-MM-DD; defaults to today in London"),

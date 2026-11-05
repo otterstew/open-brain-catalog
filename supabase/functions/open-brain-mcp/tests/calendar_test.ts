@@ -20,8 +20,9 @@ const work = shapeEvents([
   { summary: "Cancelled", status: "cancelled", start: { dateTime: "2026-11-05T15:00:00Z" }, end: { dateTime: "2026-11-05T16:00:00Z" } },
 ], "work");
 eq("work: only the real busy time", work.length, 1);
-eq("work: no title, place or people", work[0], { start: "2026-11-05T09:00:00Z", end: "2026-11-05T09:30:00Z", all_day: false, title: "Work", where: null, calendar: "work" });
-eq("work: nothing of the original words anywhere", JSON.stringify(work).includes("colleague") || JSON.stringify(work).includes("Room"), false);
+eq("work: the title, but no place or people", work[0], { start: "2026-11-05T09:00:00Z", end: "2026-11-05T09:30:00Z", all_day: false, title: "1:1 with a colleague", where: null, calendar: "work" });
+eq("work: the place is never passed on", JSON.stringify(work).includes("Room"), false);
+eq("work: an untitled meeting reads as Work", shapeEvents([{ start: { dateTime: "2026-11-05T10:00:00Z" }, end: { dateTime: "2026-11-05T10:30:00Z" } }], "work")[0].title, "Work");
 
 const personal = shapeEvents([
   { summary: "Swim", location: "Havre des Pas", start: { dateTime: "2026-11-05T07:00:00Z" }, end: { dateTime: "2026-11-05T08:00:00Z" } },
