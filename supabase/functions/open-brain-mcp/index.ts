@@ -7,6 +7,7 @@ import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
 import { calendarDay, londonToday } from "./calendar.ts";
+import { tickStayTask, todayExtras } from "./briefing.ts";
 import { checkPlan, isDay, type PlanBlockIn } from "./plan.ts";
 import { fallbackSuggestion, FILED_AS, type InboxRow, normaliseSuggestion, SORTER_MODEL, sorterPrompt, type Suggestion } from "./inbox.ts";
 import { AUDIO_BUCKET, audioFormat, cleanAudioPaths, cleanPaths, cleanTranscript, decodeAudio, decodeImage, isAudioPath, newAudioPath, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS, toBase64, TRANSCRIBE_MAX_BYTES, TRANSCRIBE_MODEL } from "./photos.ts";
@@ -2711,6 +2712,53 @@ function buildServer(): McpServer {
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Could not read the calendar: ${(err as Error).message}` }], isError: true };
       }
+    }
+  );
+
+  // --- Today's extras: stays, tides, sunrise and sunset (5 Nov 2026; see briefing.ts) ---
+  server.registerTool(
+    "today_extras",
+    {
+      title: "Today Extras",
+      description:
+        "For one day in Jersey: sunrise and sunset, high and low tides with heights, and the rental stay tasks from the Wishing Stream bookings system (welcome and goodbye messages, review requests) due within stay_days, with today's arrivals and departures. Used by the catalog's Today and Stays pages. A part that cannot be read is named in problems.",
+      annotations: { readOnlyHint: true, openWorldHint: true },
+      inputSchema: {
+        date: z.string().optional().describe("YYYY-MM-DD; defaults to today in London"),
+        stay_days: z.number().optional().describe("Show stay tasks due within this many days (overdue ones always). Default 2, at most 60."),
+        format: z.enum(["text", "json"]).optional().describe("\"text\" (default) or \"json\", used by the Open Brain Catalog GUI."),
+      },
+    },
+    async ({ date, stay_days, format }) => {
+      const day = date && isDay(date) ? date : londonToday();
+      const out = await todayExtras(day, typeof stay_days === "number" ? stay_days : 2);
+      if (format === "json") return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
+      const lines: string[] = [day];
+      if (out.sun) lines.push(`Sunrise ${out.sun.sunrise}, sunset ${out.sun.sunset}`);
+      if (out.tides.length) lines.push("Tides: " + out.tides.map((t) => `${t.type === "high" ? "High" : "Low"} ${t.time} (${t.height_m} m)`).join(", "));
+      if (out.stays) {
+        for (const m of out.stays.movements) lines.push(`${m.kind === "arrival" ? "Arriving" : "Leaving"} today: ${m.guest_name ?? "a guest"} at ${m.gite}`);
+        for (const t of out.stays.tasks) lines.push(`- ${t.label} for ${t.guest_name ?? "a guest"} at ${t.gite}, due ${t.due_on} [stay task id: ${t.id}]`);
+        if (!out.stays.tasks.length && !out.stays.movements.length) lines.push("No stay tasks due.");
+      }
+      if (out.problems.length) lines.push("Problems: " + out.problems.join("; "));
+      return { content: [{ type: "text" as const, text: lines.join("\n") }] };
+    }
+  );
+
+  server.registerTool(
+    "tick_stay_task",
+    {
+      title: "Tick Stay Task",
+      description: "Mark a rental stay task (from today_extras) as done in the Wishing Stream bookings system, when Stewart says the message has gone.",
+      annotations: { readOnlyHint: false, openWorldHint: true },
+      inputSchema: { id: z.string().describe("The stay task's id from today_extras") },
+    },
+    async ({ id }) => {
+      const why = await tickStayTask(id);
+      return why
+        ? { content: [{ type: "text" as const, text: `Could not tick it off: ${why}` }], isError: true }
+        : { content: [{ type: "text" as const, text: `Ticked off stay task ${id}.` }] };
     }
   );
 

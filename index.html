@@ -938,6 +938,8 @@ a.o-card:hover{filter:brightness(.98)}
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
 
   .icon-btn {
@@ -959,6 +961,27 @@ a.o-card:hover{filter:brightness(.98)}
   .icon-btn:focus-visible { outline: 2px solid var(--fail); outline-offset: 2px; }
   .icon-btn:disabled { opacity: 0.35; cursor: default; }
   .icon-btn:disabled:hover { border-color: var(--stone); color: var(--ink-3); }
+  /* Task / Journal: worded, because they make something rather than change the note. */
+  .icon-btn--word { width: auto; gap: 5px; padding: 0 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); border-color: var(--stone); }
+  .icon-btn--word:hover { border-color: var(--accent); color: var(--accent-deep, var(--accent)); }
+  .icon-btn--word:focus-visible { outline-color: var(--accent); }
+  .index-card-confirm.is-make { background: color-mix(in oklab, var(--accent) 7%, transparent); }
+  .note-make { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .note-make-label { font-size: 12.5px; color: var(--ink-2); }
+  .note-make-field { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-sm, 14px); color: var(--ink);
+    background: var(--paper); border: 1px solid var(--stone); border-radius: var(--r-sm); padding: 8px 10px; resize: vertical; }
+  .note-make-field:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .note-make-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
+  .note-make-due { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
+  .note-make-due input { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--stone); border-radius: var(--r-sm); padding: 4px 6px; }
+  .note-make-status { margin-right: auto; font-size: 12px; color: var(--ink-3); }
+  @media (max-width: 480px) {
+    .icon-btn--word { width: 26px; padding: 0; border-color: transparent; }
+    .icon-btn--word .icon-btn-word { display: none; }
+    .note-make-due { flex-basis: 100%; }
+    .note-make-status:empty { display: none; }
+    .note-make-row > button { flex: 1; }
+  }
 
   .index-card-confirm {
     display: none;
@@ -2483,6 +2506,31 @@ a.o-card:hover{filter:brightness(.98)}
   .today-empty { padding: var(--s3) 0; list-style: none; }
   .today-allday { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s3); }
   .today-allday:empty { display: none; }
+  /* Sun and tides under the title, Stays above the tasks, Prep over the hours (5 Nov 2026). */
+  .today-sea { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s5); margin: 0 0 var(--s5); font-size: var(--t-sm); color: var(--ink-2); }
+  .today-sea__item { display: inline-flex; align-items: baseline; gap: 5px; white-space: nowrap; }
+  .today-sea__item i { align-self: center; font-size: 16px; color: var(--ink-3); }
+  .today-sea__item b { font-weight: 500; color: var(--ink); }
+  .today-sea__item.is-past { opacity: .5; }
+  .today-sea__item.is-next b { color: var(--accent-deep, var(--accent)); }
+  .today-sub { font-family: var(--mono); font-size: var(--t-xs); letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+  .today-stays { margin-bottom: var(--s5); }
+  .today-stays .o-tasks { margin-top: var(--s1); }
+  .today-move-icon { flex: none; width: 20px; font-size: 18px; color: var(--ink-3); margin-top: 1px; text-align: center; }
+  .today-prep { background: var(--paper); border-radius: var(--r-md); padding: var(--s3) var(--s4); margin-bottom: var(--s3); }
+  .today-prep__head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
+  .today-prep__body { margin: var(--s2) 0 0; }
+  .today-prep__list { list-style: none; margin: var(--s2) 0 0; padding: 0; }
+  .today-prep__list button { display: flex; justify-content: space-between; gap: var(--s3); width: 100%; padding: var(--s2) 0; border: 0; background: none; font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+  .today-prep__list li + li button { box-shadow: 0 -1px 0 var(--stone); }
+  .today-prep__list button:hover .today-prep__title { color: var(--accent-deep, var(--accent)); }
+  .today-prep__list .o-meta { flex: none; }
+  .o-day__block[data-prep] { cursor: pointer; }
+  .o-day__block[data-prep]:hover, .o-day__block[data-prep]:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .section-lead { max-width: 60ch; color: var(--ink-2); line-height: 1.6; margin: 0 0 var(--s5); }
+  .section-links { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s5); }
+  .section-links a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .section-stays { max-width: 640px; }
   .today-allday__item { background: var(--stone); border-radius: var(--r-sm); padding: var(--s1) var(--s3); font-size: var(--t-sm); }
   .today-hours .o-day__block { background: var(--stone); font-size: var(--t-xs); }
   .today-hours .o-day__block.is-work { background: color-mix(in oklab, var(--stone), var(--paper) 20%); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--stone); }
@@ -3010,6 +3058,10 @@ a.o-card:hover{filter:brightness(.98)}
     <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" title="Notes"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
     <button type="button" class="o-rail__item" data-go="modeJournal" data-view="journal" title="Journal"><i class="ph-light ph-book-open-text"></i><span class="ob-rail__label">Journal</span></button>
     <button type="button" class="o-rail__item" data-go="modeTasks" data-view="tasks" title="Tasks"><i class="ph-light ph-check-square"></i><span class="ob-rail__label">Tasks</span><span class="o-num" id="railTasksN"></span></button>
+    <button type="button" class="o-rail__item" data-go="calendar" data-view="calendar" title="Calendar"><i class="ph-light ph-calendar-blank"></i><span class="ob-rail__label">Calendar</span></button>
+    <button type="button" class="o-rail__item" data-go="meetings" data-view="meetings" title="Meetings"><i class="ph-light ph-users-three"></i><span class="ob-rail__label">Meetings</span></button>
+    <button type="button" class="o-rail__item" data-go="stays" data-view="stays" title="Stays: messages to send for the gîtes"><i class="ph-light ph-house-line"></i><span class="ob-rail__label">Stays</span></button>
+    <button type="button" class="o-rail__item" data-go="money" data-view="money" title="Money (coming later)"><i class="ph-light ph-coins"></i><span class="ob-rail__label">Money</span></button>
     <div class="o-rail__group">Helpers</div>
     <button type="button" class="o-rail__item" data-go="plan" data-view="plan" title="Morning plan: fit today's tasks around the calendar"><i class="ph-light ph-sun-horizon"></i><span class="ob-rail__label">Morning plan</span></button>
     <div class="o-rail__group">Add</div>
@@ -3159,7 +3211,7 @@ a.o-card:hover{filter:brightness(.98)}
   <button type="button" data-go="modeJournal" data-view="journal"><i class="ph-light ph-book-open-text"></i>Journal</button>
   <button type="button" data-go="inbox" data-view="inbox"><span class="ob-tab-icon"><i class="ph-light ph-tray"></i><span class="ob-tab-n o-num" id="tabInboxN" hidden></span></span>Inbox</button>
   <button type="button" data-go="today" data-view="today" data-also="tasks plan"><i class="ph-light ph-sun"></i>Today</button>
-  <button type="button" data-go="more" data-view="more"><i class="ph-light ph-dots-three"></i>More</button>
+  <button type="button" data-go="more" data-view="more" data-also="calendar meetings stays money"><i class="ph-light ph-dots-three"></i>More</button>
 </nav>
 
 <script>
@@ -4787,6 +4839,12 @@ function selectThought(t, mark) {
         <span class="index-card-type" style="color:${style.color}">${style.label}</span>
         <div class="index-card-head-right">
           <span class="index-card-date" title="Date captured">${formatDate(t.created_at)}</span>
+          <button class="icon-btn icon-btn--word" id="toTaskBtn" type="button" title="Make a task from this note" aria-label="Make a task from this note">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg><span class="icon-btn-word">Task</span>
+          </button>
+          ${isJournalEntry(t) ? '' : `<button class="icon-btn icon-btn--word" id="toJournalBtn" type="button" title="Add to today's journal" aria-label="Add this note to today's journal">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"></path><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"></path><path d="M9 8h7"></path></svg><span class="icon-btn-word">Journal</span>
+          </button>`}
           <button class="icon-btn" id="exportBtn" title="Export: web page or PDF" aria-label="Export this note as a web page or PDF">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>
           </button>
@@ -4904,6 +4962,7 @@ function selectThought(t, mark) {
   }
 
   renderNoteTasks(t.realId || t.id);
+  wireNoteMakers(t, cardConfirm);
 
   deleteBtn.addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
@@ -9767,6 +9826,108 @@ async function noteTasksFor(id) {
   return noteTaskIndex.get(id) || [];
 }
 
+// From a note, make a task or a line in today's journal (5 Nov 2026). Both open
+// a small form in the card's confirm strip, filled from the note, so the words
+// can be changed before anything is saved. The task carries the note's id, so
+// it shows under "Tasks from this note"; the journal entry is linked both ways.
+// The note itself is left as it is: delete it afterwards if it was only a stub.
+function wireNoteMakers(t, strip) {
+  const noteId = t.realId || t.id;
+  const close = () => { strip.style.display = 'none'; strip.innerHTML = ''; strip.classList.remove('is-make'); };
+  const firstLine = String(t.content || '').split('\n').map(s => s.replace(/^[#>*\-\s]+/, '').trim()).find(Boolean) || '';
+  const open = html => {
+    strip.classList.add('is-make');
+    strip.style.display = 'flex';
+    strip.innerHTML = html;
+    strip.querySelector('[data-x="cancel"]').addEventListener('click', close);
+    const field = strip.querySelector('.note-make-field');
+    field.focus();
+    field.select();
+    return strip.querySelector('.note-make-status');
+  };
+  const busy = on => strip.querySelectorAll('button, input, textarea').forEach(b => { b.disabled = on; });
+
+  const taskBtn = document.getElementById('toTaskBtn');
+  if (taskBtn) taskBtn.addEventListener('click', () => {
+    const status = open(`
+      <form class="note-make">
+        <label class="note-make-label" for="noteMakeTitle">New task from this note</label>
+        <input class="note-make-field" id="noteMakeTitle" maxlength="200" value="${escapeAttr((t.title || firstLine).slice(0, 200))}">
+        <div class="note-make-row">
+          <label class="note-make-due">Due <input type="date" id="noteMakeDue"></label>
+          <span class="note-make-status" role="status"></span>
+          <button class="confirm-cancel" type="button" data-x="cancel">Cancel</button>
+          <button class="compose-save" type="submit">Make task</button>
+        </div>
+      </form>`);
+    strip.querySelector('form').addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const title = strip.querySelector('#noteMakeTitle').value.trim();
+      if (!title) { strip.querySelector('#noteMakeTitle').focus(); return; }
+      const args = { title, status: 'next', source: 'catalog', thought_id: noteId };
+      const due = strip.querySelector('#noteMakeDue').value;
+      if (due) args.due_date = due;
+      busy(true);
+      status.textContent = 'Making it…';
+      try {
+        const res = await callTool('create_task', args);
+        if (!/id: [0-9a-f-]{36}/.test(res)) throw new Error(res);
+        noteTaskIndex = null;
+        close();
+        renderNoteTasks(noteId);
+      } catch (err) {
+        busy(false);
+        status.textContent = 'Could not make it — ' + err.message;
+      }
+    });
+  });
+
+  const journalBtn = document.getElementById('toJournalBtn');
+  if (journalBtn) journalBtn.addEventListener('click', () => {
+    // A short note goes in whole; a long one by its title, since the link
+    // to it travels with the entry anyway.
+    const body = String(t.content || '').trim();
+    const start = body.length <= 600 ? body : (t.title || firstLine);
+    const status = open(`
+      <form class="note-make">
+        <label class="note-make-label" for="noteMakeText">Add to today's journal</label>
+        <textarea class="note-make-field" id="noteMakeText" rows="${Math.min(8, Math.max(2, start.split('\n').length + 1))}">${escapeHtml(start)}</textarea>
+        <div class="note-make-row">
+          <span class="note-make-status" role="status">Linked back to this note.</span>
+          <button class="confirm-cancel" type="button" data-x="cancel">Cancel</button>
+          <button class="compose-save" type="submit">Add to journal</button>
+        </div>
+      </form>`);
+    strip.querySelector('form').addEventListener('submit', async ev => {
+      ev.preventDefault();
+      const text = strip.querySelector('#noteMakeText').value.trim();
+      if (!text) { strip.querySelector('#noteMakeText').focus(); return; }
+      busy(true);
+      status.textContent = 'Adding…';
+      try {
+        const stamp = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const entryId = await addToTodaysJournal(stamp + ' — ' + text);
+        await callTool('link_thoughts', { id_a: noteId, id_b: entryId }).catch(() => {});
+        journalReady = loadJournal();
+        strip.innerHTML = `<span class="confirm-text">Added to today's journal.</span>
+          <button class="confirm-cancel" type="button" data-x="cancel">Close</button>
+          <button class="compose-save" type="button" data-x="open">Open today's entry</button>`;
+        strip.querySelector('[data-x="cancel"]').addEventListener('click', close);
+        strip.querySelector('[data-x="open"]').addEventListener('click', async () => {
+          if (!confirmLeavingEdit()) return;
+          setViewMode('journal');
+          await journalReady;
+          const entry = allJournal.find(x => (x.realId || x.id) === entryId);
+          if (entry) selectThought(entry);
+        });
+      } catch (err) {
+        busy(false);
+        status.textContent = 'Could not add it — ' + err.message;
+      }
+    });
+  });
+}
+
 async function renderNoteTasks(noteId) {
   const box = document.getElementById('noteTasks');
   if (!box || !noteId) return;
@@ -10777,6 +10938,10 @@ function openFromLink() {
 const MORE_ITEMS = [
   // Shortcuts (5 Nov 2026): a new note with the microphone already on.
   ['modeTasks', 'ph-check-square', 'Tasks', 'Every task, by when it is due'],
+  ['calendar', 'ph-calendar-blank', 'Calendar', 'Week and month view, coming next'],
+  ['meetings', 'ph-users-three', 'Meetings', 'Prep, notes and recordings, coming'],
+  ['stays', 'ph-house-line', 'Stays', 'Messages to send for the gîtes'],
+  ['money', 'ph-coins', 'Money', 'Coming later'],
   ['plan', 'ph-sun-horizon', 'Morning plan', 'Fit today’s tasks around the calendar'],
   ['newBtn', 'ph-plus-circle', 'New note', 'A blank note to write in'],
   ['speakNote', 'ph-microphone', 'Speak a note', 'Talk and it types a new note'],
@@ -10796,7 +10961,7 @@ function showMoreScreen() {
   editingId = null;
   closeReference();
   const items = MORE_ITEMS.filter(([id]) => {
-    if (id === 'plan') return true;
+    if (id === 'plan' || SECTION_SCREENS[id]) return true;
     if (id === 'speakNote') return !!micButtonHtml();
     if (id === 'recordNote') return CAN_RECORD;
     const el = document.getElementById(id);
@@ -10816,6 +10981,7 @@ function showMoreScreen() {
     const id = b.dataset.go;
     if (id === 'modeTasks') { openAllTasks(); return; }
     if (id === 'plan') { showPlanScreen(); return; }
+    if (SECTION_SCREENS[id]) { showSectionScreen(id); return; }
     if (id === 'speakNote' || id === 'recordNote') { startNoteWithMic(id === 'speakNote' ? '.mic-add' : '.rec-add'); return; }
     // Statistics and the colours button work from the notes view.
     if ((id === 'statsBtn' || id === 'newBtn') && viewMode !== 'notes') setViewMode('notes');
@@ -11123,6 +11289,7 @@ function showTodayScreen() {
       <div class="o-dateline">${escapeHtml(dateline)} · Jersey</div>
       <h1 class="more-title"><em>Today</em></h1>
       ${workMode ? personalHiddenHtml('Today') : `
+      <div class="today-sea" id="todaySea" aria-label="Sun and tides" hidden></div>
       <div class="o-tabs today-tabs" role="tablist" aria-label="Today">
         <button type="button" class="o-tab" role="tab" aria-selected="true" data-today-tab="tasks">To do</button>
         <button type="button" class="o-tab" role="tab" aria-selected="false" data-today-tab="hours">Hours</button>
@@ -11130,6 +11297,7 @@ function showTodayScreen() {
       <div class="today-grid" data-show="tasks">
         <section class="today-tasks" aria-label="To do today">
           <h2 class="today-h">To do</h2>
+          <div class="today-stays" id="todayStays" hidden></div>
           <button type="button" class="o-btn o-btn--sm today-plan"><i class="ph-light ph-sun-horizon" aria-hidden="true"></i><span>Plan my day</span></button>
           <div class="o-capture today-add">
             <input id="todayAdd" type="text" placeholder="Add a task for today" aria-label="Add a task for today" enterkeyhint="done">
@@ -11140,6 +11308,7 @@ function showTodayScreen() {
         <section class="today-hours" aria-label="The day's hours">
           <h2 class="today-h">Hours</h2>
           <div class="today-allday"></div>
+          <div class="today-prep" id="todayPrep" aria-live="polite" hidden></div>
           <div class="o-day" id="todayDay"></div>
           <p class="o-meta today-cal-note" aria-live="polite">Reading the calendar…</p>
         </section>
@@ -11166,6 +11335,7 @@ function showTodayScreen() {
   drawDay(null);
   loadTodayTasks();
   loadTodayCalendar();
+  loadTodayExtras();
   clearInterval(todayTimer);
   todayTimer = setInterval(() => {
     if (!main.querySelector('.today-screen')) { clearInterval(todayTimer); return; }
@@ -11332,12 +11502,21 @@ function drawDay(events) {
     const width = `calc((100% - 44px) / ${x.cols})`;
     const left = `calc(44px + (100% - 44px) / ${x.cols} * ${x.col})`;
     const work = x.e.calendar === 'work', plan = x.e.calendar === 'plan';
-    return `<div class="o-day__block${work ? ' is-work' : ''}${plan ? ' is-plan' : ''}"${plan ? ' data-tint="heather"' : ''} style="top:${top}px; height:${height}px; left:${left}; width:${width}; right:auto">
+    const prep = plan ? '' : ` data-prep="${spans.indexOf(x)}" role="button" tabindex="0" title="Prep: what Open Brain has on this"`;
+    return `<div class="o-day__block${work ? ' is-work' : ''}${plan ? ' is-plan' : ''}"${plan ? ' data-tint="heather"' : ''}${prep} style="top:${top}px; height:${height}px; left:${left}; width:${width}; right:auto">
       <b>${escapeHtml(x.e.title)}</b><small class="o-num">${escapeHtml(clockOf(x.e.start))}–${escapeHtml(clockOf(x.e.end))}${x.e.where ? ' · ' + escapeHtml(x.e.where) : ''}</small>
     </div>`;
   }).join('');
   html += '<div class="o-day__now" hidden></div>';
   box.innerHTML = html;
+  const openPrep = ev => {
+    const b = ev.target.closest('[data-prep]');
+    if (!b || (ev.type === 'keydown' && ev.key !== 'Enter' && ev.key !== ' ')) return;
+    ev.preventDefault();
+    showMeetingPrep(spans[+b.dataset.prep].e);
+  };
+  box.onclick = openPrep;
+  box.onkeydown = openPrep;
   box.dataset.first = first;
   box.dataset.last = last;
   placeNowLine();
@@ -11357,6 +11536,197 @@ function placeNowLine() {
 function scrollTodayToNow() {
   const line = main.querySelector('.o-day__now');
   if (line && !line.hidden) line.scrollIntoView({ block: 'center' });
+}
+
+// ----- stays, tides, the sun and meeting prep (5 Nov 2026) -----
+// The morning briefing's pieces, moving from Telegram onto Today (Stewart,
+// 5 Nov 2026), so the Life Engine's Telegram message can be retired. The server
+// reads them (today_extras, see briefing.ts); a part that fails is named, the
+// rest still show.
+
+async function loadTodayExtras() {
+  const sea = document.getElementById('todaySea');
+  let x;
+  try {
+    const text = await callTool('today_extras', { date: todayISO(), format: 'json' });
+    try { x = JSON.parse(text); } catch (_) { throw new Error(text.slice(0, 160)); }
+  } catch (err) {
+    if (!sea || !main.querySelector('.today-screen')) return;
+    sea.hidden = false;
+    sea.innerHTML = `<span class="o-meta">Could not read the sun, tides or stays — ${escapeHtml(err.message)}</span>`;
+    return;
+  }
+  if (!main.querySelector('.today-screen')) return;
+  renderTodaySea(sea, x);
+  renderStays(document.getElementById('todayStays'), x.stays, (x.problems || []).filter(p => /^stays/.test(p)), { quietWhenEmpty: true });
+}
+
+function renderTodaySea(box, x) {
+  if (!box) return;
+  const now = new Date();
+  const nowHm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+  const items = [];
+  if (x.sun) {
+    items.push(`<span class="today-sea__item"><i class="ph-light ph-sun-horizon" aria-hidden="true"></i>Sunrise <b class="o-num">${escapeHtml(x.sun.sunrise)}</b></span>`);
+    items.push(`<span class="today-sea__item">Sunset <b class="o-num">${escapeHtml(x.sun.sunset)}</b></span>`);
+  }
+  const tides = x.tides || [];
+  const next = tides.find(t => t.time >= nowHm);
+  tides.forEach((t, i) => {
+    const past = t.time < nowHm, isNext = t === next;
+    items.push(`<span class="today-sea__item${past ? ' is-past' : ''}${isNext ? ' is-next' : ''}"${isNext ? ' title="Next tide"' : ''}>${i === 0 ? '<i class="ph-light ph-waves" aria-hidden="true"></i>' : ''}${t.type === 'high' ? 'High' : 'Low'} <b class="o-num">${escapeHtml(t.time)}</b> <span class="o-num">${escapeHtml(t.height_m.toFixed(1))} m</span></span>`);
+  });
+  const missing = (x.problems || []).filter(p => !/^stays/.test(p));
+  if (missing.length) items.push(`<span class="o-meta">Not read: ${escapeHtml(missing.map(p => p.split(':')[0]).join(', '))}</span>`);
+  box.innerHTML = items.join('');
+  box.hidden = !items.length;
+}
+
+// Stay tasks (welcome and goodbye messages, review requests) and today's
+// arrivals and departures, from the bookings system. Ticking one marks it done
+// there, as saying so on Telegram used to.
+function renderStays(box, stays, problems, opts) {
+  if (!box) return;
+  opts = opts || {};
+  const today = todayISO();
+  const tasks = (stays && stays.tasks) || [], moves = (stays && stays.movements) || [];
+  if (!stays) {
+    box.hidden = false;
+    box.innerHTML = `<p class="o-meta">Could not read the stays — ${escapeHtml((problems[0] || 'no answer').replace(/^stays:\s*/, ''))}</p>`;
+    return;
+  }
+  if (!tasks.length && !moves.length) {
+    box.hidden = !!opts.quietWhenEmpty;
+    box.innerHTML = opts.quietWhenEmpty ? '' : '<p class="o-meta">Nothing due for the stays.</p>';
+    return;
+  }
+  box.hidden = false;
+  box.innerHTML = `${opts.quietWhenEmpty ? '<div class="today-sub">Stays</div>' : ''}
+    <ul class="o-tasks">${moves.map(m => `
+      <li class="o-task is-move">
+        <i class="ph-light ${m.kind === 'arrival' ? 'ph-suitcase-rolling' : 'ph-door-open'} today-move-icon" aria-hidden="true"></i>
+        <span class="o-task__main"><span class="o-task__title">${m.kind === 'arrival' ? 'Arriving' : 'Leaving'} today: ${escapeHtml(m.guest_name || 'a guest')}</span>
+          <span class="o-task__meta">${escapeHtml(m.gite)}</span></span>
+      </li>`).join('')}${tasks.map(t => {
+      const due = dueLabel(t.due_on, today);
+      return `
+      <li class="o-task" data-stay="${escapeAttr(t.id)}">
+        <button type="button" class="o-task__tick" aria-label="Mark “${escapeAttr(t.label)}” for ${escapeAttr(t.guest_name || 'the guest')} done"></button>
+        <span class="o-task__main"><span class="o-task__title">${escapeHtml(t.label)} · ${escapeHtml(t.guest_name || 'guest’s name not known yet')}</span>
+          <span class="o-task__meta">${escapeHtml(t.gite)}${t.contact ? ' · ' + escapeHtml(t.contact) : ''}</span></span>
+        <span class="o-task__time${due.tone === 'late' || t.days_until_due <= 0 ? ' is-due' : ''}">${escapeHtml(due.text.replace(/^./, c => c.toUpperCase()))}</span>
+      </li>`;
+    }).join('')}
+    </ul>`;
+  box.querySelectorAll('[data-stay]').forEach(row => {
+    row.querySelector('.o-task__tick').addEventListener('click', async () => {
+      if (row.classList.contains('is-done')) return;
+      row.classList.add('is-done');
+      try {
+        const res = await callTool('tick_stay_task', { id: row.dataset.stay });
+        if (/^Could not/.test(res)) throw new Error(res.replace(/^Could not tick it off:\s*/, ''));
+        setTimeout(() => row.remove(), 900);
+      } catch (err) {
+        row.classList.remove('is-done');
+        showToastStatus('Could not tick that off — ' + err.message);
+      }
+    });
+  });
+}
+
+// Prep for a meeting, on demand: what Open Brain holds on its title. Quiet on
+// purpose: the Telegram prep alarms were dropped on 26 Oct 2026 at Stewart's
+// request, so nothing here arrives unasked.
+async function showMeetingPrep(e) {
+  const box = document.getElementById('todayPrep');
+  if (!box) return;
+  const title = (e.title || '').trim();
+  box.hidden = false;
+  box.innerHTML = `<div class="today-prep__head"><span class="today-sub">Prep · ${escapeHtml(title)}</span>
+    <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="close">Close</button></div>
+    <p class="o-meta today-prep__body">Looking in Open Brain…</p>`;
+  box.querySelector('[data-x="close"]').addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+  box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  const body = box.querySelector('.today-prep__body');
+  if (!title || /^(work|\(no title\))$/i.test(title)) { body.textContent = 'Nothing to look up for an untitled meeting.'; return; }
+  try {
+    const found = parseJsonThoughts(await callTool('search_thoughts', { query: title, limit: 5, format: 'json' }));
+    if (box.querySelector('.today-prep__body') !== body) return;
+    if (!found.length) { body.textContent = 'Nothing in Open Brain on this yet.'; return; }
+    const list = document.createElement('ul');
+    list.className = 'today-prep__list';
+    list.innerHTML = found.map((t, i) => `<li><button type="button" data-i="${i}">
+      <span class="today-prep__title">${escapeHtml(t.title || String(t.content || '').slice(0, 80) || 'Untitled')}</span>
+      <span class="o-meta">${escapeHtml(formatDate(t.created_at))}</span></button></li>`).join('');
+    body.replaceWith(list);
+    list.querySelectorAll('[data-i]').forEach(b => b.addEventListener('click', () => {
+      const t = found[+b.dataset.i];
+      setViewMode(isJournalEntry(t) ? 'journal' : 'notes');
+      selectThought(findThought(t.id) || t);
+    }));
+  } catch (err) {
+    body.textContent = 'Could not look — ' + err.message;
+  }
+}
+
+// ---------- Calendar, Meetings, Stays and Money in the menu (5 Nov 2026) ----------
+// From the joined-up-app plan. Stays works now; the others say what is coming
+// and link to what does the job today. Personal, so hidden in work mode.
+const SECTION_SCREENS = {
+  calendar: {
+    title: 'Calendar', icon: 'ph-calendar-blank',
+    lead: 'A week and month view, with adding events, is next on the plan. Until then Today shows today’s hours.',
+    links: [['today', 'Today’s hours'], ['https://calendar.google.com/', 'Google Calendar']],
+  },
+  meetings: {
+    title: 'Meetings', icon: 'ph-users-three',
+    lead: 'One page per meeting is planned: the prep cards, notes and tasks during it, a recording and its transcript, then one tap to file it all to Open Brain. Until then, prep is in One Side and the Prep deck, and Today has a Prep button on each meeting.',
+    links: [['https://oneside.thewishingstream.com/', 'One Side'], ['https://twosides.thewishingstream.com/prep.html', 'Prep deck']],
+  },
+  stays: {
+    title: 'Stays', icon: 'ph-house-line',
+    lead: 'Messages to send for the next fortnight’s stays, and today’s arrivals and departures, from the bookings system. Tick one when it has gone.',
+    links: [['https://owner.thewishingstream.com/', 'Owner page']],
+  },
+  money: {
+    title: 'Money', icon: 'ph-coins',
+    lead: 'Coming last: a UK and Jersey ledger with a dashboard, and receipts from the Scanner as expense lines. The gîte’s money stays on the owner page.',
+    links: [],
+  },
+};
+
+function showSectionScreen(kind) {
+  const def = SECTION_SCREENS[kind];
+  if (!def || !confirmLeavingEdit()) return;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  main.innerHTML = `
+    <div class="more-screen section-screen" data-section="${kind}">
+      <h1 class="more-title"><em>${escapeHtml(def.title)}</em></h1>
+      ${workMode ? personalHiddenHtml(def.title) : `
+      <p class="section-lead">${escapeHtml(def.lead)}</p>
+      ${kind === 'stays' ? '<div class="section-stays" id="sectionStays"><p class="o-meta">Reading the stays…</p></div>' : ''}
+      ${def.links.length ? `<div class="section-links">${def.links.map(([href, label]) => /^https?:/.test(href)
+        ? `<a class="o-btn o-btn--sm" href="${escapeAttr(href)}" target="_blank" rel="noopener">${escapeHtml(label)} <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>`
+        : `<button type="button" class="o-btn o-btn--sm" data-section-go="${escapeAttr(href)}">${escapeHtml(label)}</button>`).join('')}</div>` : ''}`}
+    </div>`;
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  syncNav(kind);
+  main.querySelectorAll('[data-section-go="today"]').forEach(b => b.addEventListener('click', showTodayScreen));
+  if (kind === 'stays' && !workMode) loadStaysScreen();
+}
+
+async function loadStaysScreen() {
+  const box = document.getElementById('sectionStays');
+  try {
+    const x = JSON.parse(await callTool('today_extras', { date: todayISO(), stay_days: 14, format: 'json' }));
+    if (document.getElementById('sectionStays') !== box) return;
+    renderStays(box, x.stays, (x.problems || []).filter(p => /^stays/.test(p)), {});
+  } catch (err) {
+    if (box) box.innerHTML = `<p class="o-meta">Could not read the stays — ${escapeHtml(err.message)}</p>`;
+  }
 }
 
 // ---------- the Morning plan (5 Nov 2026, Otter build order step 4) ----------
@@ -11633,6 +12003,7 @@ document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.a
   if (id === 'inbox') { showInboxScreen(); return; }
   if (id === 'today') { showTodayScreen(); return; }
   if (id === 'plan') { showPlanScreen(); return; }
+  if (SECTION_SCREENS[id]) { showSectionScreen(id); return; }
   const fromBar = !!b.closest('#tabbar');
   if (fromBar && /^mode/.test(id)) {
     // Tapping the section you are in goes back to its list.

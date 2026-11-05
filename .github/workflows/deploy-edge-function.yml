@@ -55,6 +55,9 @@ jobs:
       - name: Test the Morning plan checks
         run: deno run --no-config supabase/functions/open-brain-mcp/tests/plan_test.ts
 
+      - name: Test Today's extras (tides, sun, what crosses from the bookings system)
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/briefing_test.ts
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
