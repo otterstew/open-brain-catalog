@@ -104,13 +104,13 @@ async function accessToken(): Promise<string> {
   return cachedToken.token;
 }
 
-async function listRaw(calendarId: string, min: string, max: string): Promise<RawEvent[]> {
+async function listRaw(calendarId: string, min: string, max: string, limit = 100): Promise<RawEvent[]> {
   const url = new URL(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calendarId)}/events`);
   url.searchParams.set("timeMin", min);
   url.searchParams.set("timeMax", max);
   url.searchParams.set("singleEvents", "true");
   url.searchParams.set("orderBy", "startTime");
-  url.searchParams.set("maxResults", "100");
+  url.searchParams.set("maxResults", String(limit));
   const res = await fetch(url, { headers: { Authorization: `Bearer ${await accessToken()}` } });
   if (!res.ok) throw new Error(`a calendar could not be read (${res.status})`);
   return (await res.json()).items ?? [];
@@ -136,4 +136,95 @@ export async function calendarDay(date: string): Promise<{ date: string; events:
   });
   events.sort((a, b) => Number(b.all_day) - Number(a.all_day) || a.start.localeCompare(b.start));
   return { date, events, problems };
+}
+
+// --- Several days at once, for the Calendar page's week and month (5 Nov 2026) ---
+
+export function addDays(date: string, n: number): string {
+  const d = new Date(date + "T12:00:00Z");
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
+function calendarIds(): { work: string; personal: string[] } {
+  return {
+    work: (Deno.env.get("CALENDAR_WORK_ID") || "").trim(),
+    personal: (Deno.env.get("CALENDAR_PERSONAL_IDS") || "").split(",").map((s) => s.trim()).filter(Boolean),
+  };
+}
+
+export async function calendarRange(start: string, days: number): Promise<{ start: string; days: number; events: DayEvent[]; problems: string[] }> {
+  const n = Math.max(1, Math.min(42, Math.round(days)));
+  const min = londonDayBounds(start).min;
+  const max = londonDayBounds(addDays(start, n - 1)).max;
+  const { work, personal } = calendarIds();
+  const problems: string[] = [];
+  if (!work && !personal.length) problems.push("No calendars are set up yet (CALENDAR_WORK_ID / CALENDAR_PERSONAL_IDS).");
+  const settled = await Promise.allSettled([
+    ...personal.map((id) => listRaw(id, min, max, 250).then((r) => shapeEvents(r, "personal"))),
+    ...(work ? [listRaw(work, min, max, 250).then((r) => shapeEvents(r, "work"))] : []),
+  ]);
+  const events: DayEvent[] = [];
+  settled.forEach((s, i) => {
+    if (s.status === "fulfilled") events.push(...s.value);
+    else problems.push((i < personal.length ? "A personal calendar: " : "The work calendar: ") + (s.reason as Error).message);
+  });
+  events.sort((a, b) => a.start.slice(0, 10).localeCompare(b.start.slice(0, 10)) || Number(b.all_day) - Number(a.all_day) || a.start.localeCompare(b.start));
+  return { start, days: n, events, problems };
+}
+
+// --- Adding an event (5 Nov 2026) ---
+// Goes into the first personal calendar. The Google sign-in was made for
+// reading only (calendar.readonly), so until Stewart re-runs google-reauth.py,
+// which now asks for calendar.events too, Google refuses and this says so
+// plainly (NEEDS_WRITE); the catalog then opens Google Calendar's own form,
+// filled in, instead.
+
+export const NEEDS_WRITE = "needs-calendar-write";
+
+export interface NewEvent { title: string; date: string; all_day: boolean; start?: string; end?: string; where?: string }
+
+// The pure part: checks, and the body Google wants.
+export function eventBody(e: NewEvent): Record<string, unknown> {
+  const title = (e.title || "").trim();
+  if (!title) throw new Error("an event needs a title");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(e.date || "")) throw new Error("the date must be YYYY-MM-DD");
+  const body: Record<string, unknown> = { summary: title.slice(0, 300) };
+  if (e.where && e.where.trim()) body.location = e.where.trim().slice(0, 300);
+  if (e.all_day) {
+    body.start = { date: e.date };
+    body.end = { date: addDays(e.date, 1) };
+    return body;
+  }
+  const hm = /^([01]\d|2[0-3]):[0-5]\d$/;
+  if (!hm.test(e.start || "")) throw new Error("the start time must be HH:MM");
+  const end = e.end && hm.test(e.end) ? e.end : null;
+  if (e.end && !end) throw new Error("the end time must be HH:MM");
+  let endDate = e.date, endTime = end;
+  if (!endTime) {
+    const [h, m] = (e.start as string).split(":").map(Number);
+    const t = h * 60 + m + 60;
+    endTime = `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+    if (t >= 24 * 60) endDate = addDays(e.date, 1);
+  } else if (endTime <= (e.start as string)) {
+    endDate = addDays(e.date, 1);
+  }
+  body.start = { dateTime: `${e.date}T${e.start}:00`, timeZone: TIMEZONE };
+  body.end = { dateTime: `${endDate}T${endTime}:00`, timeZone: TIMEZONE };
+  return body;
+}
+
+export async function addCalendarEvent(e: NewEvent): Promise<{ id: string; link: string | null }> {
+  const body = eventBody(e);
+  const target = calendarIds().personal[0];
+  if (!target) throw new Error("no personal calendar is set up (CALENDAR_PERSONAL_IDS)");
+  const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(target)}/events`, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${await accessToken()}`, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (res.status === 403 || res.status === 401) throw new Error(NEEDS_WRITE);
+  if (!res.ok) throw new Error(`Google would not add it (${res.status})`);
+  const d = await res.json();
+  return { id: d.id, link: d.htmlLink ?? null };
 }

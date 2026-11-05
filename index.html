@@ -2531,6 +2531,64 @@ a.o-card:hover{filter:brightness(.98)}
   .section-links { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s5); }
   .section-links a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
   .section-stays { max-width: 640px; }
+  /* Calendar (5 Nov 2026) */
+  .cal-screen { max-width: 1160px; }
+  .cal-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3) var(--s5); }
+  .cal-head .more-title { margin-bottom: 0; }
+  .cal-tools { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); }
+  .cal-tools .lh-views { margin-left: 0; }
+  .cal-range { margin: var(--s4) 0 var(--s4); }
+  .cal-add { background: color-mix(in oklab, var(--accent) 7%, var(--paper)); border-radius: var(--r-md); padding: var(--s4); margin-bottom: var(--s4); }
+  .cal-add-when input[type=date], .cal-add-when input[type=time] { font: inherit; font-size: 13px; color: var(--ink); background: var(--paper); border: 1px solid var(--stone); border-radius: var(--r-sm); padding: 5px 8px; }
+  .cal-add-when [hidden] { display: none; }
+  .cal-body.is-loading { opacity: .5; transition: opacity .2s; }
+  .cal-evs { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+  .cal-ev { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 6px; padding: 5px 7px; border-radius: var(--r-sm); background: var(--paper); font-size: var(--t-sm); line-height: 1.3; }
+  .cal-ev.is-allday { background: var(--stone); }
+  .cal-ev.is-work { background: color-mix(in oklab, var(--ink) 6%, var(--paper)); color: var(--ink-2); }
+  .cal-ev__time { font-size: var(--t-xs); color: var(--ink-3); }
+  .cal-ev__title { min-width: 0; overflow-wrap: anywhere; }
+  .cal-ev__where { flex-basis: 100%; font-size: var(--t-xs); color: var(--ink-3); }
+  .cal-empty { color: var(--ink-3); font-size: var(--t-sm); padding: 4px 2px; }
+  .cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: var(--s2); }
+  .cal-day { min-width: 0; }
+  .cal-day.is-past { opacity: .6; }
+  .cal-day__head { display: flex; align-items: baseline; gap: 6px; width: 100%; border: 0; background: none; padding: var(--s1) 2px var(--s2); font: inherit; color: var(--ink-2); cursor: pointer; text-align: left; }
+  .cal-day__head:hover .cal-day__num { color: var(--accent-deep, var(--accent)); }
+  .cal-day__name { font-family: var(--mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
+  .cal-day__num { font-size: 1.15rem; color: var(--ink); }
+  .cal-day.is-today .cal-day__num { color: var(--paper); background: var(--accent); border-radius: 999px; padding: 0 7px; }
+  .cal-month__dow, .cal-month__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
+  .cal-month__dow span { font-family: var(--mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); padding: 0 6px var(--s1); }
+  .cal-cell { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-height: 96px; min-width: 0; padding: 6px; border: 0; border-radius: var(--r-sm); background: var(--paper); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+  .cal-cell:hover { box-shadow: inset 0 0 0 1px var(--stone); }
+  .cal-cell.is-out { background: transparent; color: var(--ink-3); }
+  .cal-cell.is-picked { box-shadow: inset 0 0 0 2px var(--ink); }
+  .cal-cell__num { font-size: var(--t-sm); }
+  .cal-cell.is-today .cal-cell__num { align-self: flex-start; color: var(--paper); background: var(--accent); border-radius: 999px; padding: 0 6px; }
+  .cal-cell__evs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .cal-cell__ev { font-size: 11.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 1px 4px; border-radius: 4px; background: color-mix(in oklab, var(--accent) 12%, var(--paper)); }
+  .cal-cell__ev.is-work { background: var(--stone); color: var(--ink-2); }
+  .cal-cell__more { font-size: 11px; color: var(--ink-3); padding-left: 4px; }
+  .cal-cell__dots { display: none; gap: 3px; }
+  .cal-cell__dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .cal-picked { margin-top: var(--s4); max-width: 520px; }
+  .cal-picked__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2); }
+  @media (max-width: 860px) {
+    .cal-week { grid-template-columns: 1fr; gap: var(--s3); }
+    .cal-day { display: grid; grid-template-columns: 64px minmax(0, 1fr); align-items: start; gap: var(--s3); }
+    .cal-day__head { flex-direction: column; gap: 0; padding-top: 4px; }
+    .cal-day.is-today .cal-day__num { align-self: flex-start; }
+  }
+  @media (max-width: 600px) {
+    .cal-cell { min-height: 52px; padding: 4px; align-items: center; }
+    .cal-cell__evs { display: none; }
+    .cal-cell__dots { display: flex; }
+    .cal-cell.is-today .cal-cell__num { align-self: center; }
+    .cal-month__dow span { padding: 0; text-align: center; }
+    .cal-tools { width: 100%; }
+    .cal-add-btn { margin-left: auto; }
+  }
   .today-allday__item { background: var(--stone); border-radius: var(--r-sm); padding: var(--s1) var(--s3); font-size: var(--t-sm); }
   .today-hours .o-day__block { background: var(--stone); font-size: var(--t-xs); }
   .today-hours .o-day__block.is-work { background: color-mix(in oklab, var(--stone), var(--paper) 20%); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--stone); }
@@ -10938,7 +10996,7 @@ function openFromLink() {
 const MORE_ITEMS = [
   // Shortcuts (5 Nov 2026): a new note with the microphone already on.
   ['modeTasks', 'ph-check-square', 'Tasks', 'Every task, by when it is due'],
-  ['calendar', 'ph-calendar-blank', 'Calendar', 'Week and month view, coming next'],
+  ['calendar', 'ph-calendar-blank', 'Calendar', 'The week or the month, and adding events'],
   ['meetings', 'ph-users-three', 'Meetings', 'Prep, notes and recordings, coming'],
   ['stays', 'ph-house-line', 'Stays', 'Messages to send for the gîtes'],
   ['money', 'ph-coins', 'Money', 'Coming later'],
@@ -11697,6 +11755,7 @@ const SECTION_SCREENS = {
 
 function showSectionScreen(kind) {
   const def = SECTION_SCREENS[kind];
+  if (kind === 'calendar' && !workMode) { showCalendarScreen(); return; }
   if (!def || !confirmLeavingEdit()) return;
   selectedIndex = null;
   editingId = null;
@@ -11727,6 +11786,247 @@ async function loadStaysScreen() {
   } catch (err) {
     if (box) box.innerHTML = `<p class="o-meta">Could not read the stays — ${escapeHtml(err.message)}</p>`;
   }
+}
+
+// ---------- Calendar: the week or the month, and adding events (5 Nov 2026) ----------
+// Reads calendar_range (personal calendars in full, work meetings by title
+// only, as on Today). Adding goes through add_calendar_event; the Google
+// sign-in was made for reading, so until google-reauth.py is run again Google
+// says no, and the form offers Google Calendar's own add screen, filled in.
+let calView = 'week';
+try { if (localStorage.getItem('ob.calView') === 'month') calView = 'month'; } catch (_) {}
+let calAnchor = null;      // a YYYY-MM-DD inside the shown week or month
+let calPicked = null;      // the day opened under the month grid
+const calCache = new Map();
+
+const isoAdd = (iso, n) => { const d = new Date(iso + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const isoDow = iso => (new Date(iso + 'T12:00:00Z').getUTCDay() + 6) % 7;   // Monday 0
+const mondayOf = iso => isoAdd(iso, -isoDow(iso));
+const calDayName = (iso, opts) => new Date(iso + 'T12:00:00Z').toLocaleDateString('en-GB', Object.assign({ timeZone: 'UTC' }, opts));
+
+function calSpan() {
+  if (calView === 'week') return { start: mondayOf(calAnchor), days: 7 };
+  const first = calAnchor.slice(0, 8) + '01';
+  return { start: mondayOf(first), days: 42 };
+}
+
+// Each event under every day it touches: timed ones by their start day here,
+// all-day ones on each day up to (not including) their end date.
+function calByDay(events) {
+  const by = new Map();
+  const put = (day, e) => { if (!by.has(day)) by.set(day, []); by.get(day).push(e); };
+  (events || []).forEach(e => {
+    if (e.all_day) {
+      const end = (e.end || '').slice(0, 10) || isoAdd(e.start, 1);
+      for (let d = e.start.slice(0, 10), i = 0; d < end && i < 60; d = isoAdd(d, 1), i++) put(d, e);
+    } else put(new Date(e.start).toLocaleDateString('en-CA'), e);
+  });
+  by.forEach(list => list.sort((a, b) => Number(b.all_day) - Number(a.all_day) || String(a.start).localeCompare(String(b.start))));
+  return by;
+}
+
+function showCalendarScreen() {
+  if (!confirmLeavingEdit()) return;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  if (!calAnchor) calAnchor = todayISO();
+  main.innerHTML = `
+    <div class="more-screen section-screen cal-screen" data-section="calendar">
+      <div class="cal-head">
+        <h1 class="more-title"><em>Calendar</em></h1>
+        <div class="cal-tools">
+          <span class="lh-views cal-views" role="group" aria-label="Show">
+            <button type="button" data-cal-view="week" aria-pressed="${calView === 'week'}">Week</button>
+            <button type="button" data-cal-view="month" aria-pressed="${calView === 'month'}">Month</button>
+          </span>
+          <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-cal-step="-1" aria-label="Earlier"><i class="ph-light ph-caret-left"></i></button>
+          <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-cal-step="0">Today</button>
+          <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-cal-step="1" aria-label="Later"><i class="ph-light ph-caret-right"></i></button>
+          <button type="button" class="o-btn o-btn--sm cal-add-btn"><i class="ph-light ph-plus" aria-hidden="true"></i> Add event</button>
+        </div>
+      </div>
+      <div class="o-dateline cal-range"></div>
+      <div class="cal-add" hidden></div>
+      <div class="cal-body" aria-live="polite"><p class="o-meta">Reading the calendar…</p></div>
+      <p class="o-meta cal-note"></p>
+    </div>`;
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  syncNav('calendar');
+  const screen = main.querySelector('.cal-screen');
+  screen.querySelectorAll('[data-cal-view]').forEach(b => b.addEventListener('click', () => {
+    calView = b.dataset.calView;
+    try { localStorage.setItem('ob.calView', calView); } catch (_) {}
+    screen.querySelectorAll('[data-cal-view]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+    calPicked = null;
+    drawCalendar();
+  }));
+  screen.querySelectorAll('[data-cal-step]').forEach(b => b.addEventListener('click', () => {
+    const step = +b.dataset.calStep;
+    if (!step) calAnchor = todayISO();
+    else if (calView === 'week') calAnchor = isoAdd(calAnchor, 7 * step);
+    else { const d = new Date(calAnchor.slice(0, 8) + '15T12:00:00Z'); d.setUTCMonth(d.getUTCMonth() + step); calAnchor = d.toISOString().slice(0, 10); }
+    calPicked = step ? null : todayISO();
+    drawCalendar();
+  }));
+  screen.querySelector('.cal-add-btn').addEventListener('click', () => openCalendarAdd(calPicked || (calView === 'week' && mondayOf(todayISO()) !== mondayOf(calAnchor) ? mondayOf(calAnchor) : todayISO())));
+  drawCalendar();
+}
+
+async function drawCalendar(force) {
+  const screen = main.querySelector('.cal-screen');
+  if (!screen) return;
+  const { start, days } = calSpan();
+  const last = isoAdd(start, days - 1);
+  screen.querySelector('.cal-range').textContent = calView === 'week'
+    ? `${calDayName(start, { day: 'numeric', month: 'short' })} – ${calDayName(last, { day: 'numeric', month: 'short', year: 'numeric' })}`
+    : calDayName(calAnchor, { month: 'long', year: 'numeric' });
+  const body = screen.querySelector('.cal-body');
+  const note = screen.querySelector('.cal-note');
+  const key = start + '/' + days;
+  let data = !force && calCache.get(key);
+  if (!data) {
+    body.classList.add('is-loading');
+    try {
+      const text = await callTool('calendar_range', { start, days, format: 'json' });
+      try { data = JSON.parse(text); } catch (_) { throw new Error(text.slice(0, 160)); }
+      calCache.set(key, data);
+    } catch (err) {
+      if (main.querySelector('.cal-screen') !== screen) return;
+      body.classList.remove('is-loading');
+      body.innerHTML = '';
+      note.textContent = 'Could not read the calendar — ' + err.message;
+      return;
+    }
+    if (main.querySelector('.cal-screen') !== screen || calSpan().start !== start) return;
+    body.classList.remove('is-loading');
+  }
+  const by = calByDay(data.events);
+  note.textContent = (data.problems || []).length ? 'Some of the calendar could not be read: ' + data.problems.join('; ') : '';
+  const today = todayISO();
+  const evHtml = e => `<li class="cal-ev${e.calendar === 'work' ? ' is-work' : ''}${e.all_day ? ' is-allday' : ''}">
+      ${e.all_day ? '' : `<span class="cal-ev__time o-num">${escapeHtml(clockOf(e.start))}</span>`}
+      <span class="cal-ev__title">${escapeHtml(e.title)}</span>${e.where ? `<span class="cal-ev__where">${escapeHtml(e.where)}</span>` : ''}</li>`;
+  if (calView === 'week') {
+    let html = '<div class="cal-week">';
+    for (let i = 0; i < 7; i++) {
+      const d = isoAdd(start, i), list = by.get(d) || [];
+      html += `<section class="cal-day${d === today ? ' is-today' : ''}${d < today ? ' is-past' : ''}" data-day="${d}">
+        <button type="button" class="cal-day__head" data-add-on="${d}" title="Add an event on this day">
+          <span class="cal-day__name">${escapeHtml(calDayName(d, { weekday: 'short' }))}</span>
+          <span class="cal-day__num o-num">${escapeHtml(calDayName(d, { day: 'numeric' }))}</span></button>
+        <ul class="cal-evs">${list.map(evHtml).join('') || '<li class="cal-empty">—</li>'}</ul>
+      </section>`;
+    }
+    body.innerHTML = html + '</div>';
+  } else {
+    const month = calAnchor.slice(0, 7);
+    let html = '<div class="cal-month"><div class="cal-month__dow">' +
+      ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(n => `<span>${n}</span>`).join('') + '</div><div class="cal-month__grid">';
+    for (let i = 0; i < 42; i++) {
+      const d = isoAdd(start, i), list = by.get(d) || [];
+      const out = d.slice(0, 7) !== month;
+      html += `<button type="button" class="cal-cell${out ? ' is-out' : ''}${d === today ? ' is-today' : ''}${d === calPicked ? ' is-picked' : ''}" data-pick="${d}" aria-label="${escapeAttr(calDayName(d, { weekday: 'long', day: 'numeric', month: 'long' }) + (list.length ? ', ' + list.length + ' event' + (list.length > 1 ? 's' : '') : ''))}">
+        <span class="cal-cell__num o-num">${escapeHtml(calDayName(d, { day: 'numeric' }))}</span>
+        <span class="cal-cell__evs">${list.slice(0, 3).map(e => `<span class="cal-cell__ev${e.calendar === 'work' ? ' is-work' : ''}">${escapeHtml(e.title)}</span>`).join('')}${list.length > 3 ? `<span class="cal-cell__more">+${list.length - 3}</span>` : ''}</span>
+        ${list.length ? `<span class="cal-cell__dots" aria-hidden="true">${'<i></i>'.repeat(Math.min(list.length, 4))}</span>` : ''}
+      </button>`;
+    }
+    html += '</div></div>';
+    if (calPicked && by) {
+      const list = by.get(calPicked) || [];
+      html += `<section class="cal-picked">
+        <div class="cal-picked__head"><span class="today-sub">${escapeHtml(calDayName(calPicked, { weekday: 'long', day: 'numeric', month: 'long' }))}</span>
+          <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-add-on="${calPicked}"><i class="ph-light ph-plus" aria-hidden="true"></i> Add</button></div>
+        <ul class="cal-evs">${list.map(evHtml).join('') || '<li class="cal-empty">Nothing in the calendar.</li>'}</ul></section>`;
+    }
+    body.innerHTML = html;
+    body.querySelectorAll('[data-pick]').forEach(b => b.addEventListener('click', () => {
+      calPicked = calPicked === b.dataset.pick ? null : b.dataset.pick;
+      drawCalendar();
+    }));
+  }
+  body.querySelectorAll('[data-add-on]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); openCalendarAdd(b.dataset.addOn); }));
+}
+
+// Google Calendar's own add screen, filled in: the way to add while the
+// sign-in can only read. Opened by the reader's own click, in a new tab.
+function googleCalendarAddLink(e) {
+  const compact = s => s.replace(/[-:]/g, '');
+  let dates;
+  if (e.all_day) dates = compact(e.date) + '/' + compact(isoAdd(e.date, 1));
+  else {
+    const endTime = e.end || (() => { const [h, m] = e.start.split(':').map(Number); const t = Math.min(h * 60 + m + 60, 23 * 60 + 59); return String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); })();
+    const endDate = e.end && e.end <= e.start ? isoAdd(e.date, 1) : e.date;
+    dates = compact(e.date) + 'T' + compact(e.start) + '00/' + compact(endDate) + 'T' + compact(endTime) + '00';
+  }
+  const q = new URLSearchParams({ action: 'TEMPLATE', text: e.title, dates, ctz: 'Europe/London' });
+  if (e.where) q.set('location', e.where);
+  return 'https://calendar.google.com/calendar/render?' + q.toString();
+}
+
+function openCalendarAdd(date) {
+  const box = main.querySelector('.cal-add');
+  if (!box) return;
+  box.hidden = false;
+  box.innerHTML = `
+    <form class="note-make cal-add-form">
+      <label class="note-make-label" for="calAddTitle">New event</label>
+      <input class="note-make-field" id="calAddTitle" maxlength="300" placeholder="What is it?" required>
+      <div class="note-make-row cal-add-when">
+        <input type="date" id="calAddDate" value="${escapeAttr(date || todayISO())}" aria-label="Date">
+        <label class="note-make-due"><input type="checkbox" id="calAddAllDay"> All day</label>
+        <input type="time" id="calAddStart" value="09:00" aria-label="Starts">
+        <span class="o-meta cal-add-to">to</span>
+        <input type="time" id="calAddEnd" value="10:00" aria-label="Ends">
+      </div>
+      <input class="note-make-field" id="calAddWhere" maxlength="300" placeholder="Where (optional)">
+      <div class="note-make-row">
+        <span class="note-make-status" role="status"></span>
+        <button class="confirm-cancel" type="button" data-x="cancel">Cancel</button>
+        <button class="compose-save" type="submit">Add to calendar</button>
+      </div>
+    </form>`;
+  const $ = id => box.querySelector('#' + id);
+  const status = box.querySelector('.note-make-status');
+  const allDay = $('calAddAllDay');
+  const syncTimes = () => box.querySelectorAll('#calAddStart, #calAddEnd, .cal-add-to').forEach(x => { x.hidden = allDay.checked; });
+  allDay.addEventListener('change', syncTimes);
+  $('calAddStart').addEventListener('change', () => {
+    const [h, m] = $('calAddStart').value.split(':').map(Number);
+    if (Number.isFinite(h)) { const t = Math.min(h * 60 + m + 60, 23 * 60 + 59); $('calAddEnd').value = String(Math.floor(t / 60)).padStart(2, '0') + ':' + String(t % 60).padStart(2, '0'); }
+  });
+  box.querySelector('[data-x="cancel"]').addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+  $('calAddTitle').focus();
+  box.querySelector('form').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const e = { title: $('calAddTitle').value.trim(), date: $('calAddDate').value, all_day: allDay.checked };
+    if (!e.title || !e.date) return;
+    if (!e.all_day) { e.start = $('calAddStart').value; if ($('calAddEnd').value) e.end = $('calAddEnd').value; if (!e.start) { $('calAddStart').focus(); return; } }
+    const where = $('calAddWhere').value.trim();
+    if (where) e.where = where;
+    box.querySelectorAll('button, input').forEach(x => { x.disabled = true; });
+    status.textContent = 'Adding…';
+    let res;
+    try { res = await callTool('add_calendar_event', e); } catch (err) { res = 'Could not add it: ' + err.message; }
+    if (/^Added/.test(res)) {
+      box.hidden = true; box.innerHTML = '';
+      calCache.clear();
+      calAnchor = e.date;
+      if (calView === 'month') calPicked = e.date;
+      drawCalendar(true);
+      return;
+    }
+    box.querySelectorAll('button, input').forEach(x => { x.disabled = false; });
+    if (/needs-calendar-write/.test(res)) {
+      status.innerHTML = 'Open Brain can only read the calendar so far. <a href="' + escapeAttr(googleCalendarAddLink(e)) + '" target="_blank" rel="noopener">Finish in Google Calendar ↗</a> (filled in; press Save there).';
+      const a = status.querySelector('a');
+      a.addEventListener('click', () => { calCache.clear(); setTimeout(() => { box.hidden = true; box.innerHTML = ''; drawCalendar(true); }, 1500); });
+    } else {
+      status.textContent = res.replace(/^Could not add it:\s*/, 'Could not add it — ');
+    }
+  });
 }
 
 // ---------- the Morning plan (5 Nov 2026, Otter build order step 4) ----------

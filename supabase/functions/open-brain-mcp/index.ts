@@ -6,7 +6,7 @@ import { Hono, type Context } from "hono";
 import { z } from "zod";
 import { createClient } from "@supabase/supabase-js";
 import { chunkText } from "./chunks.ts";
-import { calendarDay, londonToday } from "./calendar.ts";
+import { addCalendarEvent, calendarDay, calendarRange, londonToday, NEEDS_WRITE } from "./calendar.ts";
 import { tickStayTask, todayExtras } from "./briefing.ts";
 import { checkPlan, isDay, type PlanBlockIn } from "./plan.ts";
 import { fallbackSuggestion, FILED_AS, type InboxRow, normaliseSuggestion, SORTER_MODEL, sorterPrompt, type Suggestion } from "./inbox.ts";
@@ -2711,6 +2711,59 @@ function buildServer(): McpServer {
         return { content: [{ type: "text" as const, text }] };
       } catch (err) {
         return { content: [{ type: "text" as const, text: `Could not read the calendar: ${(err as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  // --- The Calendar page: several days, and adding an event (5 Nov 2026) ---
+  server.registerTool(
+    "calendar_range",
+    {
+      title: "Calendar Range",
+      description: "Stewart's calendar for several days (up to 42) from a start date, shaped like calendar_day: personal events in full, work meetings by title only. Used by the catalog's Calendar page.",
+      annotations: { readOnlyHint: true, openWorldHint: true },
+      inputSchema: {
+        start: z.string().describe("YYYY-MM-DD, the first day"),
+        days: z.number().describe("How many days, 1 to 42"),
+        format: z.enum(["text", "json"]).optional().describe("\"text\" (default) or \"json\", used by the Open Brain Catalog GUI."),
+      },
+    },
+    async ({ start, days, format }) => {
+      const first = isDay(start) ? start : londonToday();
+      try {
+        const out = await calendarRange(first, days);
+        if (format === "json") return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
+        const time = (iso: string) => new Date(iso).toLocaleString("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+        const lines = out.events.map((e) => e.all_day ? `- ${e.start} all day: ${e.title}` : `- ${time(e.start)} ${e.title}${e.where ? ` (${e.where})` : ""}`);
+        return { content: [{ type: "text" as const, text: `${out.days} days from ${first}:\n${lines.join("\n") || "nothing in the calendar."}${out.problems.length ? "\n\nProblems: " + out.problems.join("; ") : ""}` }] };
+      } catch (err) {
+        return { content: [{ type: "text" as const, text: `Could not read the calendar: ${(err as Error).message}` }], isError: true };
+      }
+    }
+  );
+
+  server.registerTool(
+    "add_calendar_event",
+    {
+      title: "Add Calendar Event",
+      description: "Add an event to Stewart's personal Google calendar. If the Google sign-in has no write access yet, says so (needs-calendar-write) and adds nothing.",
+      annotations: { readOnlyHint: false, openWorldHint: true },
+      inputSchema: {
+        title: z.string(),
+        date: z.string().describe("YYYY-MM-DD"),
+        all_day: z.boolean().optional(),
+        start: z.string().optional().describe("HH:MM, London time; required unless all_day"),
+        end: z.string().optional().describe("HH:MM; defaults to an hour after start"),
+        where: z.string().optional(),
+      },
+    },
+    async (args) => {
+      try {
+        const out = await addCalendarEvent({ ...args, all_day: !!args.all_day });
+        return { content: [{ type: "text" as const, text: `Added to the calendar | id: ${out.id}${out.link ? ` | ${out.link}` : ""}` }] };
+      } catch (err) {
+        const msg = (err as Error).message;
+        return { content: [{ type: "text" as const, text: msg === NEEDS_WRITE ? `Could not add it: ${NEEDS_WRITE} (the Google sign-in can only read calendars; run google-reauth.py to allow adding)` : `Could not add it: ${msg}` }], isError: true };
       }
     }
   );
