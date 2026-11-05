@@ -619,6 +619,30 @@ a.o-card:hover{filter:brightness(.98)}
             font-family: var(--mono); font-size: 10.5px;  }
   .lh-chip:focus-visible, .lh-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  /* The notes line and the folded filters (5 Nov 2026). */
+  .drawer:not(.filters-open) .facet-bar, .drawer:not(.filters-open) .facet-panel { display: none; }
+  .notes-head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2); margin: 0 0 var(--s2); }
+  .notes-head[hidden] { display: none; }
+  .nh-count { font-size: var(--t-xs); color: var(--ink-2); margin-right: auto; white-space: nowrap; }
+  .nh-filter { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 var(--s3);
+    border: 0; border-radius: var(--r-md); background: none; color: var(--ink-2); font-family: var(--type); font-size: var(--t-sm); cursor: pointer; }
+  .nh-filter i { font-size: 18px; }
+  .nh-filter:hover { background: var(--stone); color: var(--ink); }
+  .nh-filter[aria-expanded="true"] { background: var(--stone); color: var(--ink); }
+  .nh-filter[aria-expanded="true"] i { color: var(--accent); }
+  .nh-n { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--on-ink);
+    font-size: 11px; line-height: 18px; text-align: center; }
+  .nh-views { display: inline-flex; gap: 2px; padding: 3px; background: var(--stone); border-radius: var(--r-md); }
+  .nh-views button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 var(--s3); border: 0;
+    border-radius: var(--r-sm); background: none; color: var(--ink-2); font-family: var(--type); font-size: var(--t-sm); cursor: pointer; }
+  .nh-views button i { font-size: 16px; }
+  .nh-views button:hover { color: var(--ink); }
+  .nh-views button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
+  .nh-views button[aria-pressed="true"] i { color: var(--accent); }
+  .nh-chips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
+  .nh-filter:focus-visible, .nh-views button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .drawer.filters-open .facet-bar { margin-top: var(--s2); }
+
   .card-row {
     display: flex;
     width: 100%;
@@ -2495,7 +2519,34 @@ a.o-card:hover{filter:brightness(.98)}
   .ob-tab-icon { position: relative; display: inline-flex; }
   .ob-tab-n { position: absolute; top: -4px; left: 16px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
     background: var(--accent); color: var(--on-ink); font-size: 10px; line-height: 16px; text-align: center; }
+  @media (min-width: 761px) {
+    .app.notes-cards { grid-template-columns: 216px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
+    .app.notes-cards.ref-open { grid-template-columns: 216px minmax(0, 1fr) 320px; }
+    .app.notes-cards > .ob-rail { grid-column: 1; grid-row: 1 / span 2; }
+    .app.notes-cards > .drawer { grid-column: 2; grid-row: 1; }
+    .app.notes-cards > .main { grid-column: 2; grid-row: 2; }
+    .app.notes-cards > .ref-panel { grid-column: 3; grid-row: 1 / span 2; }
+    .app.notes-cards .list-scroll { display: none; }
+    .app.notes-cards .drawer-header { padding: var(--s5) 28px var(--s2); }
+    .app.notes-cards .main { --main-pad-top: var(--s3); }
+    .app.notes-cards .results--cards .results-head { display: none; }
+    /* In List the list is beside the note, so no way back is needed. */
+    .app:not(.notes-cards) .list-return { display: none; }
+    /* The Inbox, Today and the rest have the page to themselves. */
+    .app.notes-cards.on-screen > .drawer { display: none; }
+    .app.notes-cards.on-screen > .main { grid-row: 1 / span 2; --main-pad-top: 40px; }
+  }
+  @media (max-width: 760px) {
+    .notes-head { display: none !important; }
+  }
+  /* Unfolded, the facets are a short row of words, not a grid of slabs. */
+  .drawer .facet-bar .facet-btn { flex: 0 0 auto; min-height: 36px; padding: 0 var(--s3); justify-content: flex-start;
+    font-family: var(--type); font-size: var(--t-sm); }
+  .drawer .facet-bar .facet-btn .facet-n, .drawer .facet-bar .shelf-state { font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); }
+  .drawer .facet-bar .shelf-toggle { flex: 0 0 auto; gap: var(--s2); }
   @media (min-width: 761px) and (max-width: 1180px) {
+    .app.notes-cards { grid-template-columns: 64px minmax(0, 1fr); }
+    .app.notes-cards.ref-open { grid-template-columns: 64px minmax(0, 1fr) 300px; }
     .app { grid-template-columns: 64px 340px minmax(0, 1fr); }
     .app.ref-open { grid-template-columns: 64px 340px minmax(0, 1fr) 300px; }
     .ob-rail { padding-left: var(--s2); padding-right: var(--s2); }
@@ -3014,7 +3065,12 @@ a.o-card:hover{filter:brightness(.98)}
       <div class="chip-group-label" id="chipRowLabel" hidden>Kind of note</div>
       <div class="chip-row" id="chipRow"></div>
 
-      <div class="facet-bar">
+      <!-- One line for the notes: the count, Filter (the facets below fold away
+           behind it), each filter in force as a chip, and List or Cards
+           (5 Nov 2026: the facets were a block of buttons always on screen). -->
+      <div class="notes-head" id="notesHead"></div>
+
+      <div class="facet-bar" id="facetBar">
         <!-- The kind-of-note filter lives here now, behind its own button,
              rather than as a row of chips always on screen (5 Nov 2026). -->
         <button class="facet-btn" id="facetBtnKinds" type="button" aria-expanded="false">
@@ -4060,6 +4116,7 @@ function setCardView(on) {
   cardView = on;
   cardLimit = 60;
   try { localStorage.setItem('ob.cardView', on ? '1' : '0'); } catch (_) {}
+  syncNotesLayout();
   if (!isPhone() && !mainShowsList()) showEmptyState();
   else renderList(displayed, searchMode);
 }
@@ -4141,7 +4198,15 @@ function renderMainList(items, homeF) {
   // 5 Nov 2026: the graphics came off the front screen again (Stewart: they
   // cluttered it and took the room the notes need). The untouched front
   // screen is the notes as cards; the graph and the charts live in Statistics.
-  if (cardView || homeF) { main.innerHTML = ''; main.appendChild(noteCardGrid(items)); return; }
+  //
+  // Later on 5 Nov: the notes showed twice (the drawer's list and these
+  // cards). Now Cards or List decides: Cards fill the page with no list
+  // beside them; List keeps the drawer and leaves this pane for the note.
+  if (cardView) { main.innerHTML = ''; main.appendChild(noteCardGrid(items)); return; }
+  if (!isPhone()) {
+    main.innerHTML = `<div class="empty-state"><div class="glyph">§</div><p>${items.length ? 'Pick a note from the list to read it.' : 'No notes match. Take a filter off to see more.'}</p></div>`;
+    return;
+  }
   const shown = items.slice(0, RESULTS_SHOWN);
   const filters = describeFilters();
   main.innerHTML = `
@@ -4204,11 +4269,10 @@ function activeTopicChips() {
   return out;
 }
 
-function listHeadHtml(n) {
-  listHeadActs = [];
+function filterChipList(acts) {
   const chips = [];
   const chip = (label, undo) => chips.push(
-    '<button type="button" class="lh-chip" data-lh="' + (listHeadActs.push(undo) - 1) + '"' +
+    '<button type="button" class="lh-chip" data-lh="' + (acts.push(undo) - 1) + '"' +
     ' aria-label="Stop filtering by ' + escapeAttr(label) + '">' + escapeHtml(label) +
     '<span aria-hidden="true"> ×</span></button>');
   const drop = (set, norms) => () => { norms.forEach(x => set.delete(x)); applyFilters(); };
@@ -4219,13 +4283,23 @@ function listHeadHtml(n) {
   if (activePeople.size) named(activePeople, listCounts('people'));
   if (activeAuthors.size) named(activeAuthors, valueCounts('author'));
   if (activeSources.size) named(activeSources, valueCounts('source'));
+  // System notes replace the list rather than narrow it, so they show as a
+  // chip too: with the filters folded away there was no other sign.
+  if (document.getElementById('shelfToggle').getAttribute('aria-pressed') === 'true')
+    chip('System notes', () => document.getElementById('shelfToggle').click());
+  return chips;
+}
+
+function listHeadHtml(n) {
+  listHeadActs = [];
+  const chips = filterChipList(listHeadActs);
   return '<div class="list-head" id="listHead">' +
     '<span class="lh-count">' + n + ' note' + (n === 1 ? '' : 's') + '</span>' + chips.join('') +
     '<span class="lh-views" role="group" aria-label="Show notes as">' +
     '<button type="button" data-lh-view="list" aria-pressed="' + !cardView + '">List</button>' +
     '<button type="button" data-lh-view="cards" aria-pressed="' + cardView + '">Cards</button></span>' +
-    '<button type="button" class="lh-top" data-lh-top>' + 'Filters' +   // search has its own magnifier since 5 Nov 2026
-    ' <span aria-hidden="true">↑</span></button></div>';
+    // Opens the folded filters at the top of the drawer (5 Nov 2026).
+    '<button type="button" class="lh-top" data-lh-top aria-controls="facetBar">Filter</button></div>';
 }
 
 listScroll.addEventListener('click', (e) => {
@@ -4233,8 +4307,62 @@ listScroll.addEventListener('click', (e) => {
   if (c) { const undo = listHeadActs[+c.dataset.lh]; if (undo) undo(); return; }
   const v = e.target.closest('[data-lh-view]');
   if (v) { setCardView(v.dataset.lhView === 'cards'); return; }
-  if (e.target.closest('[data-lh-top]')) listScroll.parentElement.scrollTo({ top: 0, behavior: 'smooth' });
+  if (e.target.closest('[data-lh-top]')) {
+    const open = !drawerEl.classList.contains('filters-open');
+    setFiltersOpen(open);
+    if (open) listScroll.parentElement.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 });
+
+// ---------- the notes line (5 Nov 2026) ----------
+// Notes show once: as a list in the drawer with the note beside it, or as
+// cards across the page (the drawer then becomes a strip above them). The
+// facets fold away behind Filter; what is in force shows as chips.
+let notesHeadActs = [];
+const notesHeadBox = document.getElementById('notesHead');
+const drawerEl = notesHeadBox.closest('.drawer');
+const cardsLayout = () => viewMode === 'notes' && cardView && !isPhone();
+
+function setFiltersOpen(open) {
+  drawerEl.classList.toggle('filters-open', open);
+  const b = notesHeadBox.querySelector('[data-nh-filter]');
+  if (b) b.setAttribute('aria-expanded', String(open));
+  if (!open) { const panel = document.getElementById('facetPanel'); if (panel && !panel.hidden) document.querySelector('.facet-btn[aria-expanded="true"]')?.click(); }
+}
+
+function renderNotesHead(n) {
+  notesHeadActs = [];
+  const chips = filterChipList(notesHeadActs);
+  const inForce = chips.length - (searchMode && lastSearchQuery ? 1 : 0);
+  const open = drawerEl.classList.contains('filters-open');
+  notesHeadBox.innerHTML =
+    '<span class="nh-count o-num">' + n + ' note' + (n === 1 ? '' : 's') + '</span>' +
+    '<button type="button" class="nh-filter" data-nh-filter aria-expanded="' + open + '" aria-controls="facetBar">' +
+      '<i class="ph-light ph-funnel-simple" aria-hidden="true"></i><span>Filter</span>' +
+      (inForce > 0 ? '<span class="nh-n o-num">' + inForce + '</span>' : '') + '</button>' +
+    '<span class="nh-views" role="group" aria-label="Show notes as">' +
+      '<button type="button" data-lh-view="list" aria-pressed="' + !cardView + '"><i class="ph-light ph-list" aria-hidden="true"></i>List</button>' +
+      '<button type="button" data-lh-view="cards" aria-pressed="' + cardView + '"><i class="ph-light ph-squares-four" aria-hidden="true"></i>Cards</button></span>' +
+    (chips.length ? '<div class="nh-chips">' + chips.join('') + '</div>' : '');
+}
+
+notesHeadBox.addEventListener('click', (e) => {
+  const c = e.target.closest('[data-lh]');
+  if (c) { const undo = notesHeadActs[+c.dataset.lh]; if (undo) undo(); return; }
+  const v = e.target.closest('[data-lh-view]');
+  if (v) { setCardView(v.dataset.lhView === 'cards'); return; }
+  if (e.target.closest('[data-nh-filter]')) setFiltersOpen(!drawerEl.classList.contains('filters-open'));
+});
+
+function syncNotesLayout() {
+  let over = false;
+  try { over = !!navOverride; } catch (_) { /* still starting up */ }
+  app.classList.toggle('notes-cards', cardsLayout());
+  app.classList.toggle('on-screen', over);
+  notesHeadBox.hidden = viewMode !== 'notes';
+  if (viewMode !== 'notes' && drawerEl.classList.contains('filters-open')) setFiltersOpen(false);
+}
+window.matchMedia('(max-width: 760px)').addEventListener('change', () => { syncNotesLayout(); renderList(displayed, searchMode); });
 
 // Back from a note on a phone lands where you were in the list. The drawer is
 // hidden while the note shows, and a hidden box forgets how far it had
@@ -4300,6 +4428,8 @@ function renderList(items, isSearch) {
   // (4 Nov 2026: Stewart wanted the notes straight away on a phone). The graph
   // stays on the wide front screen; a phone reaches it from the stats button.
   listScroll.insertAdjacentHTML('beforeend', listHeadHtml(items.length));
+  renderNotesHead(items.length);
+  syncNotesLayout();
   // On a phone the cards take the list's place; on a wide screen they fill
   // the main pane and the drawer keeps its list.
   if (cardView && isPhone() && items.length) { listScroll.appendChild(noteCardGrid(items)); return; }
@@ -4839,7 +4969,7 @@ function selectThought(t, mark) {
   const toList = document.createElement('button');
   toList.type = 'button';
   toList.className = 'list-return';
-  toList.textContent = '← Back to the list (' + displayed.length + ')';
+  toList.textContent = (cardsLayout() ? '← All cards (' : '← Back to the list (') + displayed.length + ')';
   toList.addEventListener('click', showEmptyState);
   main.prepend(toList);
 
@@ -5841,7 +5971,7 @@ function showEmptyState() {
       <div class="glyph">§</div>
       <p>${viewMode === 'journal'
         ? 'Pick a day from the drawer, or start today’s entry.'
-        : 'Select a card from the drawer to read it.'}</p>
+        : 'Pick a note from the list to read it.'}</p>
     </div>
   `;
   renderList(displayed, searchMode);
@@ -11445,6 +11575,7 @@ function syncNav(override) {
     if (b.dataset.view === current || (b.dataset.also || '').split(' ').includes(current)) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
+  syncNotesLayout();
   const pressed = document.getElementById('workBtn').getAttribute('aria-pressed') === 'true';
   document.querySelectorAll('#rail [data-mirror="workBtn"]').forEach(b => b.classList.toggle('is-on', pressed));
 }
