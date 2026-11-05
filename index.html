@@ -2847,6 +2847,37 @@ a.o-card:hover{filter:brightness(.98)}
   /* Dark: the earthy hues are tuned for greige; lift them a little on charcoal. */
   @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) :is(.card-row-type, .index-card-type, .chip .dot) { filter: brightness(1.45) saturate(1.1); } }
   :root[data-theme="dark"] :is(.card-row-type, .index-card-type, .chip .dot) { filter: brightness(1.45) saturate(1.1); }
+
+  /* A statistics tile grows into full screen and shrinks back, instead of
+     jumping (5 Nov 2026). openBoardTile/closeBoardTile name the tile only for
+     the length of the move; the snapshots are cropped from the top left, not
+     stretched, so the chart reveals itself as the frame opens. */
+  ::view-transition-group(board-tile) { animation-duration: .42s; animation-timing-function: cubic-bezier(.22,.8,.24,1);
+    overflow: clip; border-radius: var(--r-md); }
+  ::view-transition-old(board-tile), ::view-transition-new(board-tile) {
+    width: auto; height: auto; object-fit: none; object-position: left top; animation-duration: .42s; }
+  ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .3s; }
+  @media (prefers-reduced-motion: reduce) {
+    ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+  }
+
+  /* Installed on the Mac: the manifest asks Chrome for the window-controls
+     overlay, which drops its title bar (Uninstall, passwords key, extensions).
+     The page keeps a plain strip clear for the traffic lights, draggable like
+     a title bar. Outside that mode the variable is 0 and nothing changes. */
+  @media (display-mode: window-controls-overlay) {
+    :root { --tb: env(titlebar-area-height, 0px); }
+    body { padding-top: var(--tb); }
+    body::before { content: ""; position: fixed; top: 0; left: 0; right: 0; height: var(--tb); z-index: 1000;
+      background: var(--ground); -webkit-app-region: drag; app-region: drag; }
+    .o-app { min-height: calc(100vh - var(--tb)); }
+    .app { height: calc(100vh - var(--tb)); }
+    html.work-mode .app { height: calc(100vh - var(--tb) - 36px); }
+    @media (max-width: 760px) {
+      .app { height: calc(100dvh - var(--tb) - var(--tabbar-h, 72px)); }
+      html.work-mode .app { height: calc(100dvh - var(--tb) - var(--tabbar-h, 72px) - 36px); }
+    }
+  }
 </style>
 </head>
 <body>
@@ -9389,21 +9420,37 @@ function wireBoardTile(tile) {
     }
   });
 }
-function openBoardTile(tile) {
-  closeBoardTile();
-  hideTip();
-  tile.classList.add('is-full');
-  tile.removeAttribute('role');
-  tile.removeAttribute('aria-label');
-  const close = tile.querySelector('.board-close');
-  if (close) close.focus({ preventScroll: true });
+// Grow or shrink a tile smoothly where the browser can (CSS above); elsewhere,
+// or with reduced motion asked for, it changes at once as before.
+function morphBoardTile(tile, change) {
+  const calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // A hidden window draws no frames, so a transition there would wait forever.
+  if (!document.startViewTransition || calm || !tile || document.visibilityState !== 'visible') { change(); return; }
+  tile.style.viewTransitionName = 'board-tile';
+  const t = document.startViewTransition(change);
+  t.finished.finally(() => { tile.style.viewTransitionName = ''; });
 }
-function closeBoardTile() {
+function openBoardTile(tile) {
+  const already = statsBody.querySelector('.board-tile.is-full');
+  if (already && already !== tile) closeBoardTile(true);
+  hideTip();
+  morphBoardTile(tile, () => {
+    tile.classList.add('is-full');
+    tile.removeAttribute('role');
+    tile.removeAttribute('aria-label');
+    const close = tile.querySelector('.board-close');
+    if (close) close.focus({ preventScroll: true });
+  });
+}
+function closeBoardTile(instant) {
   const open = statsBody.querySelector('.board-tile.is-full');
   if (!open) return false;
-  open.classList.remove('is-full');
-  open.setAttribute('role', 'button');
-  open.focus({ preventScroll: true });
+  const change = () => {
+    open.classList.remove('is-full');
+    open.setAttribute('role', 'button');
+    open.focus({ preventScroll: true });
+  };
+  if (instant === true) change(); else morphBoardTile(open, change);
   return true;
 }
 
