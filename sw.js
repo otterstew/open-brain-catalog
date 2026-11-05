@@ -5,7 +5,7 @@
 // carrying the access key, and stale notes would be worse than none.
 // Bump SHELL_VERSION whenever the shell files change: the browser only re-runs
 // install when this script's bytes differ, and the cache name goes with it.
-const SHELL_VERSION = 146;
+const SHELL_VERSION = 147;
 const CACHE = 'open-brain-shell-v' + SHELL_VERSION;
 const SHELL = [
   './',

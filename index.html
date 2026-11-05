@@ -2439,6 +2439,32 @@ a.o-card:hover{filter:brightness(.98)}
   .inbox-status:empty { display: none; }
   .inbox-item.is-busy { opacity: .7; }
   .inbox-empty { padding: var(--s5) 0; max-width: 46ch; }
+  /* Today (5 Nov 2026): tasks beside the hours; on the phone, two tabs. */
+  .today-screen { width: 100%; max-width: 1040px; padding: var(--s4) 0 var(--s8); container-type: inline-size; }
+  /* Too narrow for two columns (a phone, or a small window beside the drawer): tabs instead. */
+  @container (max-width: 700px) {
+    .today-screen .today-tabs { display: flex; }
+    .today-screen .today-grid { display: block; }
+    .today-screen .today-grid[data-show="tasks"] .today-hours, .today-screen .today-grid[data-show="hours"] .today-tasks { display: none; }
+    .today-screen .today-h { display: none; }
+  }
+  .today-screen .o-dateline { margin-bottom: var(--s2); }
+  .today-tabs { display: none; margin-bottom: var(--s5); }
+  .today-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: var(--s7); align-items: start; }
+  .today-h { font-family: var(--serif); font-weight: 500; font-size: 1.375rem; margin: 0 0 var(--s3); }
+  .today-add { background: var(--paper); margin-bottom: var(--s3); }
+  .today-add input { min-height: 36px; }
+  .today-tasks .o-tasks { margin-bottom: var(--s3); }
+  .today-tasks .o-task.is-done { opacity: .6; transition: opacity .6s; }
+  .today-empty { padding: var(--s3) 0; list-style: none; }
+  .today-allday { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s3); }
+  .today-allday:empty { display: none; }
+  .today-allday__item { background: var(--stone); border-radius: var(--r-sm); padding: var(--s1) var(--s3); font-size: var(--t-sm); }
+  .today-hours .o-day__block { background: var(--stone); font-size: var(--t-xs); }
+  .today-hours .o-day__block.is-work { background: color-mix(in oklab, var(--stone), var(--paper) 20%); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--stone); }
+  .today-hours .o-day__block small { margin-top: 1px; }
+  .today-cal-note:empty { display: none; }
+  .today-cal-note { margin-top: var(--s3); }
   .ob-tab-icon { position: relative; display: inline-flex; }
   .ob-tab-n { position: absolute; top: -4px; left: 16px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
     background: var(--accent); color: var(--on-ink); font-size: 10px; line-height: 16px; text-align: center; }
@@ -2462,6 +2488,11 @@ a.o-card:hover{filter:brightness(.98)}
     html:has(.wv) .ob-tabbar, html.kb-open .ob-tabbar { display: none; }
     .more-screen { padding: var(--s5) var(--s4) var(--s8); }
     .inbox-screen { padding: var(--s5) var(--s4) var(--s8); }
+    .today-screen { padding: var(--s5) var(--s4) var(--s8); }
+    .today-tabs { display: flex; }
+    .today-grid { display: block; }
+    .today-grid[data-show="tasks"] .today-hours, .today-grid[data-show="hours"] .today-tasks { display: none; }
+    .today-h { display: none; }
   }
 
   /* ---------- 5 Nov 2026: a quieter front screen ----------
@@ -2864,6 +2895,7 @@ a.o-card:hover{filter:brightness(.98)}
   <nav class="o-rail ob-rail" id="rail" aria-label="Sections">
     <span class="o-wordmark ob-rail__mark">Stew's 2nd <em>Brain</em></span>
     <button type="button" class="o-rail__item ob-search-go" data-search-open title="Search by meaning"><i class="ph-light ph-magnifying-glass"></i><span class="ob-rail__label">Search</span></button>
+    <button type="button" class="o-rail__item" data-go="today" data-view="today" title="Today: tasks beside the hours"><i class="ph-light ph-sun"></i><span class="ob-rail__label">Today</span></button>
     <button type="button" class="o-rail__item" data-go="inbox" data-view="inbox" title="Inbox: put anything here, sort it later"><i class="ph-light ph-tray"></i><span class="ob-rail__label">Inbox</span><span class="o-num" id="railInboxN"></span></button>
     <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" title="Notes"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
     <button type="button" class="o-rail__item" data-go="modeJournal" data-view="journal" title="Journal"><i class="ph-light ph-book-open-text"></i><span class="ob-rail__label">Journal</span></button>
@@ -3009,7 +3041,7 @@ a.o-card:hover{filter:brightness(.98)}
   <button type="button" data-go="modeNotes" data-view="notes"><i class="ph-light ph-notebook"></i>Notes</button>
   <button type="button" data-go="modeJournal" data-view="journal"><i class="ph-light ph-book-open-text"></i>Journal</button>
   <button type="button" data-go="inbox" data-view="inbox"><span class="ob-tab-icon"><i class="ph-light ph-tray"></i><span class="ob-tab-n o-num" id="tabInboxN" hidden></span></span>Inbox</button>
-  <button type="button" data-go="modeTasks" data-view="tasks"><i class="ph-light ph-check-square"></i>Tasks</button>
+  <button type="button" data-go="today" data-view="today" data-also="tasks"><i class="ph-light ph-sun"></i>Today</button>
   <button type="button" data-go="more" data-view="more"><i class="ph-light ph-dots-three"></i>More</button>
 </nav>
 
@@ -10537,6 +10569,7 @@ function openFromLink() {
 // rest on a phone, so the bar keeps to five.
 const MORE_ITEMS = [
   // Shortcuts (5 Nov 2026): a new note with the microphone already on.
+  ['modeTasks', 'ph-check-square', 'Tasks', 'Every task, by when it is due'],
   ['newBtn', 'ph-plus-circle', 'New note', 'A blank note to write in'],
   ['speakNote', 'ph-microphone', 'Speak a note', 'Talk and it types a new note'],
   ['recordNote', 'ph-waveform', 'Record a sound', 'Keep a sound in a new note'],
@@ -10558,7 +10591,7 @@ function showMoreScreen() {
     if (id === 'speakNote') return !!micButtonHtml();
     if (id === 'recordNote') return CAN_RECORD;
     const el = document.getElementById(id);
-    return el && !(el.hidden && id !== 'importBtn' && id !== 'statsBtn' && id !== 'newBtn');
+    return el && !(el.hidden && id !== 'importBtn' && id !== 'statsBtn' && id !== 'newBtn' && id !== 'modeTasks');
   });
   main.innerHTML = `
     <div class="more-screen">
@@ -10572,6 +10605,7 @@ function showMoreScreen() {
     </div>`;
   main.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.go;
+    if (id === 'modeTasks') { openAllTasks(); return; }
     if (id === 'speakNote' || id === 'recordNote') { startNoteWithMic(id === 'speakNote' ? '.mic-add' : '.rec-add'); return; }
     // Statistics and the colours button work from the notes view.
     if ((id === 'statsBtn' || id === 'newBtn') && viewMode !== 'notes') setViewMode('notes');
@@ -10609,7 +10643,7 @@ const INBOX_KIND = {
 };
 
 function setInboxCount() {
-  const n = inboxItems.length;
+  const n = workMode ? 0 : inboxItems.length;   // personal, so not shown in work mode
   const rail = document.getElementById('railInboxN');
   if (rail) rail.textContent = n ? String(n) : '';
   const tab = document.getElementById('tabInboxN');
@@ -10626,7 +10660,7 @@ async function loadInbox() {
 }
 
 function refreshInboxCount() {
-  if (!mcpAccessKey) return;
+  if (!mcpAccessKey || workMode) return;
   loadInbox().then(() => { if (main.querySelector('.inbox-screen')) renderInboxList(); }).catch(() => {});
 }
 
@@ -10704,6 +10738,8 @@ function showInboxScreen() {
   main.innerHTML = `
     <div class="inbox-screen">
       <h1 class="more-title"><em>Inbox</em></h1>
+      ${workMode ? personalHiddenHtml('The Inbox') : ''}
+      <div${workMode ? ' hidden' : ''}>
       <p class="o-lede inbox-lede">Put anything here. The Sorter suggests where each one belongs, and nothing is filed until you choose.</p>
       <div class="o-capture inbox-capture">
         <textarea id="inboxInput" rows="1" placeholder="Type or speak anything" aria-label="Add to the inbox"></textarea>
@@ -10713,6 +10749,7 @@ function showInboxScreen() {
       </div>
       <p class="inbox-add-status o-meta" aria-live="polite"></p>
       <div class="inbox-list"></div>
+      </div>
     </div>`;
   const input = document.getElementById('inboxInput');
   const grow = () => {
@@ -10726,10 +10763,11 @@ function showInboxScreen() {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); addToInbox(); }
   });
   main.querySelector('.inbox-send').addEventListener('click', addToInbox);
-  renderInboxList();
   main.scrollTop = 0;
   app.classList.add('detail-open');
   syncNav('inbox');
+  if (workMode) return;
+  renderInboxList();
   loadInbox().then(renderInboxList).catch(err => {
     const box = main.querySelector('.inbox-list');
     if (box) box.innerHTML = '<p class="o-meta inbox-error">Could not open the inbox — ' + escapeHtml(err.message) + '</p>';
@@ -10844,16 +10882,263 @@ async function settleInbox(card, filedAs, filedId) {
     ? '<i class="ph-light ph-trash" aria-hidden="true"></i><span>Taken out of the inbox.</span>'
     : `<i class="ph-light ${INBOX_KIND[filedAs].icon}" aria-hidden="true"></i><span>Filed as ${INBOX_KIND[filedAs].word === 'today’s journal' ? 'part of today’s journal' : INBOX_KIND[filedAs].word}.</span>`;
   status.textContent = '';
-  if (filedAs === 'task' && typeof loadTasks === 'function') loadTasks(true);
+  // Only redraw the task list when it is the list on screen; otherwise it
+  // would replace the notes in the drawer.
+  if (filedAs === 'task' && viewMode === 'tasks') loadTasks(true);
   setTimeout(() => { if (card.isConnected) { card.remove(); if (!inboxItems.length) renderInboxList(); } }, 1600);
 }
 
-let navOverride = null;   // 'more' or 'inbox' while that screen shows
+// ---------- Today (5 Nov 2026, Otter build order step 3) ----------
+// Tasks beside the hours. Today's and overdue tasks on the left; the day's
+// calendar on the right as an hour column, with a line at now. On the phone
+// the two are tabs. Calendar events are plain stone; the work calendar comes
+// back from the server as "Work" blocks only, with no titles (Stewart's
+// choice, so a shared screen is always safe). Planned blocks (tinted) come
+// with the Morning plan.
+let todayTimer = null;
+
+function personalHiddenHtml(what) {
+  return `<p class="o-notice">${what} is personal, so it is hidden while work mode is on. Turn work mode off in More to see it.</p>`;
+}
+
+function showTodayScreen() {
+  if (!confirmLeavingEdit()) return;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  const now = new Date();
+  const dateline = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+  main.innerHTML = `
+    <div class="today-screen">
+      <div class="o-dateline">${escapeHtml(dateline)} · Jersey</div>
+      <h1 class="more-title"><em>Today</em></h1>
+      ${workMode ? personalHiddenHtml('Today') : `
+      <div class="o-tabs today-tabs" role="tablist" aria-label="Today">
+        <button type="button" class="o-tab" role="tab" aria-selected="true" data-today-tab="tasks">To do</button>
+        <button type="button" class="o-tab" role="tab" aria-selected="false" data-today-tab="hours">Hours</button>
+      </div>
+      <div class="today-grid" data-show="tasks">
+        <section class="today-tasks" aria-label="To do today">
+          <h2 class="today-h">To do</h2>
+          <div class="o-capture today-add">
+            <input id="todayAdd" type="text" placeholder="Add a task for today" aria-label="Add a task for today" enterkeyhint="done">
+          </div>
+          <ul class="o-tasks" id="todayTasks"><li class="o-meta">Looking at what needs doing…</li></ul>
+          <button type="button" class="o-btn o-btn--quiet o-btn--sm today-all">All tasks</button>
+        </section>
+        <section class="today-hours" aria-label="The day's hours">
+          <h2 class="today-h">Hours</h2>
+          <div class="today-allday"></div>
+          <div class="o-day" id="todayDay"></div>
+          <p class="o-meta today-cal-note" aria-live="polite">Reading the calendar…</p>
+        </section>
+      </div>`}
+    </div>`;
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  syncNav('today');
+  if (workMode) return;
+
+  main.querySelectorAll('[data-today-tab]').forEach(b => b.addEventListener('click', () => {
+    main.querySelectorAll('[data-today-tab]').forEach(x => x.setAttribute('aria-selected', String(x === b)));
+    main.querySelector('.today-grid').dataset.show = b.dataset.todayTab;
+    if (b.dataset.todayTab === 'hours') scrollTodayToNow();
+  }));
+  main.querySelector('.today-all').addEventListener('click', openAllTasks);
+  const add = document.getElementById('todayAdd');
+  add.addEventListener('keydown', e => {
+    if (e.key !== 'Enter' || e.isComposing) return;
+    e.preventDefault();
+    addTodayTask(add);
+  });
+  drawDay(null);
+  loadTodayTasks();
+  loadTodayCalendar();
+  clearInterval(todayTimer);
+  todayTimer = setInterval(() => {
+    if (!main.querySelector('.today-screen')) { clearInterval(todayTimer); return; }
+    placeNowLine();
+  }, 60_000);
+}
+
+function openAllTasks() {
+  if (!confirmLeavingEdit()) return;
+  if (viewMode === 'tasks') { app.classList.remove('detail-open'); showTaskEmptyState(); syncNav(); }
+  else setViewMode('tasks');
+}
+
+// ----- the tasks side -----
+
+async function loadTodayTasks() {
+  const list = document.getElementById('todayTasks');
+  if (!list) return;
+  const today = todayISO();
+  try {
+    const text = await callTool('list_tasks', { format: 'json', owner: 'me', due_before: today, limit: 100 });
+    let raw; try { raw = JSON.parse(text); } catch (_) { throw new Error(text.slice(0, 160)); }
+    const tasks = (Array.isArray(raw) ? raw : []).map(normalizeTask)
+      .sort((a, b) => String(a.due_date || '').localeCompare(String(b.due_date || '')) || a.title.localeCompare(b.title));
+    renderTodayTasks(tasks);
+  } catch (err) {
+    list.innerHTML = '<li class="o-meta">Could not load the tasks — ' + escapeHtml(err.message) + '</li>';
+  }
+}
+
+function renderTodayTasks(tasks) {
+  const list = document.getElementById('todayTasks');
+  if (!list) return;
+  const today = todayISO();
+  if (!tasks.length) {
+    list.innerHTML = '<li class="o-meta today-empty">Nothing due today. Add one above, or give a task a due date of today.</li>';
+    return;
+  }
+  list.innerHTML = tasks.map(t => {
+    const late = t.due_date && t.due_date < today;
+    const when = late ? dueLabel(t.due_date, today).text : 'Today';
+    return `<li class="o-task${late ? '' : ''}" data-id="${escapeAttr(t.id)}">
+      <button type="button" class="o-task__tick" aria-label="Mark “${escapeAttr(t.title)}” done"></button>
+      <span class="o-task__main"><span class="o-task__title">${escapeHtml(t.title)}</span>
+        ${t.project ? `<span class="o-task__meta">${escapeHtml(t.project)}</span>` : ''}</span>
+      <span class="o-task__time${late ? ' is-due' : ''}">${escapeHtml(when)}</span>
+    </li>`;
+  }).join('');
+  list.querySelectorAll('.o-task').forEach(row => {
+    row.querySelector('.o-task__tick').addEventListener('click', async () => {
+      if (row.classList.contains('is-done')) return;
+      row.classList.add('is-done');
+      try {
+        await callTool('complete_task', { id: row.dataset.id });
+        setTimeout(() => { row.remove(); if (!list.querySelector('.o-task')) loadTodayTasks(); }, 900);
+      } catch (err) {
+        row.classList.remove('is-done');
+        showToastStatus('Could not complete that — ' + err.message);
+      }
+    });
+  });
+}
+
+async function addTodayTask(input) {
+  const text = input.value.trim();
+  if (!text) return;
+  const today = todayISO();
+  const parsed = parseQuickAdd(text, today);
+  if (!parsed.title) return;
+  const args = { title: parsed.title, status: 'next', source: 'today', due_date: parsed.due_date || today };
+  if (parsed.project) args.project = parsed.project;
+  input.disabled = true;
+  try {
+    const res = await callTool('create_task', args);
+    if (!/id: [0-9a-f-]{36}/.test(res)) throw new Error(res);
+    input.value = '';
+    await loadTodayTasks();
+  } catch (err) {
+    showToastStatus('Could not add that — ' + err.message);
+  } finally {
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+// ----- the hours side -----
+
+const DAY_FIRST = 7, DAY_LAST = 22;   // the hours shown unless an event needs more
+const minutesOf = iso => { const d = new Date(iso); return d.getHours() * 60 + d.getMinutes(); };
+const clockOf = iso => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+async function loadTodayCalendar() {
+  const note = main.querySelector('.today-cal-note');
+  try {
+    const text = await callTool('calendar_day', { date: todayISO(), format: 'json' });
+    let day; try { day = JSON.parse(text); } catch (_) { throw new Error(text.slice(0, 160)); }
+    if (!main.querySelector('.today-screen')) return;
+    drawDay(day.events || []);
+    const n = (day.events || []).length;
+    note.textContent = (day.problems || []).length
+      ? 'Some of the calendar could not be read: ' + day.problems.join('; ')
+      : n ? '' : 'Nothing in the calendar today.';
+  } catch (err) {
+    if (note) note.textContent = 'Could not read the calendar — ' + err.message;
+  }
+}
+
+function drawDay(events) {
+  const box = document.getElementById('todayDay');
+  const allDayBox = main.querySelector('.today-allday');
+  if (!box) return;
+  const today = todayISO();
+  const timed = (events || []).filter(e => !e.all_day);
+  const allDay = (events || []).filter(e => e.all_day);
+  allDayBox.innerHTML = allDay.map(e => `<span class="today-allday__item">${escapeHtml(e.title)}</span>`).join('');
+
+  // Clip each event to today, in this device's time.
+  const spans = timed.map(e => {
+    const s = new Date(e.start), en = new Date(e.end);
+    const start = s.toLocaleDateString('en-CA') < today ? 0 : minutesOf(e.start);
+    const end = en.toLocaleDateString('en-CA') > today ? 24 * 60 : minutesOf(e.end);
+    return { e, start, end: Math.max(end, start + 15) };
+  });
+  const first = Math.min(DAY_FIRST, ...spans.map(x => Math.floor(x.start / 60)));
+  const last = Math.max(DAY_LAST, ...spans.map(x => Math.ceil(x.end / 60)));
+  let html = '';
+  for (let h = first; h < last; h++) html += `<div class="o-day__hour">${String(h).padStart(2, '0')}:00</div>`;
+
+  // Side by side when they overlap: each event takes the first free column.
+  spans.sort((a, b) => a.start - b.start || b.end - a.end);
+  const cols = [];
+  let group = [], groupEnd = -1;
+  const closeGroup = () => { const n = Math.max(1, ...group.map(x => x.col + 1)); group.forEach(x => { x.cols = n; }); group = []; };
+  for (const x of spans) {
+    if (x.start >= groupEnd && group.length) { closeGroup(); cols.length = 0; }
+    let c = cols.findIndex(endAt => endAt <= x.start);
+    if (c < 0) { c = cols.length; cols.push(0); }
+    cols[c] = x.end;
+    x.col = c;
+    group.push(x);
+    groupEnd = Math.max(groupEnd, x.end);
+  }
+  closeGroup();
+  const hourPx = 52;
+  html += spans.map(x => {
+    const top = (x.start - first * 60) / 60 * hourPx;
+    const height = Math.max((x.end - x.start) / 60 * hourPx - 2, 22);
+    const width = `calc((100% - 44px) / ${x.cols})`;
+    const left = `calc(44px + (100% - 44px) / ${x.cols} * ${x.col})`;
+    const work = x.e.calendar === 'work';
+    return `<div class="o-day__block${work ? ' is-work' : ''}" style="top:${top}px; height:${height}px; left:${left}; width:${width}; right:auto">
+      <b>${escapeHtml(x.e.title)}</b><small class="o-num">${escapeHtml(clockOf(x.e.start))}–${escapeHtml(clockOf(x.e.end))}${x.e.where ? ' · ' + escapeHtml(x.e.where) : ''}</small>
+    </div>`;
+  }).join('');
+  html += '<div class="o-day__now" hidden></div>';
+  box.innerHTML = html;
+  box.dataset.first = first;
+  box.dataset.last = last;
+  placeNowLine();
+}
+
+function placeNowLine() {
+  const box = document.getElementById('todayDay');
+  const line = box && box.querySelector('.o-day__now');
+  if (!line) return;
+  const first = +box.dataset.first, last = +box.dataset.last;
+  const now = new Date();
+  const m = now.getHours() * 60 + now.getMinutes();
+  line.hidden = m < first * 60 || m >= last * 60;
+  line.style.top = ((m - first * 60) / 60 * 52 + 7) + 'px';
+}
+
+function scrollTodayToNow() {
+  const line = main.querySelector('.o-day__now');
+  if (line && !line.hidden) line.scrollIntoView({ block: 'center' });
+}
+
+let navOverride = null;   // 'more', 'inbox' or 'today' while that screen shows
 function syncNav(override) {
   navOverride = override || null;
   const current = navOverride || viewMode;
   document.querySelectorAll('#rail [data-view], #tabbar [data-view]').forEach(b => {
-    if (b.dataset.view === current) b.setAttribute('aria-current', 'page');
+    // On the phone the task list sits under Today, which took its place in
+    // the bar, so Today stays lit while the tasks show.
+    if (b.dataset.view === current || b.dataset.also === current) b.setAttribute('aria-current', 'page');
     else b.removeAttribute('aria-current');
   });
   const pressed = document.getElementById('workBtn').getAttribute('aria-pressed') === 'true';
@@ -10864,6 +11149,7 @@ document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.a
   const id = b.dataset.go;
   if (id === 'more') { showMoreScreen(); return; }
   if (id === 'inbox') { showInboxScreen(); return; }
+  if (id === 'today') { showTodayScreen(); return; }
   const fromBar = !!b.closest('#tabbar');
   if (fromBar && /^mode/.test(id)) {
     // Tapping the section you are in goes back to its list.
@@ -10877,7 +11163,7 @@ document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.a
 }));
 
 // Whatever replaces the More screen (a note, a list) takes "More" off.
-new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen, .inbox-screen')) syncNav(); })
+new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen, .inbox-screen, .today-screen')) syncNav(); })
   .observe(main, { childList: true });
 // The bar's height, so the page above it ends where the bar begins.
 (() => {
