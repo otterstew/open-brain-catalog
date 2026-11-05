@@ -10508,6 +10508,9 @@ function openFromLink() {
 // Each item clicks the control it stands for. "More" opens a screen of the
 // rest on a phone, so the bar keeps to five.
 const MORE_ITEMS = [
+  // Shortcuts (5 Nov 2026): a new note with the microphone already on.
+  ['speakNote', 'ph-microphone', 'Speak a note', 'Talk and it types a new note'],
+  ['recordNote', 'ph-waveform', 'Record a sound', 'Keep a sound in a new note'],
   ['importBtn', 'ph-upload-simple', 'Import a file', 'A PDF, text or Markdown file becomes a note'],
   ['photoBtn', 'ph-camera', 'Photograph text', 'A page or a sign, read into a new note'],
   ['statsBtn', 'ph-chart-bar', 'Statistics', 'The shape of the archive'],
@@ -10523,6 +10526,8 @@ function showMoreScreen() {
   editingId = null;
   closeReference();
   const items = MORE_ITEMS.filter(([id]) => {
+    if (id === 'speakNote') return !!micButtonHtml();
+    if (id === 'recordNote') return CAN_RECORD;
     const el = document.getElementById(id);
     return el && !(el.hidden && id !== 'importBtn' && id !== 'statsBtn');
   });
@@ -10538,6 +10543,7 @@ function showMoreScreen() {
     </div>`;
   main.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.go;
+    if (id === 'speakNote' || id === 'recordNote') { startNoteWithMic(id === 'speakNote' ? '.mic-add' : '.rec-add'); return; }
     // Statistics and the colours button work from the notes view.
     if (id === 'statsBtn' && viewMode !== 'notes') setViewMode('notes');
     document.getElementById(id).click();
@@ -10546,6 +10552,19 @@ function showMoreScreen() {
   main.scrollTop = 0;
   app.classList.add('detail-open');
   syncNav('more');
+}
+
+// Speak a note / Record a sound: open a new note and press its Speak or
+// Record button, in the same tap, so the browser allows the microphone.
+function startNoteWithMic(sel) {
+  if (viewMode !== 'notes') setViewMode('notes');
+  newBtn.click();
+  const ta = document.getElementById('composeText');
+  const btn = ta && main.querySelector('.index-card ' + sel);
+  if (!btn) return;
+  ta.focus();
+  btn.click();
+  syncNav();
 }
 
 let navOverride = null;   // 'more' while the More screen shows
