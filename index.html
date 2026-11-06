@@ -3139,7 +3139,37 @@ a.o-card:hover{filter:brightness(.98)}
   .stats-board > .board-tile:nth-child(6n+4) { --tile-bg: color-mix(in oklab, var(--ochre), var(--paper) 88%); }
   .stats-board > .board-tile:nth-child(6n+5) { --tile-bg: color-mix(in oklab, var(--teal), var(--paper) 88%); }
   .stats-board > .board-tile:nth-child(6n) { --tile-bg: color-mix(in oklab, var(--blossom), var(--paper) 88%); }
-  .stats-board > .board-tile.is-full { --tile-bg: var(--paper); }
+  /* Full screen keeps the tile's colour (6 Nov 2026: it used to turn white). */
+
+  /* Everything on the page is tinted, not just the small tiles: the graph
+     takes a light heather wash, the counts along the top one colour each. */
+  .stats-board > .board-main { background: color-mix(in oklab, var(--heather), var(--paper) 92%); }
+  .stats-tiles { background: none; border: 0; gap: var(--s2); }
+  .stats-tiles div { border-radius: var(--r-sm); }
+  .stats-tiles div:nth-child(6n+1) { background: color-mix(in oklab, var(--heather), var(--paper) 86%); }
+  .stats-tiles div:nth-child(6n+2) { background: color-mix(in oklab, var(--sea), var(--paper) 86%); }
+  .stats-tiles div:nth-child(6n+3) { background: color-mix(in oklab, var(--moss), var(--paper) 86%); }
+  .stats-tiles div:nth-child(6n+4) { background: color-mix(in oklab, var(--ochre), var(--paper) 86%); }
+  .stats-tiles div:nth-child(6n+5) { background: color-mix(in oklab, var(--teal), var(--paper) 86%); }
+  .stats-tiles div:nth-child(6n) { background: color-mix(in oklab, var(--blossom), var(--paper) 86%); }
+
+  /* The tiles fill their row and sit close together, rather than small boxes
+     with wide gaps beside the tall graph. Each tile is as tall as the tallest
+     beside it (stretch), never taller than its cap. */
+  .stats-board { gap: var(--s3); align-items: stretch; }
+  .board-tile { max-height: 260px; }
+  @media (min-width: 1000px) {
+    /* Three rows down each side, shared out from the graph's height: the
+       tiles don't add their own height (contain: size), they fill the cell. */
+    .stats-board { grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) minmax(0, 1.2fr);
+                   grid-template-rows: repeat(var(--rows, 3), minmax(0, 1fr)); }
+    .stats-board > .board-main { grid-row: 1 / span var(--rows, 3); }
+    .stats-board > .board-tile:not(.is-full) { contain: size; max-height: none; }
+  }
+  @media (max-width: 760px) {
+    .stats-board { gap: var(--s2); }
+    .board-tile { max-height: 190px; }
+  }
 </style>
 </head>
 <body>
@@ -9666,6 +9696,10 @@ function openStats() {
     '</div>';
   statsPanel.hidden = false;
   statsBody.querySelectorAll('.stats-board > .stats-card').forEach(wireBoardTile);
+  // On a wide screen the tiles run down both sides of the graph: as many rows
+  // as half the tiles, so a short archive leaves no empty row (6 Nov 2026).
+  const board = statsBody.querySelector('.stats-board');
+  board.style.setProperty('--rows', Math.max(1, Math.ceil(board.querySelectorAll('.board-tile').length / 2)));
   wireHomeGraph(statsBody.querySelector('.home-graph'), f);
   wireStatsCharts(statsBody);
 }
