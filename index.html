@@ -3131,14 +3131,14 @@ a.o-card:hover{filter:brightness(.98)}
   .meet-newform { background: color-mix(in oklab, var(--teal), var(--paper) 90%); }
 
   /* Statistics: the tiles take the six colours in turn. */
-  .stats-board > .board-tile { --tile-bg: var(--paper); background: var(--tile-bg); }
-  .stats-board > .board-tile::after { background: linear-gradient(color-mix(in oklab, var(--tile-bg) 0%, transparent), var(--tile-bg)); }
-  .stats-board > .board-tile:nth-child(6n+1) { --tile-bg: color-mix(in oklab, var(--heather), var(--paper) 88%); }
-  .stats-board > .board-tile:nth-child(6n+2) { --tile-bg: color-mix(in oklab, var(--sea), var(--paper) 88%); }
-  .stats-board > .board-tile:nth-child(6n+3) { --tile-bg: color-mix(in oklab, var(--moss), var(--paper) 88%); }
-  .stats-board > .board-tile:nth-child(6n+4) { --tile-bg: color-mix(in oklab, var(--ochre), var(--paper) 88%); }
-  .stats-board > .board-tile:nth-child(6n+5) { --tile-bg: color-mix(in oklab, var(--teal), var(--paper) 88%); }
-  .stats-board > .board-tile:nth-child(6n) { --tile-bg: color-mix(in oklab, var(--blossom), var(--paper) 88%); }
+  .stats-board .board-tile { --tile-bg: var(--paper); background: var(--tile-bg); }
+  .stats-board .board-tile::after { background: linear-gradient(color-mix(in oklab, var(--tile-bg) 0%, transparent), var(--tile-bg)); }
+  .stats-board .board-tile[data-tint="heather"] { --tile-bg: color-mix(in oklab, var(--heather), var(--paper) 88%); }
+  .stats-board .board-tile[data-tint="sea"] { --tile-bg: color-mix(in oklab, var(--sea), var(--paper) 88%); }
+  .stats-board .board-tile[data-tint="moss"] { --tile-bg: color-mix(in oklab, var(--moss), var(--paper) 88%); }
+  .stats-board .board-tile[data-tint="ochre"] { --tile-bg: color-mix(in oklab, var(--ochre), var(--paper) 88%); }
+  .stats-board .board-tile[data-tint="teal"] { --tile-bg: color-mix(in oklab, var(--teal), var(--paper) 88%); }
+  .stats-board .board-tile[data-tint="blossom"] { --tile-bg: color-mix(in oklab, var(--blossom), var(--paper) 88%); }
   /* Full screen keeps the tile's colour (6 Nov 2026: it used to turn white). */
 
   /* Everything on the page is tinted, not just the small tiles: the graph
@@ -3153,22 +3153,26 @@ a.o-card:hover{filter:brightness(.98)}
   .stats-tiles div:nth-child(6n+5) { background: color-mix(in oklab, var(--teal), var(--paper) 86%); }
   .stats-tiles div:nth-child(6n) { background: color-mix(in oklab, var(--blossom), var(--paper) 86%); }
 
-  /* The tiles fill their row and sit close together, rather than small boxes
-     with wide gaps beside the tall graph. Each tile is as tall as the tallest
-     beside it (stretch), never taller than its cap. */
-  .stats-board { gap: var(--s3); align-items: stretch; }
-  .board-tile { max-height: 260px; }
+  /* Two stacks of tiles, one each side of the graph (one under it on a
+     narrower screen). A tile is as tall as what it shows, up to its cap, and
+     the next one moves up to meet it: no empty space inside a tile, no wide
+     gaps between them (6 Nov 2026). */
+  .stats-board { gap: var(--s3); align-items: start; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stats-board > .board-main { grid-column: 1 / -1; grid-row: 1; }
+  .board-stack { display: flex; flex-direction: column; gap: var(--s3); min-width: 0; }
+  .board-stack--left { grid-column: 1; grid-row: 2; }
+  .board-stack--right { grid-column: 2; grid-row: 2; }
+  .board-tile { max-height: 280px; }
+  .board-tile:not(.is-clipped)::after { display: none; }
   @media (min-width: 1000px) {
-    /* Three rows down each side, shared out from the graph's height: the
-       tiles don't add their own height (contain: size), they fill the cell. */
-    .stats-board { grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) minmax(0, 1.2fr);
-                   grid-template-rows: repeat(var(--rows, 3), minmax(0, 1fr)); }
-    .stats-board > .board-main { grid-row: 1 / span var(--rows, 3); }
-    .stats-board > .board-tile:not(.is-full) { contain: size; max-height: none; }
+    .stats-board { grid-template-columns: minmax(0, 1.2fr) minmax(0, 2fr) minmax(0, 1.2fr); }
+    .stats-board > .board-main { grid-column: 2; grid-row: 1; }
+    .board-stack--left { grid-column: 1; grid-row: 1; }
+    .board-stack--right { grid-column: 3; grid-row: 1; }
   }
   @media (max-width: 760px) {
-    .stats-board { gap: var(--s2); }
-    .board-tile { max-height: 190px; }
+    .stats-board, .board-stack { gap: var(--s2); }
+    .board-tile { max-height: 200px; }
   }
 </style>
 </head>
@@ -9690,16 +9694,25 @@ function statsGrid(f) {
 function openStats() {
   if (!allThoughts.length) return;
   const f = archiveFigures();
-  statsBody.innerHTML = tileRow(f) + '<div class="stats-board">' +
-    homeGraphCard(f, 'stats-graph board-main', false) +
-    [completeness(f), weeksChart(f), typeChart(f), topicsChart(f), hubsList(f), coverageCard(f)].join('') +
-    '</div>';
+  // Two stacks, one each side of the graph: a tile is as tall as what it
+  // shows, and the one below moves up to meet it (6 Nov 2026), rather than
+  // rows lined up across the page leaving empty space in the shorter tile.
+  // Each tile keeps its colour wherever it lands: sea, moss, ochre, teal, blossom, heather.
+  const TILE_TINTS = ['sea', 'moss', 'ochre', 'teal', 'blossom', 'heather'];
+  const boardTiles = [completeness(f), weeksChart(f), typeChart(f), topicsChart(f), hubsList(f), coverageCard(f)]
+    .filter(Boolean)
+    .map((html, i) => html.replace('<div class="stats-card"', '<div data-tint="' + TILE_TINTS[i % 6] + '" class="stats-card"'));
+  const stack = side => '<div class="board-stack board-stack--' + side + '">' +
+    boardTiles.filter((_, i) => i % 2 === (side === 'left' ? 0 : 1)).join('') + '</div>';
+  statsBody.innerHTML = tileRow(f) + '<div class="stats-board">' + stack('left') +
+    homeGraphCard(f, 'stats-graph board-main', false) + stack('right') + '</div>';
   statsPanel.hidden = false;
-  statsBody.querySelectorAll('.stats-board > .stats-card').forEach(wireBoardTile);
-  // On a wide screen the tiles run down both sides of the graph: as many rows
-  // as half the tiles, so a short archive leaves no empty row (6 Nov 2026).
-  const board = statsBody.querySelector('.stats-board');
-  board.style.setProperty('--rows', Math.max(1, Math.ceil(board.querySelectorAll('.board-tile').length / 2)));
+  statsBody.querySelectorAll('.board-stack > .stats-card').forEach(wireBoardTile);
+  // The fade at a tile's foot says "there's more": only where there is.
+  const markClipped = () => statsBody.querySelectorAll('.board-tile:not(.is-full)').forEach(t =>
+    t.classList.toggle('is-clipped', t.scrollHeight > t.clientHeight + 2));
+  requestAnimationFrame(markClipped);
+  if (!window.__statsClipWatch) { window.__statsClipWatch = true; addEventListener('resize', markClipped); }
   wireHomeGraph(statsBody.querySelector('.home-graph'), f);
   wireStatsCharts(statsBody);
 }
