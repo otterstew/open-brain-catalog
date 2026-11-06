@@ -2626,6 +2626,17 @@ a.o-card:hover{filter:brightness(.98)}
   .meet-prep__links { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 0 calc(-1 * var(--s2)); }
   .meet-prep__links a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
   .meet-found { margin-top: var(--s3); }
+  .meet-prepedit { background: color-mix(in oklab, var(--teal), var(--paper) 90%); border-radius: var(--r-md); padding: var(--s4); margin-top: var(--s3); display: flex; flex-direction: column; gap: var(--s2); }
+  .meet-prepedit[hidden] { display: none; }
+  .meet-prep__edit[hidden] { display: none; }
+  .meet-prepedit__label { font-family: var(--serif); font-style: italic; font-size: 1.05rem; margin: var(--s2) 0 0; }
+  .meet-prepedit__cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); }
+  .meet-prepedit__card { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s1) var(--s2); background: var(--paper); border-radius: var(--r-sm); padding: var(--s2); }
+  .meet-prepedit__card input, .meet-prepedit__card textarea { grid-column: 1; }
+  .meet-prepedit__card button { grid-column: 2; grid-row: 1; align-self: start; }
+  .meet-prepedit__add { align-self: flex-start; }
+  .meet-prepedit__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s2); margin-top: var(--s2); }
+  .meet-prepedit__status { margin-right: auto; }
   .meet-rec__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
   .meet-rec__go.is-listening { background: color-mix(in oklab, var(--fail) 12%, var(--paper)); }
   .meet-rec__warn { background: color-mix(in oklab, var(--warn) 12%, var(--paper)); border-radius: var(--r-md); padding: var(--s3) var(--s4); margin-top: var(--s3); }
@@ -12224,6 +12235,100 @@ function drawMeetingList(screen) {
   });
 }
 
+// Write or change a meeting's prep here (6 Nov 2026). It is the same note One
+// Side reads and writes ("Meeting prep", "# Name / Date: / Time:", a card per
+// "##", "## Keep in mind" pinned), so the two apps edit one thing. Saved only
+// when Stewart taps Save prep.
+function meetPrepContent(name, date, time, keep, cards) {
+  let s = '# ' + name.trim() + '\nDate: ' + date + '\n';
+  if (time) s += 'Time: ' + time + '\n';
+  if (keep.trim()) s += '\n## Keep in mind\n' + keep.trim() + '\n';
+  cards.forEach((c, i) => { s += '\n## ' + (c.head.trim() || 'Point ' + (i + 1)) + '\n' + c.words.trim() + '\n'; });
+  return s;
+}
+
+function wireMeetPrepEdit(screen, m, keepNotes) {
+  const form = screen.querySelector('.meet-prepedit');
+  if (!form) return;
+  const list = form.querySelector('.meet-prepedit__cards');
+  const keep = form.querySelector('#meetKeep');
+  const status = form.querySelector('.meet-prepedit__status');
+  const saveBtn = form.querySelector('.meet-prepedit__save');
+  let cards = [];
+  const readRows = () => {
+    cards = [...list.children].map(li => ({ head: li.querySelector('input').value, words: li.querySelector('textarea').value }));
+  };
+  const drawRows = () => {
+    list.innerHTML = cards.map((c, i) => `<li class="meet-prepedit__card">
+      <input class="o-field" maxlength="120" placeholder="Card ${i + 1}: the point" aria-label="Card ${i + 1} heading" value="${escapeAttr(c.head)}">
+      <textarea class="o-field" rows="3" placeholder="The words you want in front of you" aria-label="Card ${i + 1} words">${escapeHtml(c.words)}</textarea>
+      <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-card-x="${i}" aria-label="Remove card ${i + 1}"><i class="ph-light ph-x" aria-hidden="true"></i></button></li>`).join('');
+    list.querySelectorAll('[data-card-x]').forEach(b => b.addEventListener('click', () => { readRows(); cards.splice(+b.dataset.cardX, 1); drawRows(); }));
+  };
+  const open = () => {
+    const p = m.prep;
+    keep.value = p ? p.keep : '';
+    cards = p && p.cards.length ? p.cards.map(c => ({ head: c.head, words: c.words })) : [{ head: '', words: '' }];
+    drawRows();
+    status.textContent = '';
+    form.hidden = false;
+    screen.querySelectorAll('.meet-prep__edit').forEach(b => { b.hidden = true; });
+    (p ? keep : list.querySelector('input')).focus();
+  };
+  const close = () => {
+    form.hidden = true;
+    screen.querySelectorAll('.meet-prep__edit').forEach(b => { b.hidden = false; });
+  };
+  screen.querySelectorAll('.meet-prep__edit').forEach(b => b.addEventListener('click', open));
+  form.querySelector('.meet-prepedit__add').addEventListener('click', () => {
+    readRows(); cards.push({ head: '', words: '' }); drawRows();
+    const heads = list.querySelectorAll('input');
+    heads[heads.length - 1].focus();
+  });
+  form.querySelector('.meet-prepedit__cancel').addEventListener('click', close);
+  let saving = false;
+  form.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    if (saving) return;
+    readRows();
+    const filled = cards.filter(c => c.head.trim() || c.words.trim());
+    if (!filled.length && !keep.value.trim()) { status.textContent = 'Write a card, or something to keep in mind.'; return; }
+    const p = m.prep;
+    const name = p ? p.name : m.title;
+    const date = (p && p.date) || m.date;
+    const time = m.time || (p && p.time) || '';
+    const content = meetPrepContent(name, date, time, keep.value, filled);
+    saving = true;
+    saveBtn.disabled = true;
+    status.textContent = 'Saving to Open Brain…';
+    let id = p ? p.id : null, topics = p ? p.topics : [];
+    try {
+      if (p) {
+        await callTool('update_thought', { id, content, title: name, published_date: date, updated_date: todayISO() });
+      } else {
+        const res = await callTool('capture_thought', { content, published_date: date });
+        const got = /id: ([0-9a-f-]{36})/.exec(res);
+        id = got && got[1];
+        // From here the note exists: Save stays off, or a retry files it twice.
+        if (!id) throw Object.assign(new Error('saved, but its id did not come back, so it is not tagged “Meeting prep” yet. Tag it in Notes.'), { filed: true });
+        topics = ['Meeting prep'];
+        if (m.calendar === 'work') topics.push('Work');
+        await callTool('update_thought', { id, title: name, topics, type: 'reference' });
+      }
+    } catch (err) {
+      saving = false;
+      status.textContent = 'Could not save — ' + err.message;
+      if (p) saveBtn.disabled = false;
+      return;
+    }
+    m.prep = parseMeetingPrep({ id, content, title: name, published_date: date, topics });
+    keepNotes();
+    drawMeeting(screen, m);
+    const st = screen.querySelector('.meet-prep__links');
+    if (st) st.insertAdjacentHTML('afterend', '<p class="o-meta" role="status">Prep saved. One Side shows it too.</p>');
+  });
+}
+
 function drawMeeting(screen, m) {
   const d = meetDraft(m.key) || { notes: '', actions: [] };
   d.actions = Array.isArray(d.actions) ? d.actions : [];
@@ -12248,11 +12353,25 @@ function drawMeeting(screen, m) {
       ${p ? `
         ${p.keep ? `<div class="meet-keep"><span class="meet-keep__label">Keep in mind</span>${words(p.keep)}</div>` : ''}
         ${p.cards.length ? `<ol class="meet-cards">${p.cards.map(c => `<li class="meet-card">${c.head ? `<h3 class="meet-card__head">${escapeHtml(c.head)}</h3>` : ''}${words(c.words)}</li>`).join('')}</ol>` : '<p class="o-meta">The prep note has no cards yet.</p>'}
-        <p class="meet-prep__links"><a class="o-btn o-btn--quiet o-btn--sm" href="https://oneside.thewishingstream.com/" target="_blank" rel="noopener">Edit in One Side <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
+        <p class="meet-prep__links"><button type="button" class="o-btn o-btn--quiet o-btn--sm meet-prep__edit"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i> Change the prep</button>
+        <a class="o-btn o-btn--quiet o-btn--sm" href="https://oneside.thewishingstream.com/" target="_blank" rel="noopener">Edit in One Side <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
         <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-open-note="${escapeAttr(p.id)}">Open the prep note</button></p>`
-      : `<p class="o-meta">No prep note for this one. Prep written in One Side for this day shows here.</p>
-         <button type="button" class="o-btn o-btn--sm meet-look">Look in Open Brain</button>
+      : `<p class="o-meta">No prep yet. Write it here, or in One Side: either way it shows here and in One Side.</p>
+         <p class="meet-prep__links"><button type="button" class="o-btn o-btn--sm meet-prep__edit"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i> Write prep</button>
+         <button type="button" class="o-btn o-btn--quiet o-btn--sm meet-look">Look in Open Brain</button></p>
          <div class="meet-found"></div>`}
+      <form class="meet-prepedit" hidden>
+        <label class="meet-prepedit__label" for="meetKeep">Keep in mind</label>
+        <textarea class="o-field" id="meetKeep" rows="2" placeholder="How you want to come across: slow down, listen first"></textarea>
+        <p class="meet-prepedit__label">Cards <span class="o-meta">one point each, in the order you want them</span></p>
+        <ol class="meet-prepedit__cards"></ol>
+        <button type="button" class="o-btn o-btn--quiet o-btn--sm meet-prepedit__add"><i class="ph-light ph-plus" aria-hidden="true"></i> Add a card</button>
+        <div class="meet-prepedit__row">
+          <span class="o-meta meet-prepedit__status" role="status"></span>
+          <button type="button" class="o-btn o-btn--quiet o-btn--sm meet-prepedit__cancel">Cancel</button>
+          <button type="submit" class="o-btn o-btn--sm meet-prepedit__save">Save prep</button>
+        </div>
+      </form>
     </section>
     <section class="meet-sec">
       <h2 class="meet-h">Recording</h2>
@@ -12371,6 +12490,7 @@ function drawMeeting(screen, m) {
     input.focus();
   });
   screen.querySelectorAll('[data-open-note]').forEach(b => b.addEventListener('click', () => openNoteById(b.dataset.openNote, b)));
+  wireMeetPrepEdit(screen, m, () => { clearTimeout(timer); d.notes = notes.value; save(); });
   const look = screen.querySelector('.meet-look');
   if (look) look.addEventListener('click', async () => {
     const box = screen.querySelector('.meet-found');
