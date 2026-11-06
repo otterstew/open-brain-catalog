@@ -2589,6 +2589,56 @@ a.o-card:hover{filter:brightness(.98)}
     .cal-tools { width: 100%; }
     .cal-add-btn { margin-left: auto; }
   }
+  /* Meetings (5 Nov 2026) */
+  .meet-screen { max-width: 760px; }
+  .meet-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); }
+  .meet-head .more-title { margin-bottom: 0; }
+  .meet-head + .section-lead { margin-top: var(--s4); }
+  .meet-newform { background: color-mix(in oklab, var(--accent) 7%, var(--paper)); border-radius: var(--r-md); padding: var(--s4); margin-bottom: var(--s5); }
+  .meet-newform[hidden] { display: none; }
+  .meet-past > summary { list-style: none; }
+  .meet-past > summary::-webkit-details-marker { display: none; }
+  .meet-newform input[type=date], .meet-newform input[type=time] { font: inherit; font-size: 13px; color: var(--ink); background: var(--paper); border: 1px solid var(--stone); border-radius: var(--r-sm); padding: 5px 8px; }
+  .meet-problems { margin: 0 0 var(--s4); }
+  .meet-day { margin-bottom: var(--s5); }
+  .meet-day__name { font-size: 1.15rem; margin: 0 0 var(--s2); }
+  .meet-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s1); }
+  .meet-row { display: flex; align-items: baseline; gap: var(--s3); width: 100%; min-height: 44px; padding: var(--s2) var(--s3); border: 0; border-radius: var(--r-sm); background: var(--paper); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
+  .meet-row:hover .meet-row__title { color: var(--accent-deep, var(--accent)); }
+  .meet-row.is-work { background: color-mix(in oklab, var(--ink) 4%, var(--paper)); }
+  .meet-row__time { flex: none; width: 3.2em; font-size: var(--t-sm); color: var(--ink-3); }
+  .meet-row__main { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s1) var(--s2); min-width: 0; }
+  .meet-row__title { overflow-wrap: anywhere; }
+  .meet-row__marks { display: inline-flex; gap: var(--s1); }
+  .meet-row__marks .o-chip { font-size: var(--t-xs); padding: 1px 6px; }
+  .meet-past { margin-top: var(--s5); }
+  .meet-past > .more { cursor: pointer; margin-bottom: var(--s4); }
+  .meet-back { margin: 0 0 var(--s3) calc(-1 * var(--s2)); }
+  .meet-title { margin-bottom: var(--s2); }
+  .meet-sec { margin-top: var(--s7); }
+  .meet-h { font-size: 1.35rem; margin: 0 0 var(--s3); }
+  .meet-keep { background: color-mix(in oklab, var(--accent) 9%, var(--paper)); border-radius: var(--r-md); padding: var(--s3) var(--s4); margin-bottom: var(--s3); }
+  .meet-keep__label { display: block; font-family: var(--serif); font-style: italic; font-size: 1.05rem; margin-bottom: var(--s1); }
+  .meet-keep p, .meet-card p { margin: 0 0 var(--s1); line-height: 1.55; }
+  .meet-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s2); counter-reset: meetcard; }
+  .meet-card { background: var(--paper); border-radius: var(--r-md); padding: var(--s3) var(--s4); }
+  .meet-card__head { font-size: 1.1rem; margin: 0 0 var(--s1); }
+  .meet-prep__links { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 0 calc(-1 * var(--s2)); }
+  .meet-prep__links a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
+  .meet-found { margin-top: var(--s3); }
+  .meet-notes { width: 100%; min-height: 12rem; resize: vertical; line-height: 1.6; }
+  .meet-saved { margin: var(--s1) 0 0; }
+  .meet-actions { margin: 0 0 var(--s2); padding: 0; list-style: none; }
+  .meet-actions .o-task { align-items: center; }
+  .meet-actions .o-task.is-filed .o-task__title { color: var(--ink-2); }
+  .meet-actions__none { padding: var(--s1) 0; }
+  .meet-addact { display: flex; gap: var(--s2); }
+  .meet-addact .o-field { flex: 1; min-width: 0; }
+  .meet-file { margin-top: var(--s7); }
+  .meet-file__what { margin: 0 0 var(--s3); }
+  .meet-file__row { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: var(--s2) var(--s3); }
+  .meet-file__status { margin-right: auto; font-size: var(--t-sm); color: var(--ink-2); }
+  .today-prep__head > span { display: inline-flex; gap: var(--s1); }
   .today-allday__item { background: var(--stone); border-radius: var(--r-sm); padding: var(--s1) var(--s3); font-size: var(--t-sm); }
   .today-hours .o-day__block { background: var(--stone); font-size: var(--t-xs); }
   .today-hours .o-day__block.is-work { background: color-mix(in oklab, var(--stone), var(--paper) 20%); color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--stone); }
@@ -10997,7 +11047,7 @@ const MORE_ITEMS = [
   // Shortcuts (5 Nov 2026): a new note with the microphone already on.
   ['modeTasks', 'ph-check-square', 'Tasks', 'Every task, by when it is due'],
   ['calendar', 'ph-calendar-blank', 'Calendar', 'The week or the month, and adding events'],
-  ['meetings', 'ph-users-three', 'Meetings', 'Prep, notes and recordings, coming'],
+  ['meetings', 'ph-users-three', 'Meetings', 'Prep, notes and actions, filed to Open Brain'],
   ['stays', 'ph-house-line', 'Stays', 'Messages to send for the gîtes'],
   ['money', 'ph-coins', 'Money', 'Coming later'],
   ['plan', 'ph-sun-horizon', 'Morning plan', 'Fit today’s tasks around the calendar'],
@@ -11701,9 +11751,12 @@ async function showMeetingPrep(e) {
   const title = (e.title || '').trim();
   box.hidden = false;
   box.innerHTML = `<div class="today-prep__head"><span class="today-sub">Prep · ${escapeHtml(title)}</span>
-    <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="close">Close</button></div>
+    <span><button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="meet">Meeting page</button>
+    <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="close">Close</button></span></div>
     <p class="o-meta today-prep__body">Looking in Open Brain…</p>`;
   box.querySelector('[data-x="close"]').addEventListener('click', () => { box.hidden = true; box.innerHTML = ''; });
+  box.querySelector('[data-x="meet"]').addEventListener('click', () =>
+    showMeetingsScreen(e.start && !e.all_day ? meetKey(new Date(e.start).toLocaleDateString('en-CA'), hhmm(e.start), title) : null));
   box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
   const body = box.querySelector('.today-prep__body');
   if (!title || /^(work|\(no title\))$/i.test(title)) { body.textContent = 'Nothing to look up for an untitled meeting.'; return; }
@@ -11738,8 +11791,8 @@ const SECTION_SCREENS = {
   },
   meetings: {
     title: 'Meetings', icon: 'ph-users-three',
-    lead: 'One page per meeting is planned: the prep cards, notes and tasks during it, a recording and its transcript, then one tap to file it all to Open Brain. Until then, prep is in One Side and the Prep deck, and Today has a Prep button on each meeting.',
-    links: [['https://oneside.thewishingstream.com/', 'One Side'], ['https://twosides.thewishingstream.com/prep.html', 'Prep deck']],
+    lead: '',   // its own page now: showMeetingsScreen
+    links: [],
   },
   stays: {
     title: 'Stays', icon: 'ph-house-line',
@@ -11756,6 +11809,7 @@ const SECTION_SCREENS = {
 function showSectionScreen(kind) {
   const def = SECTION_SCREENS[kind];
   if (kind === 'calendar' && !workMode) { showCalendarScreen(); return; }
+  if (kind === 'meetings') { showMeetingsScreen(); return; }   // work meetings too, so not hidden in work mode
   if (!def || !confirmLeavingEdit()) return;
   selectedIndex = null;
   editingId = null;
@@ -11785,6 +11839,407 @@ async function loadStaysScreen() {
     renderStays(box, x.stays, (x.problems || []).filter(p => /^stays/.test(p)), {});
   } catch (err) {
     if (box) box.innerHTML = `<p class="o-meta">Could not read the stays — ${escapeHtml(err.message)}</p>`;
+  }
+}
+
+// ---------- Meetings: prep, notes and actions, then File to Open Brain (5 Nov 2026) ----------
+// The joined-up-app plan's meeting page. A week each side of today from the
+// calendar, each meeting matched to its One Side prep note ("Meeting prep",
+// same day, a word of the title in common). Opening one shows the prep cards
+// with "Keep in mind" pinned, then notes and actions typed during it, saved on
+// this device as you go. File to Open Brain makes ONE note (tagged Meeting
+// notes, linked to the prep) and a task for each action; filing again updates
+// that note and only adds the new actions. Nothing is filed until Stewart taps.
+// Recording and transcripts are not here yet: work meetings are undecided,
+// and transcription needs a provider and a key decided first (see the plan).
+// In work mode only work-calendar meetings show, and the prep list already
+// arrives filtered to work notes (parseJsonThoughts).
+const MEET_STORE = 'ob.meetings.v1';
+const MEET_TOPIC = 'Meeting notes';
+const MEET_STOP = new Set(['the', 'and', 'for', 'with', 'meeting', 'call', 'catch', 'weekly', 'sync', 'prep', 'chat', 'from', 'about']);
+let meetData = null;          // { meetings, problems, loadedAt }
+let meetOpenKey = null;
+
+function meetDrafts() {
+  try { const x = JSON.parse(localStorage.getItem(MEET_STORE) || '{}'); return x && typeof x === 'object' ? x : {}; } catch (_) { return {}; }
+}
+function meetSaveDrafts(all) {
+  // Filed and untouched for a month: the note holds it now.
+  const cutoff = isoAdd(todayISO(), -30);
+  Object.keys(all).forEach(k => { const d = all[k]; if (d.noteId && String(d.saved || '').slice(0, 10) < cutoff) delete all[k]; });
+  try { localStorage.setItem(MEET_STORE, JSON.stringify(all)); return true; } catch (_) { return false; }
+}
+function meetDraft(key) { return meetDrafts()[key] || null; }
+function meetPutDraft(key, d) {
+  const all = meetDrafts();
+  all[key] = Object.assign({}, d, { saved: new Date().toISOString() });
+  return meetSaveDrafts(all);
+}
+
+const meetKey = (date, time, title) => date + ' ' + (time || '--:--') + ' ' + String(title || '').trim().toLowerCase();
+const meetWords = s => new Set(String(s || '').toLowerCase().replace(/[^a-z0-9 ]+/g, ' ').split(/\s+/).filter(w => w.length > 2 && !MEET_STOP.has(w)));
+const hhmm = iso => new Date(iso).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+
+// A One Side prep note: "# Name", "Date: …", "Time: …", then a card per "##".
+function parseMeetingPrep(t) {
+  const lines = String(t.content || '').replace(/\r/g, '').split('\n');
+  let name = '', date = '', time = '', i = 0;
+  for (; i < lines.length; i++) {
+    const line = lines[i];
+    const h1 = line.match(/^#\s+(.+)$/);
+    if (h1 && !name) { name = h1[1].replace(/\*\*/g, '').replace(/^meeting prep\s*[:–—-]\s*/i, '').trim(); continue; }
+    const d = line.match(/^\s*(?:\*\*)?(?:date|day|when)(?:\*\*)?\s*:\s*(.+)$/i);
+    if (d && !date) { const m = d[1].match(/(\d{4}-\d{2}-\d{2})/); if (m) { date = m[1]; continue; } }
+    const tm = line.match(/^\s*(?:\*\*)?time(?:\*\*)?\s*:\s*(\d{1,2})[:.](\d{2})/i);
+    if (tm && !time) { time = tm[1].padStart(2, '0') + ':' + tm[2]; continue; }
+    if (!line.trim()) continue;
+    break;
+  }
+  const body = lines.slice(i).join('\n').trim();
+  const cards = [];
+  if (/^#{2,3}\s+/m.test(body)) {
+    let cur = null;
+    const lead = [];
+    body.split('\n').forEach(line => {
+      const h = line.match(/^#{2,3}\s+(.+)$/);
+      if (h) { if (cur) cards.push(cur); cur = { head: h[1].replace(/\*\*/g, '').trim(), words: '' }; }
+      else if (cur) cur.words += line + '\n';
+      else lead.push(line);
+    });
+    if (cur) cards.push(cur);
+    if (lead.join('').trim()) cards.unshift({ head: '', words: lead.join('\n') });
+  } else if (body) cards.push({ head: '', words: body });
+  cards.forEach(c => { c.words = c.words.trim(); });
+  const isKeep = c => /^keep in mind$/i.test(c.head);
+  return {
+    id: t.realId || t.id,
+    name: name || t.title || 'Meeting',
+    date: date || t.published_date || String(t.created_at || '').slice(0, 10),
+    time,
+    keep: cards.filter(isKeep).map(c => c.words).join('\n').trim(),
+    cards: cards.filter(c => !isKeep(c) && (c.head || c.words)),
+    topics: t.topics || [],
+  };
+}
+
+function prepFits(p, m) {
+  if (p.date !== m.date) return false;
+  if (p.time && m.time && p.time === m.time) return true;
+  const a = p.name.toLowerCase(), b = m.title.toLowerCase();
+  if (a && b && (a.includes(b) || b.includes(a))) return true;
+  const wa = meetWords(a);
+  return [...meetWords(b)].some(w => wa.has(w));
+}
+
+async function loadMeetings() {
+  const today = todayISO();
+  const start = isoAdd(today, -7), end = isoAdd(today, 7);
+  const problems = [];
+  const [cal, preps] = await Promise.all([
+    callTool('calendar_range', { start, days: 15, format: 'json' })
+      .then(t => { try { return JSON.parse(t); } catch (_) { throw new Error(t.slice(0, 160)); } })
+      .catch(err => { problems.push('The calendar: ' + err.message); return { events: [] }; }),
+    callTool('list_thoughts', { topic: 'Meeting prep', limit: 300, format: 'json', include_shelved: true })
+      .then(t => parseJsonThoughts(t).map(parseMeetingPrep).filter(p => p.date >= start && p.date <= end))
+      .catch(err => { problems.push('The prep notes: ' + err.message); return []; }),
+  ]);
+  (cal.problems || []).forEach(p => problems.push(p));
+  const meetings = (cal.events || [])
+    .filter(e => !e.all_day && (!workMode || e.calendar === 'work'))
+    .map(e => {
+      const date = new Date(e.start).toLocaleDateString('en-CA');
+      const time = hhmm(e.start);
+      return { key: meetKey(date, time, e.title), title: e.title, date, time, until: hhmm(e.end), where: e.where || '', calendar: e.calendar, prep: null };
+    });
+  const used = new Set();
+  meetings.forEach(m => {
+    const p = preps.find(x => !used.has(x.id) && prepFits(x, m));
+    if (p) { m.prep = p; used.add(p.id); }
+  });
+  preps.filter(p => !used.has(p.id)).forEach(p => meetings.push({
+    key: 'prep:' + p.id, title: p.name, date: p.date, time: p.time, until: '', where: '', calendar: null, prep: p,
+  }));
+  // Meetings typed in by hand, or ones the calendar no longer shows, while
+  // their notes are still on this device.
+  const have = new Set(meetings.map(m => m.key));
+  Object.entries(meetDrafts()).forEach(([key, d]) => {
+    if (have.has(key) || (workMode && d.calendar !== 'work' && !d.work)) return;
+    meetings.push({ key, title: d.title || 'Meeting', date: d.date || today, time: d.time || '', until: d.until || '', where: '', calendar: d.calendar || null, prep: null, adhoc: !!d.adhoc });
+  });
+  meetings.sort((a, b) => (a.date + (a.time || '99:99')).localeCompare(b.date + (b.time || '99:99')));
+  return { meetings, problems, loadedAt: Date.now() };
+}
+
+function meetDayLabel(iso) {
+  const t = todayISO();
+  if (iso === t) return 'Today';
+  if (iso === isoAdd(t, 1)) return 'Tomorrow';
+  if (iso === isoAdd(t, -1)) return 'Yesterday';
+  return calDayName(iso, { weekday: 'long', day: 'numeric', month: 'short' });
+}
+
+function showMeetingsScreen(openKey) {
+  if (!confirmLeavingEdit()) return;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  meetOpenKey = openKey || null;
+  main.innerHTML = `<div class="more-screen section-screen meet-screen" data-section="meetings"></div>`;
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  syncNav('meetings');
+  drawMeetings();
+}
+
+async function drawMeetings(force) {
+  const screen = main.querySelector('.meet-screen');
+  if (!screen) return;
+  if (!meetData || force || Date.now() - meetData.loadedAt > 5 * 60_000) {
+    if (!meetOpenKey || !meetData) screen.innerHTML = `<h1 class="more-title"><em>Meetings</em></h1><p class="o-meta">Reading the calendar and the prep notes…</p>`;
+    try { meetData = await loadMeetings(); }
+    catch (err) { if (main.querySelector('.meet-screen') === screen) screen.innerHTML = `<h1 class="more-title"><em>Meetings</em></h1><p class="o-meta">Could not read the meetings — ${escapeHtml(err.message)}</p>`; return; }
+    if (main.querySelector('.meet-screen') !== screen) return;
+  }
+  const m = meetOpenKey && meetData.meetings.find(x => x.key === meetOpenKey);
+  if (m) drawMeeting(screen, m); else { meetOpenKey = null; drawMeetingList(screen); }
+}
+
+function drawMeetingList(screen) {
+  const today = todayISO();
+  const drafts = meetDrafts();
+  const row = m => {
+    const d = drafts[m.key];
+    const marks = [
+      m.prep ? '<span class="o-chip">Prep</span>' : '',
+      d && d.noteId ? '<span class="o-chip o-chip--ok">Filed</span>' : (d && ((d.notes || '').trim() || (d.actions || []).length) ? '<span class="o-chip o-chip--warn">Notes not filed</span>' : ''),
+    ].join('');
+    return `<li><button type="button" class="meet-row${m.calendar === 'work' ? ' is-work' : ''}" data-meet="${escapeAttr(m.key)}">
+      <span class="meet-row__time o-num">${escapeHtml(m.time || '—')}</span>
+      <span class="meet-row__main"><span class="meet-row__title">${escapeHtml(m.title)}</span>${marks ? `<span class="meet-row__marks">${marks}</span>` : ''}</span>
+    </button></li>`;
+  };
+  const group = list => {
+    const days = [];
+    list.forEach(m => { const last = days[days.length - 1]; if (last && last.date === m.date) last.items.push(m); else days.push({ date: m.date, items: [m] }); });
+    return days.map(g => `<div class="meet-day"><h3 class="meet-day__name">${escapeHtml(meetDayLabel(g.date))}</h3><ul class="meet-list">${g.items.map(row).join('')}</ul></div>`).join('');
+  };
+  const coming = meetData.meetings.filter(m => m.date >= today);
+  const past = meetData.meetings.filter(m => m.date < today).reverse();
+  screen.innerHTML = `
+    <div class="meet-head">
+      <h1 class="more-title"><em>Meetings</em></h1>
+      <button type="button" class="o-btn o-btn--sm meet-new"><i class="ph-light ph-plus" aria-hidden="true"></i> New meeting</button>
+    </div>
+    <p class="section-lead">A week either side of today. Open one for its prep, then take notes and actions in it, and file them to Open Brain when it ends.</p>
+    <form class="meet-newform note-make" hidden>
+      <label class="note-make-label" for="meetNewTitle">A meeting that is not in the calendar</label>
+      <input class="note-make-field" id="meetNewTitle" maxlength="200" placeholder="What is it?" required>
+      <div class="note-make-row">
+        <input type="date" id="meetNewDate" value="${escapeAttr(today)}" aria-label="Date">
+        <input type="time" id="meetNewTime" aria-label="Time">
+        <span class="note-make-status" role="status"></span>
+        <button class="confirm-cancel" type="button" data-x="cancel">Cancel</button>
+        <button class="compose-save" type="submit">Start notes</button>
+      </div>
+    </form>
+    ${meetData.problems.length ? `<p class="o-meta meet-problems">${meetData.problems.map(escapeHtml).join(' · ')}</p>` : ''}
+    ${coming.length ? group(coming) : `<p class="o-meta">No meetings in the calendar for the coming week${workMode ? ' (work mode shows the work calendar only)' : ''}. Prep written in One Side shows here on its day.</p>`}
+    ${past.length ? `<details class="meet-past"><summary class="more">Earlier this week <span class="o-meta">${past.length}</span></summary>${group(past)}</details>` : ''}
+    <div class="section-links">
+      <a class="o-btn o-btn--sm" href="https://oneside.thewishingstream.com/" target="_blank" rel="noopener">Write prep in One Side <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
+      <a class="o-btn o-btn--sm" href="https://twosides.thewishingstream.com/prep.html" target="_blank" rel="noopener">Prep deck <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
+    </div>`;
+  screen.querySelectorAll('[data-meet]').forEach(b => b.addEventListener('click', () => { meetOpenKey = b.dataset.meet; drawMeetings(); main.scrollTop = 0; }));
+  const form = screen.querySelector('.meet-newform');
+  screen.querySelector('.meet-new').addEventListener('click', () => { form.hidden = false; form.querySelector('#meetNewTitle').focus(); });
+  form.querySelector('[data-x="cancel"]').addEventListener('click', () => { form.hidden = true; });
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const title = form.querySelector('#meetNewTitle').value.trim();
+    const date = form.querySelector('#meetNewDate').value || today;
+    const time = form.querySelector('#meetNewTime').value || '';
+    if (!title) return;
+    const key = meetKey(date, time, title);
+    if (!meetPutDraft(key, Object.assign(meetDraft(key) || { notes: '', actions: [] }, { title, date, time, adhoc: true, work: workMode }))) {
+      form.querySelector('.note-make-status').textContent = 'This browser will not save notes, so they would be lost.';
+      return;
+    }
+    meetOpenKey = key;
+    drawMeetings(true);
+  });
+}
+
+function drawMeeting(screen, m) {
+  const d = meetDraft(m.key) || { notes: '', actions: [] };
+  d.actions = Array.isArray(d.actions) ? d.actions : [];
+  const save = () => meetPutDraft(m.key, Object.assign(d, { title: m.title, date: m.date, time: m.time, until: m.until, calendar: m.calendar, adhoc: !!m.adhoc, work: d.work || m.calendar === 'work' }));
+  const when = [calDayName(m.date, { weekday: 'long', day: 'numeric', month: 'long' }), m.time ? m.time + (m.until ? '–' + m.until : '') : '', m.where].filter(Boolean).join(' · ');
+  const p = m.prep;
+  // Prep is read, not edited, so bold shows as bold, without its marks.
+  const words = s => s.split('\n').map(l => l.trim() ? `<p>${escapeHtml(l.replace(/^\s*[-*•]\s+/, '• ')).replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>').replace(/(^|\s)\*([^*\s][^*]*)\*(?=\s|[.,;:!?]|$)/g, '$1<em>$2</em>')}</p>` : '').join('');
+  screen.innerHTML = `
+    <button type="button" class="o-btn o-btn--quiet o-btn--sm meet-back"><i class="ph-light ph-caret-left" aria-hidden="true"></i> All meetings</button>
+    <h1 class="more-title meet-title">${escapeHtml(m.title)}</h1>
+    <p class="o-dateline">${escapeHtml(when)}</p>
+    <section class="meet-sec meet-prep">
+      <h2 class="meet-h">Prep</h2>
+      ${p ? `
+        ${p.keep ? `<div class="meet-keep"><span class="meet-keep__label">Keep in mind</span>${words(p.keep)}</div>` : ''}
+        ${p.cards.length ? `<ol class="meet-cards">${p.cards.map(c => `<li class="meet-card">${c.head ? `<h3 class="meet-card__head">${escapeHtml(c.head)}</h3>` : ''}${words(c.words)}</li>`).join('')}</ol>` : '<p class="o-meta">The prep note has no cards yet.</p>'}
+        <p class="meet-prep__links"><a class="o-btn o-btn--quiet o-btn--sm" href="https://oneside.thewishingstream.com/" target="_blank" rel="noopener">Edit in One Side <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>
+        <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-open-note="${escapeAttr(p.id)}">Open the prep note</button></p>`
+      : `<p class="o-meta">No prep note for this one. Prep written in One Side for this day shows here.</p>
+         <button type="button" class="o-btn o-btn--sm meet-look">Look in Open Brain</button>
+         <div class="meet-found"></div>`}
+    </section>
+    <section class="meet-sec">
+      <h2 class="meet-h"><label for="meetNotes">Notes</label></h2>
+      <textarea class="o-field meet-notes" id="meetNotes" rows="8" placeholder="What was said, what was decided, what to remember">${escapeHtml(d.notes || '')}</textarea>
+      <p class="o-meta meet-saved" aria-live="polite">${d.saved ? 'Kept on this device as you type.' : 'Kept on this device as you type, until you file it.'}</p>
+    </section>
+    <section class="meet-sec">
+      <h2 class="meet-h">Actions</h2>
+      <ul class="o-tasks meet-actions"></ul>
+      <form class="meet-addact">
+        <input class="o-field" maxlength="200" placeholder="Add an action" aria-label="Add an action" enterkeyhint="done">
+        <button type="submit" class="o-btn o-btn--sm">Add</button>
+      </form>
+    </section>
+    <div class="meet-file">
+      <p class="o-meta meet-file__what">${m.calendar === 'work' || d.work ? 'A work meeting: keep client material out of the note. ' : ''}Filing makes one note tagged “${MEET_TOPIC}”${p ? ', linked to the prep,' : ''} and a task for each action.</p>
+      <div class="meet-file__row">
+        <span class="meet-file__status" role="status"></span>
+        ${d.noteId ? '<button type="button" class="o-btn o-btn--sm" data-open-note="' + escapeAttr(d.noteId) + '">Open the note</button>' : ''}
+        <button type="button" class="o-btn o-btn--primary meet-file__go">${d.noteId ? 'Update the note' : 'File to Open Brain'}</button>
+      </div>
+    </div>`;
+
+  const actList = screen.querySelector('.meet-actions');
+  const drawActs = () => {
+    actList.innerHTML = d.actions.length ? d.actions.map((a, i) => `<li class="o-task${a.taskId ? ' is-filed' : ''}">
+      <span class="o-task__main"><span class="o-task__title">${escapeHtml(a.text)}</span>${a.taskId ? '<span class="o-task__meta">Task made</span>' : ''}</span>
+      ${a.taskId ? '' : `<button type="button" class="o-btn o-btn--quiet o-btn--sm" data-act-x="${i}" aria-label="Remove ${escapeAttr(a.text)}"><i class="ph-light ph-x"></i></button>`}</li>`).join('')
+      : '<li class="o-meta meet-actions__none">Actions you add become tasks when you file.</li>';
+    actList.querySelectorAll('[data-act-x]').forEach(b => b.addEventListener('click', () => { d.actions.splice(+b.dataset.actX, 1); save(); drawActs(); }));
+  };
+  drawActs();
+
+  screen.querySelector('.meet-back').addEventListener('click', () => { meetOpenKey = null; drawMeetings(); main.scrollTop = 0; });
+  const notes = screen.querySelector('#meetNotes');
+  const savedLine = screen.querySelector('.meet-saved');
+  let timer = null;
+  notes.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      d.notes = notes.value;
+      savedLine.textContent = save() ? 'Kept on this device · ' + new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : 'This browser will not save notes: file them before you leave.';
+    }, 400);
+  });
+  notes.addEventListener('blur', () => { clearTimeout(timer); d.notes = notes.value; save(); });
+  const addForm = screen.querySelector('.meet-addact');
+  addForm.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const input = addForm.querySelector('input');
+    const text = input.value.trim();
+    if (!text) return;
+    d.actions.push({ text });
+    save();
+    input.value = '';
+    drawActs();
+    input.focus();
+  });
+  screen.querySelectorAll('[data-open-note]').forEach(b => b.addEventListener('click', () => openNoteById(b.dataset.openNote, b)));
+  const look = screen.querySelector('.meet-look');
+  if (look) look.addEventListener('click', async () => {
+    const box = screen.querySelector('.meet-found');
+    look.disabled = true;
+    box.innerHTML = '<p class="o-meta">Looking…</p>';
+    try {
+      const found = parseJsonThoughts(await callTool('search_thoughts', { query: m.title, limit: 5, format: 'json' }));
+      box.innerHTML = found.length ? `<ul class="today-prep__list">${found.map(t => `<li><button type="button" data-open-note="${escapeAttr(t.id)}">
+        <span class="today-prep__title">${escapeHtml(t.title || String(t.content || '').slice(0, 80) || 'Untitled')}</span>
+        <span class="o-meta">${escapeHtml(formatDate(t.created_at))}</span></button></li>`).join('')}</ul>` : '<p class="o-meta">Nothing in Open Brain on this yet.</p>';
+      box.querySelectorAll('[data-open-note]').forEach(b => b.addEventListener('click', () => openNoteById(b.dataset.openNote, b)));
+    } catch (err) {
+      box.innerHTML = `<p class="o-meta">Could not look — ${escapeHtml(err.message)}</p>`;
+      look.disabled = false;
+    }
+  });
+
+  const go = screen.querySelector('.meet-file__go');
+  const status = screen.querySelector('.meet-file__status');
+  go.addEventListener('click', async () => {
+    clearTimeout(timer);
+    d.notes = notes.value;
+    if (!d.notes.trim() && !d.actions.length) { status.textContent = 'Nothing to file yet.'; notes.focus(); return; }
+    save();
+    go.disabled = true;
+    status.textContent = 'Filing…';
+    try {
+      const made = await fileMeeting(m, d, save);
+      status.textContent = made ? `Filed, with ${made} task${made === 1 ? '' : 's'}.` : 'Filed.';
+      noteTaskIndex = null;
+      drawMeeting(screen, m);
+      screen.querySelector('.meet-file__status').textContent = status.textContent;
+    } catch (err) {
+      go.disabled = false;
+      status.textContent = 'Could not file it — ' + err.message;
+    }
+  });
+}
+
+function meetingNoteText(m, d) {
+  const lines = ['# ' + m.title, 'Date: ' + m.date];
+  if (m.time) lines.push('Time: ' + m.time + (m.until ? '–' + m.until : ''));
+  lines.push('', '## Notes', (d.notes || '').trim() || '(No notes.)');
+  if (d.actions.length) lines.push('', '## Actions', ...d.actions.map(a => '- ' + a.text));
+  return lines.join('\n') + '\n';
+}
+
+// Returns how many tasks were made this time.
+async function fileMeeting(m, d, save) {
+  const content = meetingNoteText(m, d);
+  const idOf = text => (String(text).match(/id: ([0-9a-f-]{36})/) || [])[1];
+  if (!d.noteId) {
+    const res = await callTool('capture_thought', { content, published_date: m.date });
+    const id = idOf(res);
+    if (!id) throw new Error(res.slice(0, 160));
+    d.noteId = id;
+    save();
+    const carried = (m.prep ? m.prep.topics : []).filter(x => !/^(meeting prep|one side|pinned)$/i.test(x));
+    const topics = [MEET_TOPIC, ...carried];
+    if ((m.calendar === 'work' || d.work) && !topics.includes('Work')) topics.push('Work');
+    await callTool('update_thought', { id, title: m.title + ' — notes', type: 'observation', topics });
+    if (m.prep) await callTool('link_thoughts', { id_a: id, id_b: m.prep.id }).catch(() => {});
+  } else {
+    await callTool('update_thought', { id: d.noteId, content, updated_date: todayISO() });
+  }
+  let made = 0;
+  for (const a of d.actions) {
+    if (a.taskId) continue;
+    const res = await callTool('create_task', { title: a.text, status: 'next', source: 'meetings', thought_id: d.noteId });
+    a.taskId = idOf(res);
+    if (!a.taskId) throw new Error(res.slice(0, 160));
+    made++;
+    save();
+  }
+  d.filedAt = new Date().toISOString();
+  save();
+  return made;
+}
+
+async function openNoteById(id, btn) {
+  if (!confirmLeavingEdit()) return;
+  const found = findThought(id);
+  if (found) { setViewMode(isJournalEntry(found) ? 'journal' : 'notes'); selectThought(found); return; }
+  const label = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.textContent = 'Fetching…'; }
+  try {
+    const doc = JSON.parse(await callTool('fetch', { id }));
+    setViewMode('notes');
+    selectThought(normalizeThought({ id: doc.id, content: doc.text, created_at: doc.metadata && doc.metadata.created_at, metadata: doc.metadata || {} }));
+  } catch (err) {
+    if (btn) { btn.disabled = false; btn.innerHTML = label; btn.title = 'Could not fetch it — ' + err.message; }
   }
 }
 
