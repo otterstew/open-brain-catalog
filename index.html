@@ -2626,6 +2626,29 @@ a.o-card:hover{filter:brightness(.98)}
   .meet-prep__links { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 0 calc(-1 * var(--s2)); }
   .meet-prep__links a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
   .meet-found { margin-top: var(--s3); }
+  .meet-rec__row { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s2) var(--s3); }
+  .meet-rec__go.is-listening { background: color-mix(in oklab, var(--fail) 12%, var(--paper)); }
+  .meet-rec__warn { background: color-mix(in oklab, var(--warn) 12%, var(--paper)); border-radius: var(--r-md); padding: var(--s3) var(--s4); margin-top: var(--s3); }
+  .meet-rec__warn[hidden] { display: none; }
+  .meet-rec__warn p { margin: 0 0 var(--s2); }
+  .meet-rec__how { margin: var(--s2) 0 0; max-width: 60ch; }
+  .meet-transcript { margin-top: var(--s4); background: var(--paper); border-radius: var(--r-md); padding: var(--s3) var(--s4); max-height: 24rem; overflow: auto; }
+  .meet-transcript:empty { display: none; }
+  .meet-transcript p { margin: 0 0 var(--s2); line-height: 1.6; }
+  .meet-recbar { position: fixed; z-index: 30; right: var(--s5); bottom: var(--s5); display: flex; align-items: center; gap: var(--s2); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s1) var(--s1) var(--s1) var(--s4); border-radius: var(--r-lg); background: var(--ink); color: var(--on-ink); font-size: var(--t-sm); }
+  .meet-recbar__dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--fail); animation: meetPulse 1.6s ease-in-out infinite; }
+  @keyframes meetPulse { 50% { opacity: .35; } }
+  @media (prefers-reduced-motion: reduce) { .meet-recbar__dot { animation: none; } }
+  .meet-recbar__what { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .meet-recbar__time { margin-left: var(--s1); opacity: .75; }
+  .meet-recbar__btn { flex: none; min-height: 36px; padding: 0 var(--s3); border: 0; border-radius: var(--r-md); background: color-mix(in oklab, var(--on-ink) 14%, transparent); color: var(--on-ink); font: inherit; cursor: pointer; }
+  .meet-recbar__btn:hover { background: color-mix(in oklab, var(--on-ink) 24%, transparent); }
+  .is-meet-rec .main { padding-bottom: 96px; }
+  @media (max-width: 760px) {
+    .is-meet-rec .main { padding-bottom: 160px; }
+    .meet-recbar { left: var(--s4); right: var(--s4); bottom: calc(76px + env(safe-area-inset-bottom)); }
+    .meet-recbar__what { flex: 1; }
+  }
   .meet-notes { width: 100%; min-height: 12rem; resize: vertical; line-height: 1.6; }
   .meet-saved { margin: var(--s1) 0 0; }
   .meet-actions { margin: 0 0 var(--s2); padding: 0; list-style: none; }
@@ -7275,7 +7298,7 @@ function wireRecordButtons(root, textarea, after) {
     btn.addEventListener('click', () => {
       if (btn._pending) { saveRecording(btn, textarea, after, btn._pending); return; }
       if (activeRec && activeRec.btn === btn) { activeRec.stop(); return; }
-      if (activeRec || activeMic) return;   // one microphone at a time
+      if (activeRec || activeMic || meetRec) return;   // one microphone at a time
       startRecording(btn, textarea, after);
     });
   });
@@ -7394,7 +7417,7 @@ function wireMicButtons(root, textarea, after) {
     btn.addEventListener('click', () => {
       if (btn._pending) { writeOutSpeech(btn, textarea, after, btn._pending); return; }
       if (activeMic && activeMic.btn === btn) { activeMic.rec.stop(); return; }
-      if (activeMic || activeRec) return;   // one microphone at a time
+      if (activeMic || activeRec || meetRec) return;   // one microphone at a time
       startDictation(btn, textarea, after);
     });
   });
@@ -12011,7 +12034,8 @@ function drawMeetingList(screen) {
     const d = drafts[m.key];
     const marks = [
       m.prep ? '<span class="o-chip">Prep</span>' : '',
-      d && d.noteId ? '<span class="o-chip o-chip--ok">Filed</span>' : (d && ((d.notes || '').trim() || (d.actions || []).length) ? '<span class="o-chip o-chip--warn">Notes not filed</span>' : ''),
+      meetRec && meetRec.key === m.key ? '<span class="o-chip o-chip--fail">Recording</span>' : '',
+      d && d.noteId ? '<span class="o-chip o-chip--ok">Filed</span>' : (d && ((d.notes || '').trim() || (d.actions || []).length || (d.transcript || '').trim()) ? '<span class="o-chip o-chip--warn">Notes not filed</span>' : ''),
     ].join('');
     return `<li><button type="button" class="meet-row${m.calendar === 'work' ? ' is-work' : ''}" data-meet="${escapeAttr(m.key)}">
       <span class="meet-row__time o-num">${escapeHtml(m.time || '—')}</span>
@@ -12072,7 +12096,14 @@ function drawMeetingList(screen) {
 function drawMeeting(screen, m) {
   const d = meetDraft(m.key) || { notes: '', actions: [] };
   d.actions = Array.isArray(d.actions) ? d.actions : [];
-  const save = () => meetPutDraft(m.key, Object.assign(d, { title: m.title, date: m.date, time: m.time, until: m.until, calendar: m.calendar, adhoc: !!m.adhoc, work: d.work || m.calendar === 'work' }));
+  // The recorder writes the transcript into the stored draft from anywhere in
+  // the app, so a save from this screen takes those fields from the store.
+  const save = () => {
+    const cur = meetDraft(m.key) || {};
+    d.transcript = cur.transcript || '';
+    d.partSeq = cur.partSeq || 0;
+    return meetPutDraft(m.key, Object.assign(d, { title: m.title, date: m.date, time: m.time, until: m.until, calendar: m.calendar, adhoc: !!m.adhoc, work: d.work || m.calendar === 'work' }));
+  };
   const when = [calDayName(m.date, { weekday: 'long', day: 'numeric', month: 'long' }), m.time ? m.time + (m.until ? '–' + m.until : '') : '', m.where].filter(Boolean).join(' · ');
   const p = m.prep;
   // Prep is read, not edited, so bold shows as bold, without its marks.
@@ -12091,6 +12122,21 @@ function drawMeeting(screen, m) {
       : `<p class="o-meta">No prep note for this one. Prep written in One Side for this day shows here.</p>
          <button type="button" class="o-btn o-btn--sm meet-look">Look in Open Brain</button>
          <div class="meet-found"></div>`}
+    </section>
+    <section class="meet-sec">
+      <h2 class="meet-h">Recording</h2>
+      <div class="meet-rec">
+        <div class="meet-rec__row">
+          <button type="button" class="o-btn meet-rec__go"></button>
+          <span class="meet-rec__status o-meta" role="status"></span>
+        </div>
+        <div class="meet-rec__warn" hidden>
+          <p>A work meeting. The sound goes to Parakeet through OpenRouter, a US service, as Speak does. Keep client meetings off it.</p>
+          <div class="meet-rec__row"><button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="no">Cancel</button><button type="button" class="o-btn o-btn--sm" data-x="yes">Record anyway</button></div>
+        </div>
+        <p class="o-meta meet-rec__how">Tell everyone it is being recorded. It carries on if you open another page here, and stops if you close the app. Every ten minutes the sound is written out and thrown away; only the words are kept.</p>
+        <div class="meet-transcript" aria-live="polite"></div>
+      </div>
     </section>
     <section class="meet-sec">
       <h2 class="meet-h"><label for="meetNotes">Notes</label></h2>
@@ -12125,6 +12171,51 @@ function drawMeeting(screen, m) {
   drawActs();
 
   screen.querySelector('.meet-back').addEventListener('click', () => { meetOpenKey = null; drawMeetings(); main.scrollTop = 0; });
+
+  const recBox = screen.querySelector('.meet-rec');
+  const recGo = recBox.querySelector('.meet-rec__go');
+  const recStatus = recBox.querySelector('.meet-rec__status');
+  const recWarn = recBox.querySelector('.meet-rec__warn');
+  const transcriptBox = recBox.querySelector('.meet-transcript');
+  recBox._refresh = async () => {
+    if (!recBox.isConnected) return;
+    const mine = !!meetRec && meetRec.key === m.key;
+    recGo.innerHTML = mine ? '<i class="ph-light ph-stop-circle" aria-hidden="true"></i> Stop recording'
+      : '<i class="ph-light ph-microphone" aria-hidden="true"></i> Record and transcribe';
+    recGo.classList.toggle('is-listening', mine);
+    recGo.disabled = !!meetRec && !mine;
+    const st = meetWriting.get(m.key) || {};
+    const waiting = (await meetPartsFor(m.key)).length;
+    if (!recBox.isConnected) return;
+    let say = '';
+    if (mine) say = 'Recording. The words appear below every ten minutes, and when you stop.';
+    else if (meetRec) say = 'Recording another meeting: ' + meetRec.title + '.';
+    if (st.busy) say += (say ? ' ' : '') + 'Writing out…';
+    else if (st.error) say += (say ? ' ' : '') + 'A part was not written out — ' + st.error + '.';
+    else if (waiting && !mine) say += (say ? ' ' : '') + waiting + ' part' + (waiting === 1 ? '' : 's') + ' still to write out.';
+    recStatus.innerHTML = escapeHtml(say) + ((st.error || (waiting && !st.busy && !mine)) ? ' <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="retry">Try again</button>' : '');
+    const retry = recStatus.querySelector('[data-x="retry"]');
+    if (retry) retry.addEventListener('click', () => meetWriteOut(m.key));
+    const words = (meetDraft(m.key) || {}).transcript || '';
+    d.transcript = words;
+    transcriptBox.innerHTML = words ? '<h3 class="meet-card__head">Transcript</h3>' + words.split(/\n\s*\n/).map(x => `<p>${escapeHtml(x.trim())}</p>`).join('') : '';
+  };
+  const startRec = async () => {
+    recWarn.hidden = true;
+    recGo.disabled = true;
+    const why = await startMeetRec(m);
+    recGo.disabled = false;
+    if (why) recStatus.textContent = why;
+  };
+  recGo.addEventListener('click', () => {
+    if (meetRec && meetRec.key === m.key) { stopMeetRec(); return; }
+    if (meetRec) return;
+    if ((m.calendar === 'work' || d.work) && !recWarn.dataset.ok) { recWarn.hidden = false; return; }
+    startRec();
+  });
+  recWarn.querySelector('[data-x="no"]').addEventListener('click', () => { recWarn.hidden = true; });
+  recWarn.querySelector('[data-x="yes"]').addEventListener('click', () => { recWarn.dataset.ok = '1'; startRec(); });
+  recBox._refresh();
   const notes = screen.querySelector('#meetNotes');
   const savedLine = screen.querySelector('.meet-saved');
   let timer = null;
@@ -12171,8 +12262,8 @@ function drawMeeting(screen, m) {
   go.addEventListener('click', async () => {
     clearTimeout(timer);
     d.notes = notes.value;
-    if (!d.notes.trim() && !d.actions.length) { status.textContent = 'Nothing to file yet.'; notes.focus(); return; }
     save();
+    if (!d.notes.trim() && !d.actions.length && !(d.transcript || '').trim()) { status.textContent = 'Nothing to file yet.'; notes.focus(); return; }
     go.disabled = true;
     status.textContent = 'Filing…';
     try {
@@ -12193,6 +12284,7 @@ function meetingNoteText(m, d) {
   if (m.time) lines.push('Time: ' + m.time + (m.until ? '–' + m.until : ''));
   lines.push('', '## Notes', (d.notes || '').trim() || '(No notes.)');
   if (d.actions.length) lines.push('', '## Actions', ...d.actions.map(a => '- ' + a.text));
+  if ((d.transcript || '').trim()) lines.push('', '## Transcript', d.transcript.trim());
   return lines.join('\n') + '\n';
 }
 
@@ -12241,6 +12333,207 @@ async function openNoteById(id, btn) {
   } catch (err) {
     if (btn) { btn.disabled = false; btn.innerHTML = label; btn.title = 'Could not fetch it — ' + err.message; }
   }
+}
+
+// ---------- Recording a meeting and writing it out (6 Nov 2026) ----------
+// Stewart: "the meeting notes should also have the transcribe button though
+// and it should continue to work and be available even if i navigate away".
+// The recorder belongs to the page, not to the meeting screen, so moving
+// around the catalog leaves it running; a small bar shows it everywhere, with
+// Open and Stop. Closing the app or reloading does stop it (the browser asks
+// first). The sound is cut into ten-minute parts, each a file of its own, and
+// each part is written out by Parakeet (POST /audio/transcribe, as Speak does)
+// as soon as it ends, so a long meeting never meets the route's 15-minute cap
+// and the words arrive as the meeting goes. Every part is put in this
+// browser's IndexedDB before it is sent and removed once its words are in the
+// meeting's notes, so a dropped connection or a reload costs a retry, never
+// the sound. The sound itself is not kept anywhere once written out. The
+// screen is kept awake while recording: Android stops a web page's recording
+// when the screen locks.
+const MEET_SEG_MS = () => window.OB_MEET_SEG_MS || 10 * 60 * 1000;
+const MEET_REC_MAX_MS = 4 * 60 * 60 * 1000;
+let meetRec = null;                 // the recording in progress, if any
+const meetWriting = new Map();      // key -> { busy, again, error }
+const meetMemParts = [];            // parts kept here if IndexedDB is unavailable
+
+function meetIdb() {
+  if (!window.indexedDB) return Promise.reject(new Error('no IndexedDB'));
+  if (!meetIdb.p) meetIdb.p = new Promise((resolve, reject) => {
+    const req = indexedDB.open('ob-meeting-audio', 1);
+    req.onupgradeneeded = () => { req.result.createObjectStore('parts', { keyPath: 'id' }); };
+    req.onsuccess = () => resolve(req.result);
+    req.onerror = () => { meetIdb.p = null; reject(req.error || new Error('IndexedDB would not open')); };
+  });
+  return meetIdb.p;
+}
+async function meetIdbDo(mode, fn) {
+  const db = await meetIdb();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction('parts', mode);
+    const out = fn(tx.objectStore('parts'));
+    tx.oncomplete = () => resolve(out && 'result' in out ? out.result : undefined);
+    tx.onerror = () => reject(tx.error || new Error('IndexedDB failed'));
+  });
+}
+async function meetPartsFor(key) {
+  let all = [];
+  try { all = (await meetIdbDo('readonly', s => s.getAll())) || []; } catch (_) {}
+  return all.concat(meetMemParts).filter(p => p.key === key).sort((a, b) => a.seq - b.seq);
+}
+async function meetPutPart(part) {
+  try { await meetIdbDo('readwrite', s => s.put(part)); } catch (_) { meetMemParts.push(part); }
+}
+async function meetDropPart(part) {
+  const i = meetMemParts.indexOf(part);
+  if (i >= 0) { meetMemParts.splice(i, 1); return; }
+  try { await meetIdbDo('readwrite', s => s.delete(part.id)); } catch (_) {}
+}
+
+// Words go straight into the stored draft, so they land even while another
+// page is showing; the meeting screen re-reads it when it next draws.
+function meetAddWords(key, text) {
+  const d = meetDraft(key) || { notes: '', actions: [] };
+  d.transcript = (d.transcript ? d.transcript.replace(/\s+$/, '') + '\n\n' : '') + text;
+  meetPutDraft(key, d);
+}
+
+async function meetWriteOut(key) {
+  const st = meetWriting.get(key) || {};
+  meetWriting.set(key, st);
+  if (st.busy) { st.again = true; return; }
+  st.busy = true;
+  st.error = '';
+  meetRecRefresh();
+  try {
+    do {
+      st.again = false;
+      for (const part of await meetPartsFor(key)) {
+        const audio = await new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(r.result);
+          r.onerror = () => reject(new Error('could not read the recording'));
+          r.readAsDataURL(part.blob);
+        });
+        const { text } = await photoRequest('/audio/transcribe', { audio });
+        if (text) meetAddWords(key, text);
+        await meetDropPart(part);
+        meetRecRefresh();
+      }
+    } while (st.again);
+  } catch (err) {
+    st.error = err.message;
+  } finally {
+    st.busy = false;
+    meetRecRefresh();
+  }
+}
+
+async function startMeetRec(m) {
+  if (meetRec) return 'Already recording ' + meetRec.title + '.';
+  if (activeMic || activeRec) return 'The microphone is in use by Speak or Record. Stop that first.';
+  if (!CAN_RECORD) return 'This browser cannot record.';
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
+  } catch (_) {
+    return 'The microphone is blocked for this site. Allow it in the browser’s site settings.';
+  }
+  const type = ['audio/webm;codecs=opus', 'audio/ogg;codecs=opus', 'audio/mp4', 'audio/webm']
+    .find(t => MediaRecorder.isTypeSupported && MediaRecorder.isTypeSupported(t)) || '';
+  const d = meetDraft(m.key) || { notes: '', actions: [] };
+  const r = meetRec = { key: m.key, title: m.title, stream, type, startAt: Date.now(), seq: (d.partSeq || 0), live: 0 };
+  d.partSeq = r.seq + 1000;   // room for this recording's parts; a later one starts after them
+  meetPutDraft(m.key, Object.assign(d, { title: d.title || m.title, date: d.date || m.date, time: d.time || m.time, calendar: d.calendar || m.calendar }));
+  meetRecSegment(r);
+  r.clock = setInterval(() => {
+    if (Date.now() - r.startAt > MEET_REC_MAX_MS) stopMeetRec();
+    meetRecBar();
+  }, 1000);
+  meetWake(true);
+  meetRecRefresh();
+  return '';
+}
+
+function meetRecSegment(r) {
+  const rec = new MediaRecorder(r.stream, r.type ? { mimeType: r.type, audioBitsPerSecond: 32000 } : undefined);
+  const chunks = [];
+  const seq = r.seq++;
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  rec.onstop = async () => {
+    r.live--;
+    const blob = new Blob(chunks, { type: rec.mimeType || r.type || 'audio/webm' });
+    const last = r.stopping && r.live === 0;
+    if (last) r.stream.getTracks().forEach(t => t.stop());
+    if (blob.size > 2000) {
+      await meetPutPart({ id: r.key + '#' + String(seq).padStart(6, '0'), key: r.key, seq, blob, at: new Date().toISOString() });
+      meetWriteOut(r.key);
+    }
+  };
+  rec.start(1000);
+  r.live++;
+  // A fresh file every ten minutes: the next part starts before this one
+  // stops, so not a word falls between them.
+  r.segTimer = setTimeout(() => {
+    if (meetRec !== r || r.stopping) return;
+    meetRecSegment(r);
+    if (rec.state !== 'inactive') rec.stop();
+  }, MEET_SEG_MS());
+  r.rec = rec;
+}
+
+function stopMeetRec() {
+  const r = meetRec;
+  if (!r) return;
+  r.stopping = true;
+  clearTimeout(r.segTimer);
+  clearInterval(r.clock);
+  if (r.rec && r.rec.state !== 'inactive') r.rec.stop();
+  else r.stream.getTracks().forEach(t => t.stop());
+  meetRec = null;
+  meetWake(false);
+  meetRecRefresh();
+}
+
+let meetWakeLock = null;
+async function meetWake(on) {
+  try {
+    if (on && navigator.wakeLock && !meetWakeLock) {
+      meetWakeLock = await navigator.wakeLock.request('screen');
+      meetWakeLock.addEventListener('release', () => { meetWakeLock = null; });
+    } else if (!on && meetWakeLock) { await meetWakeLock.release(); meetWakeLock = null; }
+  } catch (_) { /* not allowed here; recording still works while the screen is on */ }
+}
+document.addEventListener('visibilitychange', () => { if (meetRec && document.visibilityState === 'visible') meetWake(true); });
+window.addEventListener('beforeunload', ev => { if (meetRec) { ev.preventDefault(); ev.returnValue = ''; } });
+
+// The bar that follows Stewart round the catalog while a meeting records.
+function meetRecBar() {
+  let bar = document.getElementById('meetRecBar');
+  document.body.classList.toggle('is-meet-rec', !!meetRec);   // room below the page for the bar
+  if (!meetRec) { if (bar) bar.remove(); return; }
+  if (!bar) {
+    bar = document.createElement('div');
+    bar.id = 'meetRecBar';
+    bar.className = 'meet-recbar';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = `<span class="meet-recbar__dot" aria-hidden="true"></span>
+      <span class="meet-recbar__what"><span class="meet-recbar__title"></span> <span class="meet-recbar__time o-num"></span></span>
+      <button type="button" class="meet-recbar__btn" data-x="open">Open</button>
+      <button type="button" class="meet-recbar__btn" data-x="stop">Stop</button>`;
+    bar.querySelector('[data-x="open"]').addEventListener('click', () => { if (meetRec) showMeetingsScreen(meetRec.key); });
+    bar.querySelector('[data-x="stop"]').addEventListener('click', stopMeetRec);
+    document.body.appendChild(bar);
+  }
+  bar.querySelector('.meet-recbar__title').textContent = 'Recording · ' + meetRec.title;
+  bar.querySelector('.meet-recbar__time').textContent = clock(Math.floor((Date.now() - meetRec.startAt) / 1000));
+}
+
+// Redraw whatever shows the recording: the bar, and the meeting's own screen.
+function meetRecRefresh() {
+  meetRecBar();
+  const screen = main.querySelector('.meet-screen');
+  const box = screen && screen.querySelector('.meet-rec');
+  if (box && typeof box._refresh === 'function') box._refresh();
 }
 
 // ---------- Calendar: the week or the month, and adding events (5 Nov 2026) ----------
