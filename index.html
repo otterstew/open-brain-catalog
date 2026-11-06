@@ -2646,6 +2646,9 @@ a.o-card:hover{filter:brightness(.98)}
   .meet-transcript { margin-top: var(--s4); background: var(--paper); border-radius: var(--r-md); padding: var(--s3) var(--s4); max-height: 24rem; overflow: auto; }
   .meet-transcript:empty { display: none; }
   .meet-transcript p { margin: 0 0 var(--s2); line-height: 1.6; }
+  .ob-update { position: fixed; z-index: 95; top: calc(var(--s3) + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s2); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s1) var(--s1) var(--s1) var(--s4); border-radius: var(--r-lg); background: var(--ink); color: var(--on-ink); font-size: var(--t-sm); }
+  .ob-update span { white-space: nowrap; }
+  .ob-update .o-btn { color: var(--on-ink); border-color: color-mix(in oklab, var(--on-ink) 40%, transparent); }
   .meet-recbar { position: fixed; z-index: 30; right: var(--s5); bottom: var(--s5); display: flex; align-items: center; gap: var(--s2); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s1) var(--s1) var(--s1) var(--s4); border-radius: var(--r-lg); background: var(--ink); color: var(--on-ink); font-size: var(--t-sm); }
   .meet-recbar__dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--fail); animation: meetPulse 1.6s ease-in-out infinite; }
   @keyframes meetPulse { 50% { opacity: .35; } }
@@ -13428,8 +13431,38 @@ else showUnlock();
 // Only registers over http(s): opened as a file:// the API is unavailable and
 // registration would throw.
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+  // A phone keeps the installed app in memory for days and brings it back
+  // without reloading, so it never asked whether there was a new version
+  // (Stewart, 6 Nov 2026: "my phone app not updating"). It now asks each time
+  // it comes back to the front, and hourly while open. A new version shows a
+  // bar to reload rather than reloading by itself: something may be half typed
+  // or recording.
+  const hadController = !!navigator.serviceWorker.controller;
+  let swReg = null, lastAsk = 0;
+  const askForUpdate = () => {
+    if (!swReg || Date.now() - lastAsk < 60000) return;
+    lastAsk = Date.now();
+    swReg.update().catch(() => {});
+  };
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').catch(() => { /* not fatal */ });
+    navigator.serviceWorker.register('sw.js').then(r => { swReg = r; lastAsk = Date.now(); }).catch(() => { /* not fatal */ });
+  });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') askForUpdate(); });
+  setInterval(() => { if (document.visibilityState === 'visible') askForUpdate(); }, 3600000);
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || document.querySelector('.ob-update')) return;
+    const bar = document.createElement('div');
+    bar.className = 'ob-update';
+    bar.setAttribute('role', 'status');
+    bar.innerHTML = '<span>A new version is ready.</span>' +
+      '<button type="button" class="o-btn o-btn--sm" data-x="go">Reload</button>' +
+      '<button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="no" aria-label="Not now"><i class="ph-light ph-x" aria-hidden="true"></i></button>';
+    bar.querySelector('[data-x="go"]').addEventListener('click', () => {
+      if (typeof meetRec !== 'undefined' && meetRec && !confirm('A meeting is recording. Reloading stops it. Reload anyway?')) return;
+      location.reload();
+    });
+    bar.querySelector('[data-x="no"]').addEventListener('click', () => bar.remove());
+    document.body.appendChild(bar);
   });
 }
 
