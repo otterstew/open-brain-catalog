@@ -3057,6 +3057,89 @@ a.o-card:hover{filter:brightness(.98)}
       html.work-mode .app { height: calc(100dvh - var(--tb) - var(--tabbar-h, 72px) - 36px); }
     }
   }
+  /* ── Colour through the app (6 Nov 2026) ──
+     Stewart found the catalog too white and asked for splashes of colour,
+     using only the six note colours. Each part of the app keeps one of them,
+     always as a soft tint or an icon, never a flooded bar:
+       Today, Morning plan: ochre (the sun)   Inbox, Calendar: sea
+       Notes, Statistics: heather (the app)   Journal, Money: moss
+       Tasks, Meetings: teal (One Side's)     Stays: blossom (the Wishing Stream's)
+     --sec is the part's colour; --sec-ink the same, nudged towards the ink
+     so it reads as text and icons in light and dark. */
+  [data-view="today"], [data-view="plan"], [data-go="today"], [data-go="plan"], .today-screen, .plan-screen { --sec: var(--ochre); }
+  [data-view="inbox"], [data-go="inbox"], .inbox-screen, [data-view="calendar"], [data-go="calendar"], [data-section="calendar"] { --sec: var(--sea); }
+  [data-view="notes"], [data-go="statsBtn"], [data-go="newBtn"] { --sec: var(--heather); }
+  [data-view="journal"], [data-view="money"], [data-go="money"], [data-section="money"] { --sec: var(--moss); }
+  [data-view="tasks"], [data-go="modeTasks"], [data-view="meetings"], [data-go="meetings"], [data-section="meetings"] { --sec: var(--teal); }
+  [data-view="stays"], [data-go="stays"], [data-section="stays"] { --sec: var(--blossom); }
+  #statsBtn { --sec: var(--heather); }
+  :is([data-view], [data-go], [data-section], .today-screen, .plan-screen, .inbox-screen, #statsBtn) { --sec-ink: color-mix(in oklab, var(--sec, var(--accent)) 82%, var(--ink)); --sec-tint: color-mix(in oklab, var(--sec, var(--accent)), var(--paper) 84%); }
+
+  /* The menu: every icon in its colour; the open one sits on a tint. */
+  .o-rail__item:is([data-view], #statsBtn) i { color: var(--sec-ink); }
+  .o-rail__item[data-view]:is(.is-current, [aria-current]) { background: var(--sec-tint); }
+  .o-rail__item[data-view]:is(.is-current, [aria-current]) i { color: var(--sec-ink); }
+  .o-tabbar [data-view] i { color: var(--sec-ink); opacity: .8; }
+  .o-tabbar [data-view]:is(.is-current, [aria-current]) i { opacity: 1; }
+  .o-tabbar [data-view]:is(.is-current, [aria-current]) { color: var(--sec-ink); }
+  .more-screen .o-stone[data-go] > i { color: var(--sec-ink, var(--ink-2)); }
+
+  /* Each page's one italic word takes its colour. */
+  :is(.today-screen, .plan-screen, .inbox-screen, .section-screen) .more-title em { color: var(--sec-ink); }
+
+  /* Notes keep their card colour in the list too. */
+  .card-row[data-tint="heather"] { --tint: var(--heather); } .card-row[data-tint="sea"] { --tint: var(--sea); } .card-row[data-tint="teal"] { --tint: var(--teal); }
+  .card-row[data-tint="moss"] { --tint: var(--moss); } .card-row[data-tint="ochre"] { --tint: var(--ochre); } .card-row[data-tint="blossom"] { --tint: var(--blossom); }
+  .card-row[data-tint] { background: color-mix(in oklab, var(--tint), var(--paper) 85%); }
+  .card-row[data-tint]:hover { background: color-mix(in oklab, var(--tint), var(--paper) 80%); }
+  .card-row[data-tint].selected { background: color-mix(in oklab, var(--tint), var(--paper) 72%); }
+
+  /* Today: the sun in ochre, the sea in sea; stays in blossom, prep in teal;
+     personal hours in sea, all-day things in ochre. */
+  .today-sea__item.is-sun i, .today-sea__item.is-sun b { color: color-mix(in oklab, var(--ochre) 82%, var(--ink)); }
+  .today-sea__item.is-tide i { color: color-mix(in oklab, var(--sea) 82%, var(--ink)); }
+  .today-sea__item.is-tide.is-next b { color: color-mix(in oklab, var(--sea) 82%, var(--ink)); }
+  .today-stays { background: color-mix(in oklab, var(--blossom), var(--paper) 88%); border-radius: var(--r-md); padding: var(--s3) var(--s4) var(--s2); }
+  .today-stays .o-task__tick, .section-stays .o-task__tick { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--blossom) 70%, var(--paper)); }
+  .today-prep { background: color-mix(in oklab, var(--teal), var(--paper) 88%); }
+  .today-hours .o-day__block:not(.is-work):not(.is-plan) { background: color-mix(in oklab, var(--sea), var(--paper) 80%); }
+  .today-hours .o-day__block.is-work { background: color-mix(in oklab, var(--teal), var(--paper) 88%); box-shadow: none; }
+  .today-allday__item { background: color-mix(in oklab, var(--ochre), var(--paper) 78%); }
+
+  /* Tasks: teal rings, so a list of them has some life. */
+  .o-task__tick { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--teal) 65%, var(--paper)); }
+  .o-task.is-done .o-task__tick { background: var(--teal); }
+
+  /* Calendar: personal in sea, work in teal, all-day in ochre; today in sea. */
+  .cal-ev { background: color-mix(in oklab, var(--sea), var(--paper) 84%); }
+  .cal-ev.is-work { background: color-mix(in oklab, var(--teal), var(--paper) 88%); color: var(--ink); }
+  .cal-ev.is-allday { background: color-mix(in oklab, var(--ochre), var(--paper) 78%); }
+  .cal-cell__ev { background: color-mix(in oklab, var(--sea), var(--paper) 80%); }
+  .cal-cell__ev.is-work { background: color-mix(in oklab, var(--teal), var(--paper) 84%); color: var(--ink); }
+  .cal-cell__dots i { background: var(--sea); }
+  .cal-day.is-today .cal-day__num, .cal-cell.is-today .cal-cell__num { background: var(--sea); }
+  .cal-cell.is-today { background: color-mix(in oklab, var(--sea), var(--paper) 90%); }
+  .cal-day.is-today { background: color-mix(in oklab, var(--sea), var(--paper) 93%); border-radius: var(--r-sm); }
+  .cal-add { background: color-mix(in oklab, var(--sea), var(--paper) 90%); }
+
+  /* Meetings: prep cards in One Side's teal, the transcript in sea. */
+  .meet-card { background: color-mix(in oklab, var(--teal), var(--paper) 88%); }
+  .meet-keep { background: color-mix(in oklab, var(--ochre), var(--paper) 84%); }
+  .meet-transcript { background: color-mix(in oklab, var(--sea), var(--paper) 90%); }
+  .meet-row__time { color: color-mix(in oklab, var(--teal) 82%, var(--ink)); }
+  .meet-row.is-work { background: color-mix(in oklab, var(--teal), var(--paper) 92%); }
+  .meet-newform { background: color-mix(in oklab, var(--teal), var(--paper) 90%); }
+
+  /* Statistics: the tiles take the six colours in turn. */
+  .stats-board > .board-tile { --tile-bg: var(--paper); background: var(--tile-bg); }
+  .stats-board > .board-tile::after { background: linear-gradient(color-mix(in oklab, var(--tile-bg) 0%, transparent), var(--tile-bg)); }
+  .stats-board > .board-tile:nth-child(6n+1) { --tile-bg: color-mix(in oklab, var(--heather), var(--paper) 88%); }
+  .stats-board > .board-tile:nth-child(6n+2) { --tile-bg: color-mix(in oklab, var(--sea), var(--paper) 88%); }
+  .stats-board > .board-tile:nth-child(6n+3) { --tile-bg: color-mix(in oklab, var(--moss), var(--paper) 88%); }
+  .stats-board > .board-tile:nth-child(6n+4) { --tile-bg: color-mix(in oklab, var(--ochre), var(--paper) 88%); }
+  .stats-board > .board-tile:nth-child(6n+5) { --tile-bg: color-mix(in oklab, var(--teal), var(--paper) 88%); }
+  .stats-board > .board-tile:nth-child(6n) { --tile-bg: color-mix(in oklab, var(--blossom), var(--paper) 88%); }
+  .stats-board > .board-tile.is-full { --tile-bg: var(--paper); }
 </style>
 </head>
 <body>
@@ -4665,6 +4748,7 @@ function renderList(items, isSearch) {
       + (selectedIndex === t.id ? ' selected' : '')
       + (referenceId === t.id ? ' referencing' : '')
       + (t.shelved ? ' shelved' : '');
+    if (t.color) row.dataset.tint = t.color;
     row.innerHTML = `
       <div class="card-row-tab" style="background:${style.color}"></div>
       <div class="card-row-body">
@@ -11698,14 +11782,14 @@ function renderTodaySea(box, x) {
   const nowHm = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
   const items = [];
   if (x.sun) {
-    items.push(`<span class="today-sea__item"><i class="ph-light ph-sun-horizon" aria-hidden="true"></i>Sunrise <b class="o-num">${escapeHtml(x.sun.sunrise)}</b></span>`);
-    items.push(`<span class="today-sea__item">Sunset <b class="o-num">${escapeHtml(x.sun.sunset)}</b></span>`);
+    items.push(`<span class="today-sea__item is-sun"><i class="ph-light ph-sun-horizon" aria-hidden="true"></i>Sunrise <b class="o-num">${escapeHtml(x.sun.sunrise)}</b></span>`);
+    items.push(`<span class="today-sea__item is-sun">Sunset <b class="o-num">${escapeHtml(x.sun.sunset)}</b></span>`);
   }
   const tides = x.tides || [];
   const next = tides.find(t => t.time >= nowHm);
   tides.forEach((t, i) => {
     const past = t.time < nowHm, isNext = t === next;
-    items.push(`<span class="today-sea__item${past ? ' is-past' : ''}${isNext ? ' is-next' : ''}"${isNext ? ' title="Next tide"' : ''}>${i === 0 ? '<i class="ph-light ph-waves" aria-hidden="true"></i>' : ''}${t.type === 'high' ? 'High' : 'Low'} <b class="o-num">${escapeHtml(t.time)}</b> <span class="o-num">${escapeHtml(t.height_m.toFixed(1))} m</span></span>`);
+    items.push(`<span class="today-sea__item is-tide${past ? ' is-past' : ''}${isNext ? ' is-next' : ''}"${isNext ? ' title="Next tide"' : ''}>${i === 0 ? '<i class="ph-light ph-waves" aria-hidden="true"></i>' : ''}${t.type === 'high' ? 'High' : 'Low'} <b class="o-num">${escapeHtml(t.time)}</b> <span class="o-num">${escapeHtml(t.height_m.toFixed(1))} m</span></span>`);
   });
   const missing = (x.problems || []).filter(p => !/^stays/.test(p));
   if (missing.length) items.push(`<span class="o-meta">Not read: ${escapeHtml(missing.map(p => p.split(':')[0]).join(', '))}</span>`);
