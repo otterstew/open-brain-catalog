@@ -2652,6 +2652,8 @@ a.o-card:hover{filter:brightness(.98)}
   .meet-transcript { margin-top: var(--s4); background: var(--paper); border-radius: var(--r-md); padding: var(--s3) var(--s4); max-height: 24rem; overflow: auto; }
   .meet-transcript:empty { display: none; }
   .meet-transcript p { margin: 0 0 var(--s2); line-height: 1.6; }
+  .meet-transcript__tools { display: flex; gap: var(--s2); margin: 0 0 var(--s3); }
+  .meet-transcript__edit { width: 100%; box-sizing: border-box; min-height: 12rem; line-height: 1.6; margin-bottom: var(--s2); }
   .ob-update { position: fixed; z-index: 95; top: calc(var(--s3) + env(safe-area-inset-top)); left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: var(--s2); max-width: calc(100vw - 2 * var(--s4)); padding: var(--s1) var(--s1) var(--s1) var(--s4); border-radius: var(--r-lg); background: var(--ink); color: var(--on-ink); font-size: var(--t-sm); }
   .ob-update span { white-space: nowrap; }
   .ob-update .o-btn { color: var(--on-ink); border-color: color-mix(in oklab, var(--on-ink) 40%, transparent); }
@@ -12656,8 +12658,66 @@ function drawMeeting(screen, m) {
     if (retry) retry.addEventListener('click', () => meetWriteOut(m.key));
     const words = (meetDraft(m.key) || {}).transcript || '';
     d.transcript = words;
-    transcriptBox.innerHTML = words ? '<h3 class="meet-card__head">Transcript</h3>' + words.split(/\n\s*\n/).map(x => `<p>${escapeHtml(x.trim())}</p>`).join('') : '';
+    if (transcriptBox.dataset.editing) return;   // never redraw over someone typing
+    transcriptBox.innerHTML = words ? '<h3 class="meet-card__head">Transcript</h3>' +
+      '<div class="meet-transcript__tools"><button type="button" class="o-btn o-btn--quiet o-btn--sm" data-t="edit">Edit</button>' +
+      '<button type="button" class="o-btn o-btn--quiet o-btn--sm" data-t="delete">Delete</button></div>' +
+      words.split(/\n\s*\n/).map(x => `<p>${escapeHtml(x.trim())}</p>`).join('') : '';
   };
+
+  // Change or delete the transcript before filing (11 Nov 2026). It lives in
+  // the stored draft, which the recorder appends to every ten minutes, so the
+  // box stops redrawing while it is being edited, and words that arrived
+  // meanwhile are kept on save rather than lost.
+  const putTranscript = text => {
+    const cur = meetDraft(m.key) || { notes: '', actions: [] };
+    cur.transcript = text;
+    meetPutDraft(m.key, cur);
+    d.transcript = text;
+  };
+  transcriptBox.addEventListener('click', ev => {
+    const btn = ev.target.closest('[data-t]');
+    if (!btn) return;
+    const what = btn.dataset.t;
+    const filedNote = (meetDraft(m.key) || {}).noteId
+      ? '<p class="o-meta">This meeting is already filed. File it again afterwards to update the note.</p>' : '';
+    if (what === 'delete') {
+      if (btn.dataset.armed !== 'yes') {
+        btn.dataset.armed = 'yes';
+        btn.textContent = 'Really delete the transcript';
+        return;
+      }
+      putTranscript('');
+      recBox._refresh();
+      return;
+    }
+    if (what === 'edit') {
+      const before = (meetDraft(m.key) || {}).transcript || '';
+      transcriptBox.dataset.editing = '1';
+      transcriptBox.innerHTML = '<h3 class="meet-card__head">Transcript</h3>' + filedNote +
+        '<textarea class="o-field meet-transcript__edit" rows="12" aria-label="Transcript"></textarea>' +
+        '<div class="meet-transcript__tools"><button type="button" class="o-btn o-btn--sm" data-t="save">Save</button>' +
+        '<button type="button" class="o-btn o-btn--quiet o-btn--sm" data-t="cancel">Cancel</button></div>';
+      const ta = transcriptBox.querySelector('textarea');
+      ta.value = before;
+      ta.dataset.before = before;
+      ta.focus();
+      return;
+    }
+    if (what === 'save' || what === 'cancel') {
+      const ta = transcriptBox.querySelector('textarea');
+      if (what === 'save' && ta) {
+        const before = ta.dataset.before || '';
+        const now = (meetDraft(m.key) || {}).transcript || '';
+        // Anything the recorder added while this was open goes on the end.
+        const arrived = now.startsWith(before) ? now.slice(before.length).replace(/^\s+/, '') : '';
+        const text = ta.value.replace(/\s+$/, '');
+        putTranscript(arrived ? (text ? text + '\n\n' : '') + arrived : text);
+      }
+      delete transcriptBox.dataset.editing;
+      recBox._refresh();
+    }
+  });
   const startRec = async () => {
     recWarn.hidden = true;
     recGo.disabled = true;
