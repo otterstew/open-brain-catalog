@@ -975,6 +975,9 @@ a.o-card:hover{filter:brightness(.98)}
   .note-make-due { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
   .note-make-due input { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--stone); border-radius: var(--r-sm); padding: 4px 6px; }
   .note-make-status { margin-right: auto; font-size: 12px; color: var(--ink-3); }
+  .note-make-matches { display: flex; flex-direction: column; }
+  .note-make-matches[hidden] { display: none; }
+  .note-make-matches .note-make-label { margin-bottom: 2px; }
   @media (max-width: 480px) {
     .icon-btn--word { width: 26px; padding: 0; border-color: transparent; }
     .icon-btn--word .icon-btn-word { display: none; }
@@ -5102,7 +5105,7 @@ function selectThought(t, mark) {
         <span class="index-card-type" style="color:${style.color}">${style.label}</span>
         <div class="index-card-head-right">
           <span class="index-card-date" title="Date captured">${formatDate(t.created_at)}</span>
-          <button class="icon-btn icon-btn--word" id="toTaskBtn" type="button" title="Make a task from this note" aria-label="Make a task from this note">
+          <button class="icon-btn icon-btn--word" id="toTaskBtn" type="button" title="Make a task from this note, or link one you already have" aria-label="Make or link a task for this note">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg><span class="icon-btn-word">Task</span>
           </button>
           ${isJournalEntry(t) ? '' : `<button class="icon-btn icon-btn--word" id="toJournalBtn" type="button" title="Add to today's journal" aria-label="Add this note to today's journal">
@@ -10082,6 +10085,8 @@ function renderTaskCount() {
 // either. It takes its own copy instead: one call for the whole table, every
 // status, cached for the session. Under a hundred rows, so the breadth is free.
 let noteTaskIndex = null;
+// The same rows, flat, for the Task form's "or link one you already have".
+let noteTaskAll = [];
 
 async function noteTasksFor(id) {
   if (!noteTaskIndex) {
@@ -10092,7 +10097,8 @@ async function noteTasksFor(id) {
     let raw;
     try { raw = JSON.parse(text); } catch (_) { raw = []; }
     noteTaskIndex = new Map();
-    (Array.isArray(raw) ? raw : []).map(normalizeTask).forEach(t => {
+    noteTaskAll = (Array.isArray(raw) ? raw : []).map(normalizeTask);
+    noteTaskAll.forEach(t => {
       if (!t.thought_id) return;
       const list = noteTaskIndex.get(t.thought_id) || [];
       list.push(t);
@@ -10127,8 +10133,9 @@ function wireNoteMakers(t, strip) {
   if (taskBtn) taskBtn.addEventListener('click', () => {
     const status = open(`
       <form class="note-make">
-        <label class="note-make-label" for="noteMakeTitle">New task from this note</label>
+        <label class="note-make-label" for="noteMakeTitle">New task from this note — or type to find one you already have</label>
         <input class="note-make-field" id="noteMakeTitle" maxlength="200" value="${escapeAttr((t.title || firstLine).slice(0, 200))}">
+        <div class="note-make-matches" id="noteMakeMatches" hidden></div>
         <div class="note-make-row">
           <label class="note-make-due">Due <input type="date" id="noteMakeDue"></label>
           <span class="note-make-status" role="status"></span>
@@ -10136,6 +10143,52 @@ function wireNoteMakers(t, strip) {
           <button class="compose-save" type="submit">Make task</button>
         </div>
       </form>`);
+
+    // The title box doubles as a search of the open tasks, so a task that
+    // already exists can be linked to this note instead of made twice
+    // (11 Nov 2026). Linking sets the task's note. A task cites one note, so a
+    // task that came from another note moves here, and its row says so first.
+    const titleEl = strip.querySelector('#noteMakeTitle');
+    const matchesEl = strip.querySelector('#noteMakeMatches');
+    const OPEN_STATUSES = ['inbox', 'next', 'waiting'];
+    let tasksReady = false;
+    const showMatches = () => {
+      if (!tasksReady) return;
+      const words = titleEl.value.toLowerCase().split(/\s+/).filter(w => w.length > 1);
+      const hits = !words.length ? [] : noteTaskAll
+        .filter(x => OPEN_STATUSES.includes(x.status) && x.thought_id !== noteId)
+        .filter(x => { const s = String(x.title || '').toLowerCase(); return words.every(w => s.includes(w)); })
+        .slice(0, 6);
+      matchesEl.hidden = !hits.length;
+      if (!hits.length) { matchesEl.innerHTML = ''; return; }
+      const today = todayISO();
+      matchesEl.innerHTML = '<span class="note-make-label">Or link a task you already have</span>' + hits.map(x => {
+        const meta = [TASK_STATUS_LABELS[x.status] || x.status];
+        if (x.due_date) meta.unshift(dueLabel(x.due_date, today).text);
+        if (x.thought_id) meta.push('moves from its current note');
+        return '<button class="note-task" type="button" data-id="' + escapeAttr(x.id) + '">' +
+          '<span class="note-task-title">' + escapeHtml(x.title) + '</span>' +
+          '<span class="note-task-meta">' + escapeHtml(meta.join(' · ')) + '</span></button>';
+      }).join('');
+      matchesEl.querySelectorAll('button[data-id]').forEach(btn => btn.addEventListener('click', async () => {
+        const picked = noteTaskAll.find(x => x.id === btn.getAttribute('data-id'));
+        if (!picked) return;
+        busy(true);
+        status.textContent = 'Linking…';
+        try {
+          await callTool('update_task', { id: picked.id, thought_id: noteId });
+          noteTaskIndex = null;
+          close();
+          renderNoteTasks(noteId);
+        } catch (err) {
+          busy(false);
+          status.textContent = 'Could not link it — ' + err.message;
+        }
+      }));
+    };
+    titleEl.addEventListener('input', showMatches);
+    noteTasksFor(noteId).then(() => { tasksReady = true; showMatches(); }).catch(() => {});
+
     strip.querySelector('form').addEventListener('submit', async ev => {
       ev.preventDefault();
       const title = strip.querySelector('#noteMakeTitle').value.trim();
