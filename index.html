@@ -2990,6 +2990,11 @@ a.o-card:hover{filter:brightness(.98)}
   .md strong { font-weight: 700; } .md em { font-style: italic; }
   .md-li { padding-left: calc(var(--depth, 0) * 1.6em); }
   .md-task.is-done .md-li-text { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--stone-2); }
+  /* Tickable while reading a note (11 Nov 2026): the whole row is the target. */
+  .md-task[role="checkbox"] { cursor: pointer; border-radius: var(--r-sm); }
+  .md-task[role="checkbox"]:hover .o-md { color: var(--accent); opacity: 1; }
+  .md-task[role="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .md-task[aria-busy="true"] { opacity: .6; }
   .md-quote { padding-left: var(--s4); color: var(--ink-2); font-style: italic; margin-left: 0; margin-right: 0; }
   .md-pre { font-family: var(--mono); font-size: .85em; line-height: 1.6; background: var(--stone); padding: var(--s3) var(--s4);
             border-radius: var(--r-md); white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -3760,7 +3765,9 @@ function renderBodyHtml(content) {
       const depth = Math.min(4, Math.floor(m[1].replace(/\t/g, '  ').length / 2));
       const box = m[3] ? m[3].trim() : '';
       const done = /x/i.test(box);
-      list.push('<div class="md-li' + (box ? ' md-task' : '') + (done ? ' is-done' : '') + '" style="--depth:' + depth + '">' +
+      // data-line is the source line, so a tick while reading can change it.
+      list.push('<div class="md-li' + (box ? ' md-task' : '') + (done ? ' is-done' : '') + '"' +
+        (box ? ' data-line="' + i + '"' : '') + ' style="--depth:' + depth + '">' +
         '<span class="o-md">' + escapeHtml(m[2] + ' ' + (box ? box + ' ' : '')) + '</span>' +
         '<span class="md-li-text">' + renderInline(m[4]) + '</span></div>');
       continue;
@@ -5229,6 +5236,7 @@ function selectThought(t, mark) {
 
   renderNoteTasks(t.realId || t.id);
   wireNoteMakers(t, cardConfirm);
+  wireChecklist(t);
 
   deleteBtn.addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
@@ -10176,7 +10184,8 @@ function wireNoteMakers(t, strip) {
         busy(true);
         status.textContent = 'Linking…';
         try {
-          await callTool('update_task', { id: picked.id, thought_id: noteId });
+          const res = await callTool('update_task', { id: picked.id, thought_id: noteId });
+          if (!/^Updated/.test(String(res))) throw new Error(String(res).slice(0, 120));
           noteTaskIndex = null;
           close();
           renderNoteTasks(noteId);
@@ -10253,6 +10262,56 @@ function wireNoteMakers(t, strip) {
         busy(false);
         status.textContent = 'Could not add it — ' + err.message;
       }
+    });
+  });
+}
+
+// Tick a "- [ ]" box while reading a note, without opening the editor
+// (11 Nov 2026). A tap changes that one line and saves the whole note, as the
+// editor would. The line is read again first: if the text has moved on since
+// the card was drawn, nothing is written and the reader is told to reload.
+const CHECK_LINE_RE = /^(\s*(?:[-*+]|\d{1,3}[.)])\s+\[)([ xX])(\]\s+.*)$/;
+
+function wireChecklist(t) {
+  const body = document.querySelector('.index-card-body .note-text');
+  if (!body) return;
+  body.querySelectorAll('.md-task[data-line]').forEach(row => {
+    const paint = done => {
+      row.classList.toggle('is-done', done);
+      row.setAttribute('aria-checked', String(done));
+      const mark = row.querySelector('.o-md');
+      if (mark) mark.textContent = mark.textContent.replace(/\[[ xX]\]/, done ? '[x]' : '[ ]');
+    };
+    row.setAttribute('role', 'checkbox');
+    row.setAttribute('aria-checked', String(row.classList.contains('is-done')));
+    row.tabIndex = 0;
+    const toggle = async ev => {
+      if (ev.target.closest('a')) return;   // a link inside the item still opens
+      if (row.getAttribute('aria-busy') === 'true') return;
+      const n = Number(row.dataset.line);
+      const lines = String(t.content || '').replace(/\r\n?/g, '\n').split('\n');
+      const m = (lines[n] || '').match(CHECK_LINE_RE);
+      if (!m) { showStatus('This list has changed since it was opened. Reload the note to tick it.', true); return; }
+      const done = m[2] === ' ';
+      lines[n] = m[1] + (done ? 'x' : ' ') + m[3];
+      const next = lines.join('\n');
+      row.setAttribute('aria-busy', 'true');
+      paint(done);
+      try {
+        // A tool error comes back as text rather than a throw.
+        const res = await callTool('update_thought', { id: t.realId || t.id, content: next, updated_date: todayISO() });
+        if (!/^Updated/.test(String(res))) throw new Error(String(res).slice(0, 120));
+        t.content = next;
+      } catch (err) {
+        paint(!done);
+        showStatus('Could not save the tick — ' + err.message, true);
+      } finally {
+        row.removeAttribute('aria-busy');
+      }
+    };
+    row.addEventListener('click', toggle);
+    row.addEventListener('keydown', ev => {
+      if (ev.key === ' ' || ev.key === 'Enter') { ev.preventDefault(); toggle(ev); }
     });
   });
 }
