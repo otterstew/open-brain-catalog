@@ -4860,9 +4860,11 @@ function filterToSingleValue(setRef, value) {
 // now an entry in the browser's history, and Back restores it (3 Oct 2026).
 // Only the notes view keeps its filters; journal and tasks record the view alone.
 let navRestoring = false;
+let navReplaceNext = false;   // set by returnToList: the next record swaps the entry rather than adding one
 const searchCache = new Map();   // query -> results, so Back to a search does not re-ask
 
 function navSnapshot() {
+  if (viewMode === 'tasks') return { ob: 1, view: 'tasks', task: selectedTaskId || null };
   if (viewMode !== 'notes') return { ob: 1, view: viewMode };
   return {
     ob: 1, view: 'notes',
@@ -4874,7 +4876,7 @@ function navSnapshot() {
 }
 
 function navKey(state, withQuery) {
-  const { depth, ...rest } = state;
+  const { depth, prevList, ...rest } = state;
   if (!withQuery) rest.q = Boolean(rest.q);
   return JSON.stringify(rest);
 }
@@ -4886,17 +4888,77 @@ function recordNav() {
   if (cur && navKey(cur, true) === navKey(next, true)) return;
   // Typing a search changes the query once per keystroke; that is one step, not ten.
   const retyped = cur && cur.q && next.q && navKey(cur) === navKey(next);
-  if (!cur || retyped) {
+  const replace = navReplaceNext;
+  navReplaceNext = false;
+  if (!cur || retyped || replace) {
     next.depth = cur ? cur.depth : 0;
+    if (cur && cur.prevList) next.prevList = cur.prevList;
     history.replaceState(next, '');
   } else {
     next.depth = (cur.depth || 0) + 1;
+    // Remember when the entry underneath is this same list with no note open,
+    // so the page's own Back button can step back to it rather than add one.
+    next.prevList = !cur.note && next.note != null && sameList(cur, next);
     history.pushState(next, '');
   }
 }
 
+function sameList(a, b) {
+  return navKey(Object.assign({}, a, { note: null }), true) === navKey(Object.assign({}, b, { note: null }), true);
+}
+
+// The page's own "Back to the list" and, on a phone, "Back to drawer"
+// (11 Nov 2026). They used to leave the browser history thinking the note was
+// still open, so after a few notes the phone's back gesture replayed every one
+// of them before reaching the list. Now they are a real step back: to the list
+// entry underneath when there is one, otherwise by swapping this note's entry
+// for the list, so nothing piles up behind it.
+function returnToList() {
+  const cur = history.state && history.state.ob ? history.state : null;
+  if (cur && cur.note && cur.prevList && !editingId) { history.back(); return; }
+  navReplaceNext = true;
+  showEmptyState();
+}
+
+// The screens that are not a list of notes (Today, Inbox, the Morning plan,
+// More, Calendar, Meetings, Stays, Money) are history entries too, as is the
+// task that is open (11 Nov 2026). Before, Back from any of them skipped to
+// whatever note or list came before.
+const SCREEN_SHOWS = {
+  more: () => showMoreScreen(),
+  inbox: () => showInboxScreen(),
+  today: () => showTodayScreen(),
+  plan: () => showPlanScreen(),
+};
+
+function recordScreen(id) {
+  if (navRestoring) return;
+  const cur = history.state && history.state.ob ? history.state : null;
+  if (cur && cur.screen === id) return;
+  const next = { ob: 1, view: viewMode, screen: id, depth: cur ? (cur.depth || 0) + 1 : 0 };
+  if (cur) history.pushState(next, ''); else history.replaceState(next, '');
+}
+
 function restoreNav(state) {
-  if (state.view !== viewMode) setViewMode(state.view);
+  if (state.screen) {
+    if (state.view && state.view !== viewMode) setViewMode(state.view);
+    if (SCREEN_SHOWS[state.screen]) SCREEN_SHOWS[state.screen]();
+    else if (SECTION_SCREENS[state.screen]) showSectionScreen(state.screen);
+    return;
+  }
+  if (state.view !== viewMode || main.querySelector('.more-screen, .inbox-screen, .today-screen, .plan-screen, .section-screen')) setViewMode(state.view);
+  if (state.view === 'tasks') {
+    if (!state.task) { showTaskEmptyState(); return; }
+    const open = () => {
+      const t = allTasks.find(x => x.id === state.task);
+      if (!t || !history.state || history.state.task !== state.task) return;
+      navRestoring = true;
+      try { selectTask(t); } finally { navRestoring = false; }
+    };
+    if (allTasks.some(x => x.id === state.task)) open();
+    else loadTasks(true).then(open);
+    return;
+  }
   if (state.view !== 'notes') return;
   if (state.q) {
     searchMode = true;
@@ -4917,8 +4979,21 @@ function restoreNav(state) {
   activeAuthors = new Set(state.authors);
   activeSources = new Set(state.sources);
   applyFilters();
-  const t = state.note && findThought(state.note);
-  if (t) selectThought(t); else showEmptyState();
+  if (!state.note) { showEmptyState(); return; }
+  // A note found by meaning may not be among the notes loaded, only among the
+  // search's results, or neither once the cache has gone; fetch it then.
+  const t = findThought(state.note) || (displayed.baseResults || []).find(x => x.id === state.note);
+  if (t) { selectThought(t); return; }
+  showEmptyState();
+  const want = state.note;
+  callTool('fetch', { id: want }).then(text => {
+    const doc = JSON.parse(text);
+    if (!history.state || history.state.note !== want) return;   // moved on meanwhile
+    navRestoring = true;
+    try {
+      selectThought(normalizeThought({ id: doc.id, content: doc.text, created_at: doc.metadata && doc.metadata.created_at, metadata: doc.metadata || {} }));
+    } finally { navRestoring = false; }
+  }).catch(() => { /* the list is showing, which is the honest fallback */ });
 }
 
 window.addEventListener('popstate', (e) => {
@@ -5330,14 +5405,14 @@ function selectThought(t, mark) {
   const back = document.createElement('button');
   back.className = 'back-btn';
   back.textContent = '← Back to drawer';
-  back.addEventListener('click', () => app.classList.remove('detail-open'));
+  back.addEventListener('click', returnToList);
   main.prepend(back);
 
   const toList = document.createElement('button');
   toList.type = 'button';
   toList.className = 'list-return';
   toList.textContent = (cardsLayout() ? '← All cards (' : '← Back to the list (') + displayed.length + ')';
-  toList.addEventListener('click', showEmptyState);
+  toList.addEventListener('click', returnToList);
   main.prepend(toList);
 
   app.classList.add('detail-open');
@@ -10485,6 +10560,7 @@ async function quickAddTask(text) {
 function showTaskEmptyState() {
   selectedTaskId = null;
   renderTaskList();
+  if (viewMode === 'tasks') recordNav();
   main.innerHTML = `
     <div class="empty-state">
       <div class="glyph">✓</div>
@@ -10543,6 +10619,7 @@ function wireDatePicker(id) {
 function selectTask(t) {
   selectedTaskId = t.id;
   renderTaskList();
+  recordNav();
 
   const statusOptions = Object.keys(TASK_STATUS_LABELS)
     .map(s => `<option value="${s}"${s === t.status ? ' selected' : ''}>${TASK_STATUS_LABELS[s]}</option>`)
@@ -11351,6 +11428,7 @@ function showMoreScreen() {
   selectedIndex = null;
   editingId = null;
   closeReference();
+  recordScreen('more');
   const items = MORE_ITEMS.filter(([id]) => {
     if (id === 'plan' || SECTION_SCREENS[id]) return true;
     if (id === 'speakNote') return !!micButtonHtml();
@@ -11502,6 +11580,7 @@ function showInboxScreen() {
   selectedIndex = null;
   editingId = null;
   closeReference();
+  recordScreen('inbox');
   main.innerHTML = `
     <div class="inbox-screen">
       <h1 class="more-title"><em>Inbox</em></h1>
@@ -11673,6 +11752,7 @@ function showTodayScreen() {
   selectedIndex = null;
   editingId = null;
   closeReference();
+  recordScreen('today');
   const now = new Date();
   const dateline = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   main.innerHTML = `
@@ -12100,6 +12180,7 @@ const SECTION_SCREENS = {
 
 function showSectionScreen(kind) {
   const def = SECTION_SCREENS[kind];
+  if (def) recordScreen(kind);
   if (kind === 'calendar' && !workMode) { showCalendarScreen(); return; }
   if (kind === 'meetings') { showMeetingsScreen(); return; }   // work meetings too, so not hidden in work mode
   if (!def || !confirmLeavingEdit()) return;
@@ -13214,6 +13295,7 @@ async function showPlanScreen() {
   selectedIndex = null;
   editingId = null;
   closeReference();
+  recordScreen('plan');
   const now = new Date();
   const dateline = now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
   main.innerHTML = `
