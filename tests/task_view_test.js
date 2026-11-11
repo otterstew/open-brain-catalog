@@ -86,8 +86,10 @@ function handle(body) {
 }
 
 (async () => {
-  const browser = await chromium.launch({ executablePath: process.env.CHROME_PATH || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' });
-  const ctx = await browser.newContext();
+  const browser = await chromium.launch(process.env.CHROME_PATH ? { executablePath: process.env.CHROME_PATH } : {});
+  // Desktop width, so the sections are reached through the rail as on a laptop;
+  // the phone's tab bar is the other way in and is not what this test is about.
+  const ctx = await browser.newContext({ viewport: { width: 1280, height: 900 } });
   const page = await ctx.newPage();
 
   const errors = [];
@@ -143,7 +145,10 @@ function handle(body) {
   });
 
   // --- switch to tasks ---
-  await page.click('#modeTasks');
+  // The Notes/Journal/Tasks buttons in the header are kept (setViewMode reads
+  // and writes them) but hidden; the rail is how the sections are reached.
+  const go = section => page.click('#rail [data-go="' + section + '"]');
+  await go('modeTasks');
   await page.waitForTimeout(500);
 
   const groups = await page.$$eval('.task-group span:first-child', els => els.map(e => e.textContent));
@@ -157,6 +162,9 @@ function handle(body) {
 
   const badge = await page.$eval('#modeTasksN', e => e.textContent);
   check('badge counts due+overdue only', badge === '2', badge);
+  // The header badge is hidden with its button; the rail's copy is what shows.
+  const railBadge = await page.$eval('#railTasksN', e => e.textContent);
+  check('rail badge mirrors the count', railBadge === '2', railBadge);
 
   const repeat = await page.$$eval('.task-sub .repeat', els => els.map(e => e.textContent.trim()));
   check('repeat shown', repeat.length === 1 && /weekly/.test(repeat[0]), repeat);
@@ -257,15 +265,23 @@ function handle(body) {
   check('second press deletes', calls.filter(c => c.name === 'delete_task').length === delCountBefore + 1);
 
   // --- back to notes ---
-  await page.click('#modeNotes');
+  await go('modeNotes');
   await page.waitForTimeout(400);
-  check('notes mode restores the search box', await shown('#searchRow'));
+  // Search and the facets fold away until asked for (5 Nov 2026), so notes
+  // mode gives them back folded: no longer hidden, and one press opens each.
+  check('notes mode un-hides the search box',
+    await page.$eval('#searchRow', e => !e.hidden));
   check('notes mode hides the quick-add box', !(await shown('#taskAddRow')));
-  check('notes mode restores the facet bar', await shown('.facet-bar'));
   check('notes mode restores the new-note button', await shown('#newBtn'));
+  await page.click('#rail [data-search-open]');
+  await page.waitForTimeout(200);
+  check('the rail magnifier opens the search box', await shown('#searchRow'));
+  await page.click('#notesHead [data-nh-filter]');
+  await page.waitForTimeout(200);
+  check('Filter opens the facet bar', await shown('.facet-bar'));
 
   // --- the done filter asks the server for done tasks ---
-  await page.click('#modeTasks');
+  await go('modeTasks');
   await page.waitForTimeout(400);
   // By label, not by position: the filter row has been reordered before.
   await page.click('#chipRow .chip:has-text("Done")');
