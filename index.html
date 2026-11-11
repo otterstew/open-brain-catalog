@@ -346,6 +346,9 @@ a.o-card:hover{filter:brightness(.98)}
 .o-task__tick:hover{box-shadow:inset 0 0 0 1.5px var(--accent)}
 .o-task.is-done .o-task__tick{background:var(--accent); box-shadow:none; color:var(--on-ink)}
 .o-task__main{flex:1; min-width:0}
+.o-task__open{background:none; border:0; padding:0; margin:0; text-align:left; font:inherit; color:inherit; cursor:pointer}
+.o-task__open:hover .o-task__title{color:var(--accent)}
+.o-task__open:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--r-sm)}
 .o-task__title{display:block}
 .o-task.is-done .o-task__title{color:var(--ink-3); text-decoration:line-through; text-decoration-color:var(--ink-dim)}
 .o-task__meta{display:block; margin-top:2px; font-size:var(--t-xs); color:var(--ink-3)}
@@ -11767,11 +11770,20 @@ function renderTodayTasks(tasks) {
     const when = late ? dueLabel(t.due_date, today).text : 'Today';
     return `<li class="o-task${late ? '' : ''}" data-id="${escapeAttr(t.id)}">
       <button type="button" class="o-task__tick" aria-label="Mark “${escapeAttr(t.title)}” done"></button>
-      <span class="o-task__main"><span class="o-task__title">${escapeHtml(t.title)}</span>
-        ${t.project ? `<span class="o-task__meta">${escapeHtml(t.project)}</span>` : ''}</span>
+      <button type="button" class="o-task__main o-task__open" title="Open this task in Tasks"><span class="o-task__title">${escapeHtml(t.title)}</span>
+        ${t.project ? `<span class="o-task__meta">${escapeHtml(t.project)}</span>` : ''}</button>
       <span class="o-task__time${late ? ' is-due' : ''}">${escapeHtml(when)}</span>
     </li>`;
   }).join('');
+  // The title opens the task itself in Tasks (11 Nov 2026), the way a note's
+  // "Tasks from this note" rows do; the circle still ticks it off.
+  const byId = new Map(tasks.map(t => [t.id, t]));
+  list.querySelectorAll('.o-task__open').forEach(btn => btn.addEventListener('click', () => {
+    const t = byId.get(btn.closest('.o-task').dataset.id);
+    if (!t) return;
+    setViewMode('tasks');
+    selectTask(t);
+  }));
   list.querySelectorAll('.o-task').forEach(row => {
     row.querySelector('.o-task__tick').addEventListener('click', async () => {
       if (row.classList.contains('is-done')) return;
