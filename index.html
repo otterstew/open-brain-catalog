@@ -2475,20 +2475,29 @@ a.o-card:hover{filter:brightness(.98)}
   .drawer .mode-btn i { font-size: 24px; color: var(--sec-ink, var(--ink-2)); }
   .drawer .mode-btn:hover { color: var(--ink); background: color-mix(in oklab, var(--paper) 50%, transparent); }
   .drawer .mode-btn[aria-pressed="true"] { color: var(--ink); background: var(--paper); border-bottom-color: transparent; }
-  .drawer .mode-btn .mode-n { position: absolute; top: 6px; right: 8px; font-family: var(--mono); font-size: var(--t-xs); }
+  /* The count of tasks due sits on the Tasks icon, like an app badge, so it
+     stays with the tab however wide the tab is (cards view, 16 Nov 2026). */
+  .drawer .mode-ic { position: relative; display: inline-block; line-height: 0; }
+  .drawer .mode-btn .mode-n { position: absolute; bottom: 55%; left: 70%; white-space: nowrap; font-family: var(--mono); font-size: 11px; line-height: 1;
+    padding: 3px 5px; border-radius: var(--r-sm); background: var(--fail); color: var(--on-ink); }
+  .drawer .mode-btn .mode-n:empty { display: none; }
+  .drawer .mode-btn[aria-pressed="true"] .mode-n { color: var(--on-ink); }
   .mode-btn[data-mode="notes"] { --sec: var(--heather); }
   .mode-btn[data-mode="journal"] { --sec: var(--moss); }
   .mode-btn[data-mode="tasks"] { --sec: var(--teal); }
   .mode-btn[data-mode="lists"] { --sec: var(--sea); }
   .mode-btn[data-mode] { --sec-ink: color-mix(in oklab, var(--sec) 82%, var(--ink)); }
   /* The notes' own buttons, big enough to see at a glance. */
-  .notes-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: var(--s2); margin: 0 0 var(--s4); }
+  .notes-row { display: flex; flex-wrap: wrap; gap: var(--s2); margin: 0 0 var(--s4); }
   .notes-row[hidden] { display: none; }
-  .nr-new { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px;
+  /* In cards view the drawer spans the page; the tabs and buttons keep to a
+     sensible width rather than stretching across it. */
+  .app.notes-cards .drawer .mode-row, .app.notes-cards .drawer .notes-row { max-width: 560px; }
+  .nr-new { flex: 1 1 100%; display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px;
     border: 0; border-radius: var(--r-md); background: var(--ink); color: var(--on-ink); font: inherit; font-size: var(--t-md); cursor: pointer; }
   .nr-new i { font-size: 20px; }
   .nr-new:hover { background: color-mix(in oklab, var(--ink) 88%, var(--accent)); }
-  .nr-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 64px; padding: var(--s2) var(--s1);
+  .nr-btn { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 64px; padding: var(--s2) var(--s1);
     border: 0; border-radius: var(--r-md); background: var(--paper); color: var(--ink); font: inherit; font-size: var(--t-sm); cursor: pointer; }
   .nr-btn[hidden] { display: none; }
   .nr-btn i { font-size: 24px; color: var(--ink-2); }
@@ -2668,7 +2677,23 @@ a.o-card:hover{filter:brightness(.98)}
   }
   /* Meetings (5 Nov 2026) */
   .meet-screen { max-width: 760px; }
-  .cal-tabs { margin: 0 0 var(--s5); }
+  /* Calendar and Meetings: the same big tabs as Notes, Journal, Tasks and
+     Lists, and the same big dark add button as New note (16 Nov 2026). */
+  .cal-tabs.o-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--s1); padding: var(--s1); max-width: 560px;
+    margin: 0 0 var(--s5); background: var(--stone); border: 0; border-radius: var(--r-md); }
+  .cal-tabs .o-tab { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; min-height: 60px; margin: 0;
+    padding: var(--s2) var(--s1); border: 0; border-radius: var(--r-sm); font-family: var(--type); font-size: var(--t-sm); color: var(--ink-2); }
+  .cal-tabs .o-tab i { font-size: 24px; }
+  .cal-tabs .o-tab[data-cal-tab="calendar"] i { color: color-mix(in oklab, var(--sea) 82%, var(--ink)); }
+  .cal-tabs .o-tab[data-cal-tab="meetings"] i { color: color-mix(in oklab, var(--teal) 82%, var(--ink)); }
+  .cal-tabs .o-tab:hover { color: var(--ink); background: color-mix(in oklab, var(--paper) 50%, transparent); }
+  .cal-tabs .o-tab[aria-selected="true"] { color: var(--ink); background: var(--paper); border-bottom-color: transparent; }
+  .cal-tabs .o-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .big-add { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s5);
+    border: 0; border-radius: var(--r-md); background: var(--ink); color: var(--on-ink); font: inherit; font-size: var(--t-md); cursor: pointer; }
+  .big-add i { font-size: 20px; }
+  .big-add:hover { background: color-mix(in oklab, var(--ink) 88%, var(--accent)); }
+  .big-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   .cal-ev[data-meet-ev] { cursor: pointer; }
   .cal-ev[data-meet-ev]:hover { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--sec, var(--accent)) 45%, transparent); }
   .cal-ev[data-meet-ev]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -3459,7 +3484,7 @@ a.o-card:hover{filter:brightness(.98)}
       <div class="mode-row" id="modeRow">
         <button class="mode-btn" id="modeNotes" type="button" data-mode="notes" aria-pressed="true"><i class="ph-light ph-notebook" aria-hidden="true"></i><span>Notes</span></button>
         <button class="mode-btn" id="modeJournal" type="button" data-mode="journal" aria-pressed="false"><i class="ph-light ph-book-open-text" aria-hidden="true"></i><span>Journal</span></button>
-        <button class="mode-btn" id="modeTasks" type="button" data-mode="tasks" aria-pressed="false"><i class="ph-light ph-check-square" aria-hidden="true"></i><span>Tasks</span><span class="mode-n" id="modeTasksN"></span></button>
+        <button class="mode-btn" id="modeTasks" type="button" data-mode="tasks" aria-pressed="false"><span class="mode-ic"><i class="ph-light ph-check-square" aria-hidden="true"></i><span class="mode-n" id="modeTasksN"></span></span><span>Tasks</span></button>
         <button class="mode-btn" id="modeLists" type="button" data-mode="lists" aria-pressed="false"><i class="ph-light ph-list-bullets" aria-hidden="true"></i><span>Lists</span></button>
       </div>
 
@@ -10247,7 +10272,11 @@ function renderTaskCount() {
   const pressing = allTasks.filter(t =>
     t.owner !== 'claude' && t.status !== 'done' && t.status !== 'dropped' &&
     t.due_date && daysBetween(today, t.due_date) <= 0).length;
-  el.textContent = pressing ? String(pressing) : '';
+  // Said in words, as a badge (16 Nov 2026): a bare "9" in the tab's corner
+  // read as a stray digit.
+  el.textContent = pressing ? pressing + ' due' : '';
+  const tab = document.getElementById('modeTasks');
+  if (tab) tab.title = pressing ? pressing + ' task' + (pressing === 1 ? '' : 's') + ' due today or overdue' : 'Tasks';
 }
 
 // ---------- tasks shown on the note they came from ----------
@@ -12724,8 +12753,8 @@ function meetDayLabel(iso) {
 // Calendar and Meetings are one place with two tabs (16 Nov 2026).
 function calTabsHtml(cur) {
   return `<div class="o-tabs cal-tabs" role="tablist" aria-label="Calendar or meetings">
-    <button type="button" class="o-tab" role="tab" data-cal-tab="calendar" aria-selected="${cur === 'calendar'}">Calendar</button>
-    <button type="button" class="o-tab" role="tab" data-cal-tab="meetings" aria-selected="${cur === 'meetings'}">Meetings</button>
+    <button type="button" class="o-tab" role="tab" data-cal-tab="calendar" aria-selected="${cur === 'calendar'}"><i class="ph-light ph-calendar-blank" aria-hidden="true"></i><span>Calendar</span></button>
+    <button type="button" class="o-tab" role="tab" data-cal-tab="meetings" aria-selected="${cur === 'meetings'}"><i class="ph-light ph-users-three" aria-hidden="true"></i><span>Meetings</span></button>
   </div>`;
 }
 main.addEventListener('click', e => {
@@ -12792,7 +12821,7 @@ function drawMeetingList(screen) {
   screen.innerHTML = `
     <div class="meet-head">
       <h1 class="more-title"><em>Meetings</em></h1>
-      <button type="button" class="o-btn o-btn--sm meet-new"><i class="ph-light ph-plus" aria-hidden="true"></i> New meeting</button>
+      <button type="button" class="big-add meet-new"><i class="ph-light ph-plus" aria-hidden="true"></i> New meeting</button>
     </div>
     <p class="section-lead">A week either side of today. Open one for its prep, then take notes and actions in it, and file them to Open Brain when it ends.</p>
     <form class="meet-newform note-make" hidden>
@@ -13499,7 +13528,7 @@ function showCalendarScreen() {
           <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-cal-step="-1" aria-label="Earlier"><i class="ph-light ph-caret-left"></i></button>
           <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-cal-step="0">Today</button>
           <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-cal-step="1" aria-label="Later"><i class="ph-light ph-caret-right"></i></button>
-          <button type="button" class="o-btn o-btn--sm cal-add-btn"><i class="ph-light ph-plus" aria-hidden="true"></i> Add event</button>
+          <button type="button" class="big-add cal-add-btn"><i class="ph-light ph-plus" aria-hidden="true"></i> Add event</button>
         </div>
       </div>
       <div class="o-dateline cal-range"></div>
