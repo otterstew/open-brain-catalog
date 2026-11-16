@@ -2467,15 +2467,75 @@ a.o-card:hover{filter:brightness(.98)}
   .drawer-title, .header-actions { display: none !important; }
   /* Notes, Journal and Tasks are one place: tabs at the top of the list
      (16 Nov 2026), in place of three items in the rail. */
-  .drawer .mode-row { display: flex; gap: var(--s5); justify-content: flex-start; margin: 0 0 var(--s4); border-bottom: 1px solid var(--stone-2); }
-  .drawer .mode-btn { flex: 0 0 auto; font-family: var(--type); font-size: var(--t-sm); color: var(--ink-2); padding: var(--s2) 0; min-height: 40px; }
-  .drawer .mode-btn:hover { color: var(--ink); }
-  .drawer .mode-btn[aria-pressed="true"] { color: var(--ink); }
-  .drawer .mode-btn .mode-n { font-family: var(--mono); font-size: var(--t-xs); }
-  .notes-row { flex-wrap: wrap; margin: 0 0 var(--s3); }
-  .notes-row .task-btn { display: inline-flex; align-items: center; gap: var(--s1); }
-  .notes-row .task-btn i { font-size: 16px; }
+  /* Big tabs (16 Nov 2026): a segmented block, each tab an icon over its word. */
+  .drawer .mode-row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s1); padding: var(--s1);
+    margin: 0 0 var(--s4); background: var(--stone); border: 0; border-radius: var(--r-md); }
+  .drawer .mode-btn { position: relative; flex-direction: column; gap: 2px; min-height: 60px; margin: 0; padding: var(--s2) var(--s1);
+    border: 0; border-radius: var(--r-sm); font-family: var(--type); font-size: var(--t-sm); color: var(--ink-2); }
+  .drawer .mode-btn i { font-size: 24px; color: var(--sec-ink, var(--ink-2)); }
+  .drawer .mode-btn:hover { color: var(--ink); background: color-mix(in oklab, var(--paper) 50%, transparent); }
+  .drawer .mode-btn[aria-pressed="true"] { color: var(--ink); background: var(--paper); border-bottom-color: transparent; }
+  .drawer .mode-btn .mode-n { position: absolute; top: 6px; right: 8px; font-family: var(--mono); font-size: var(--t-xs); }
+  .mode-btn[data-mode="notes"] { --sec: var(--heather); }
+  .mode-btn[data-mode="journal"] { --sec: var(--moss); }
+  .mode-btn[data-mode="tasks"] { --sec: var(--teal); }
+  .mode-btn[data-mode="lists"] { --sec: var(--sea); }
+  .mode-btn[data-mode] { --sec-ink: color-mix(in oklab, var(--sec) 82%, var(--ink)); }
+  /* The notes' own buttons, big enough to see at a glance. */
+  .notes-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: var(--s2); margin: 0 0 var(--s4); }
   .notes-row[hidden] { display: none; }
+  .nr-new { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px;
+    border: 0; border-radius: var(--r-md); background: var(--ink); color: var(--on-ink); font: inherit; font-size: var(--t-md); cursor: pointer; }
+  .nr-new i { font-size: 20px; }
+  .nr-new:hover { background: color-mix(in oklab, var(--ink) 88%, var(--accent)); }
+  .nr-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 64px; padding: var(--s2) var(--s1);
+    border: 0; border-radius: var(--r-md); background: var(--paper); color: var(--ink); font: inherit; font-size: var(--t-sm); cursor: pointer; }
+  .nr-btn[hidden] { display: none; }
+  .nr-btn i { font-size: 24px; color: var(--ink-2); }
+  .nr-btn:hover { background: var(--stone); }
+  .nr-btn:hover i { color: var(--accent); }
+  .nr-new:focus-visible, .nr-btn:focus-visible, .mode-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* ---------- lists (16 Nov 2026) ---------- */
+  .lst-rows { list-style: none; margin: 0; padding: 0 var(--s2); display: grid; gap: var(--s1); }
+  .lst-row { display: flex; align-items: center; gap: var(--s3); width: 100%; min-height: 56px; padding: var(--s3); border: 0; border-radius: var(--r-md);
+    background: var(--paper); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+  .lst-row:hover, .lst-row.is-current { background: color-mix(in oklab, var(--sea), var(--paper) 86%); }
+  .lst-row > i { font-size: 22px; color: color-mix(in oklab, var(--sea) 82%, var(--ink)); }
+  .lst-row__main { flex: 1; min-width: 0; }
+  .lst-row__name { display: block; font-family: var(--serif); font-size: 1.25rem; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lst-row__sub { display: block; font-size: var(--t-xs); color: var(--ink-3); }
+  .lst-empty { padding: var(--s4); max-width: 40ch; }
+  .lst-screen { width: 100%; max-width: 720px; padding: var(--s4) 0 var(--s8); }
+  .lst-back { margin-bottom: var(--s3); }
+  .lst-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); margin-bottom: var(--s2); }
+  .lst-head .more-title { margin: 0; }
+  .lst-head .more-title em { color: color-mix(in oklab, var(--sea) 82%, var(--ink)); }
+  .lst-kind { display: inline-flex; align-items: center; gap: var(--s1); }
+  .lst-tools { display: flex; flex-wrap: wrap; gap: var(--s2); margin: var(--s3) 0 var(--s5); }
+  .lst-add { background: var(--paper); margin-bottom: var(--s4); }
+  .lst-items { list-style: none; margin: 0; padding: 0; }
+  .lst-items .o-task { align-items: center; }
+  .lst-item__text { flex: 1; min-width: 0; overflow-wrap: anywhere; cursor: text; padding: 2px 0; }
+  .lst-item__n { flex: none; min-width: 1.6em; font-family: var(--mono); font-size: var(--t-sm); color: var(--ink-3); }
+  .lst-item__dot { flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--ink-3); margin: 0 7px; }
+  .lst-item__btn { flex: none; display: grid; place-items: center; width: 36px; height: 36px; border: 0; border-radius: var(--r-sm); background: none;
+    color: var(--ink-3); font-size: 18px; cursor: pointer; }
+  .lst-item__btn:hover { background: var(--stone); color: var(--ink); }
+  .lst-item__btn:disabled { visibility: hidden; }
+  .lst-item__edit { flex: 1; min-width: 0; }
+  .lst-done-head { margin: var(--s5) 0 var(--s1); }
+  .lst-kinds { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--s2); margin: var(--s3) 0 var(--s5); }
+  .lst-kindpick { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3); min-height: 64px; border: 0; border-radius: var(--r-md);
+    background: var(--paper); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
+  .lst-kindpick i { font-size: 24px; color: var(--ink-2); }
+  .lst-kindpick[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
+  .lst-kindpick[aria-pressed="true"] i { color: var(--accent); }
+  .lst-kindpick__l { display: block; font-weight: 500; }
+  .lst-kindpick__s { display: block; font-size: var(--t-xs); color: var(--ink-3); }
+  .lst-form .o-field { width: 100%; max-width: 420px; }
+  .lst-status { min-height: 1.4em; }
+  @media (max-width: 760px) { .lst-screen { padding: var(--s5) var(--s4) var(--s8); } }
   .drawer-title-row { display: none; }
   .more-screen { width: 100%; max-width: 720px; padding: var(--s4) 0 var(--s8); }
   .more-title { font-family: var(--serif); font-weight: 500; font-size: 2.25rem; margin: 0 0 var(--s5); }
@@ -3346,7 +3406,7 @@ a.o-card:hover{filter:brightness(.98)}
     <button type="button" class="o-rail__item" data-go="today" data-view="today" data-also="plan" title="Today: tasks beside the hours"><i class="ph-light ph-sun"></i><span class="ob-rail__label">Today</span></button>
     <!-- Notes, Journal and Tasks are one place with tabs at the top of the
          list; Meetings is a tab inside Calendar (16 Nov 2026). -->
-    <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" data-also="journal tasks" title="Notes, Journal and Tasks"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
+    <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" data-also="journal tasks lists" title="Notes, Journal and Tasks"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
     <button type="button" class="o-rail__item" data-go="calendar" data-view="calendar" data-also="meetings" title="Calendar and meetings"><i class="ph-light ph-calendar-blank"></i><span class="ob-rail__label">Calendar</span></button>
     <button type="button" class="o-rail__item" data-go="stays" data-view="stays" title="Stays: messages to send for the gîtes"><i class="ph-light ph-house-line"></i><span class="ob-rail__label">Stays</span></button>
     <button type="button" class="o-rail__item" data-go="money" data-view="money" title="Money (coming later)"><i class="ph-light ph-coins"></i><span class="ob-rail__label">Money</span></button>
@@ -3394,12 +3454,13 @@ a.o-card:hover{filter:brightness(.98)}
         </div>
       </div>
 
+      <!-- Four big tabs (16 Nov 2026): Notes, Journal, Tasks and Lists are one
+           place, and the tabs had to be obvious, not small words. -->
       <div class="mode-row" id="modeRow">
-        <button class="mode-btn" id="modeNotes" type="button" aria-pressed="true">Notes</button>
-        <button class="mode-btn" id="modeJournal" type="button" aria-pressed="false">Journal</button>
-        <button class="mode-btn" id="modeTasks" type="button" aria-pressed="false">
-          Tasks<span class="mode-n" id="modeTasksN"></span>
-        </button>
+        <button class="mode-btn" id="modeNotes" type="button" data-mode="notes" aria-pressed="true"><i class="ph-light ph-notebook" aria-hidden="true"></i><span>Notes</span></button>
+        <button class="mode-btn" id="modeJournal" type="button" data-mode="journal" aria-pressed="false"><i class="ph-light ph-book-open-text" aria-hidden="true"></i><span>Journal</span></button>
+        <button class="mode-btn" id="modeTasks" type="button" data-mode="tasks" aria-pressed="false"><i class="ph-light ph-check-square" aria-hidden="true"></i><span>Tasks</span><span class="mode-n" id="modeTasksN"></span></button>
+        <button class="mode-btn" id="modeLists" type="button" data-mode="lists" aria-pressed="false"><i class="ph-light ph-list-bullets" aria-hidden="true"></i><span>Lists</span></button>
       </div>
 
       <!-- Search stays folded away until asked for: the rail's Search on a
@@ -3416,12 +3477,16 @@ a.o-card:hover{filter:brightness(.98)}
 
       <!-- What used to be the rail's "Add" group, kept with the notes it makes
            (16 Nov 2026). Each button clicks the original control. -->
-      <div class="journal-row notes-row" id="notesRow">
-        <button class="task-btn" type="button" data-notes-go="newBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New note</button>
-        <button class="task-btn ghost" type="button" data-notes-go="importBtn" title="A PDF, text or Markdown file becomes a note"><i class="ph-light ph-upload-simple" aria-hidden="true"></i>Import</button>
-        <button class="task-btn ghost" type="button" data-notes-go="photoBtn" title="A page or a sign, read into a new note"><i class="ph-light ph-camera" aria-hidden="true"></i>Photograph</button>
-        <button class="task-btn ghost" type="button" data-notes-mic=".mic-add" title="Talk and it types a new note" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i>Speak</button>
-        <button class="task-btn ghost" type="button" data-notes-mic=".rec-add" title="Keep a sound in a new note" hidden><i class="ph-light ph-waveform" aria-hidden="true"></i>Record</button>
+      <div class="notes-row" id="notesRow">
+        <button class="nr-new" type="button" data-notes-go="newBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New note</button>
+        <button class="nr-btn" type="button" data-notes-go="importBtn" title="A PDF, text or Markdown file becomes a note"><i class="ph-light ph-upload-simple" aria-hidden="true"></i>Import</button>
+        <button class="nr-btn" type="button" data-notes-go="photoBtn" title="A page or a sign, read into a new note"><i class="ph-light ph-camera" aria-hidden="true"></i>Photograph</button>
+        <button class="nr-btn" type="button" data-notes-mic=".mic-add" title="Talk, tap Stop, and the words are typed into a new note" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i>Transcribe</button>
+        <button class="nr-btn" type="button" data-notes-mic=".rec-add" title="Keep a voice note or a sound in a new note" hidden><i class="ph-light ph-waveform" aria-hidden="true"></i>Record</button>
+      </div>
+
+      <div class="notes-row lists-row" id="listsRow" hidden>
+        <button class="nr-new" type="button" id="listNewBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New list</button>
       </div>
 
       <div class="journal-row" id="journalRow" hidden>
@@ -3499,7 +3564,7 @@ a.o-card:hover{filter:brightness(.98)}
 
 <nav class="o-tabbar ob-tabbar" id="tabbar" aria-label="Sections">
   <button type="button" data-go="today" data-view="today" data-also="plan"><i class="ph-light ph-sun"></i>Today</button>
-  <button type="button" data-go="modeNotes" data-view="notes" data-also="journal tasks"><i class="ph-light ph-notebook"></i>Notes</button>
+  <button type="button" data-go="modeNotes" data-view="notes" data-also="journal tasks lists"><i class="ph-light ph-notebook"></i>Notes</button>
   <button type="button" data-go="calendar" data-view="calendar" data-also="meetings"><i class="ph-light ph-calendar-blank"></i>Calendar</button>
   <button type="button" data-go="stays" data-view="stays"><i class="ph-light ph-house-line"></i>Stays</button>
   <button type="button" data-go="more" data-view="more" data-also="money"><i class="ph-light ph-dots-three"></i>More</button>
@@ -3947,7 +4012,7 @@ function kindCounts() {
   return counts;
 }
 function renderChips() {
-  if (viewMode === 'tasks') return; // the chip row holds the task filters
+  if (viewMode === 'tasks' || viewMode === 'lists') return; // the chip row holds the task filters
   chipRow.innerHTML = '';
   const label = document.getElementById('chipRowLabel');
   if (label) label.hidden = true;
@@ -4800,7 +4865,7 @@ function renderList(items, isSearch) {
   // The drawer and main pane belong to the tasks while they are showing. The
   // notes still loading in the background (loadAll on opening) used to land on
   // top of the task list (16 Oct 2026); keep their state, draw nothing.
-  if (viewMode === 'tasks') return;
+  if (viewMode === 'tasks' || viewMode === 'lists') return;
   listScroll.innerHTML = '';
   const homeF = showsHomeGraph() && allThoughts.length ? archiveFigures() : null;
   if (mainShowsList()) renderMainList(items, homeF);
@@ -6265,7 +6330,7 @@ function openWritingView(t, startWriting) {
       <button type="button" data-wv="mode">Write</button>
       <button type="button" data-wv="focus" aria-pressed="false" hidden>Focus</button>
       <button type="button" class="photo-add" data-wv="photo" hidden>Add photo</button>
-      ${micButtonHtml() ? '<button type="button" class="mic-add" data-wv="mic" aria-pressed="false" aria-label="Speak" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Speak</span></button>' : ''}
+      ${micButtonHtml() ? '<button type="button" class="mic-add" data-wv="mic" aria-pressed="false" aria-label="Transcribe" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Transcribe</span></button>' : ''}
       ${CAN_RECORD ? '<button type="button" class="rec-add" data-wv="rec" aria-pressed="false" aria-label="Record a sound" hidden><i class="ph-light ph-waveform" aria-hidden="true"></i><span class="btn-lbl"> Record</span></button>' : ''}
       <span class="o-bar__spacer"></span>
       <span class="wv-status o-meta" aria-live="polite"></span>
@@ -6662,7 +6727,7 @@ async function loadAll() {
   lastSearchQuery = '';
   searchInput.value = '';
   searchClear.style.display = 'none';
-  if (viewMode !== 'tasks') showStatus('Opening the drawer…', false);
+  if (viewMode !== 'tasks' && viewMode !== 'lists') showStatus('Opening the drawer…', false);
   try {
     // Every note, not the newest hundred. The 100 dated from a 77-note archive
     // and went on quietly hiding two thirds of it once it passed 300: a filter
@@ -6687,7 +6752,7 @@ async function loadAll() {
     // just changed has to be re-read too, or it reopens with the old text.
     if (viewMode === 'journal') await (journalReady = loadJournal());
   } catch (err) {
-    if (viewMode !== 'tasks') showStatus('Could not reach the archive — ' + err.message, true, loadAll);
+    if (viewMode !== 'tasks' && viewMode !== 'lists') showStatus('Could not reach the archive — ' + err.message, true, loadAll);
   }
 }
 
@@ -6848,6 +6913,7 @@ refreshBtn.addEventListener('click', () => {
   setTimeout(() => refreshBtn.classList.remove('spinning'), 700);
   if (viewMode === 'tasks') loadTasks(true);
   else if (viewMode === 'journal') journalReady = loadJournal();
+  else if (viewMode === 'lists') loadLists(true);
   else if (searchMode) runSearch(lastSearchQuery);
   else loadAll();
 });
@@ -7511,7 +7577,7 @@ const photoButtonHtml = () => '<button class="link-add-toggle photo-add" type="b
 // the button and the next tap tries again, so nothing said is lost.
 const SPEAK_MAX_MS = 15 * 60 * 1000;
 const micButtonHtml = () => (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)
-  ? '<button class="link-add-toggle mic-add" type="button" aria-pressed="false" aria-label="Speak" title="Speak: tap Stop when done and the words type in where the cursor is"><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Speak</span></button>'
+  ? '<button class="link-add-toggle mic-add" type="button" aria-pressed="false" aria-label="Transcribe" title="Transcribe: tap Stop when done and the words type in where the cursor is"><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Transcribe</span></button>'
   : '';
 let activeMic = null;
 
@@ -7741,7 +7807,7 @@ async function writeOutSpeech(btn, ta, after, speech) {
       if (after) after();
     }
     btn.innerHTML = btn.dataset.label;
-    btn.title = 'Speak: tap Stop when done and the words type in where the cursor is';
+    btn.title = 'Transcribe: tap Stop when done and the words type in where the cursor is';
   } catch (err) {
     btn._pending = speech;
     btn.innerHTML = '<span class="rec-msg">Not written out — tap to try again</span>';
@@ -11291,7 +11357,10 @@ function setViewMode(mode) {
   const notes = mode === 'notes';
   const journal = mode === 'journal';
   const tasks = mode === 'tasks';
+  const lists = mode === 'lists';
 
+  document.getElementById('modeLists').setAttribute('aria-pressed', String(lists));
+  document.getElementById('listsRow').hidden = !lists;
   document.getElementById('modeNotes').setAttribute('aria-pressed', String(notes));
   document.getElementById('modeJournal').setAttribute('aria-pressed', String(journal));
   document.getElementById('modeTasks').setAttribute('aria-pressed', String(tasks));
@@ -11299,7 +11368,7 @@ function setViewMode(mode) {
   document.getElementById('taskAddRow').hidden = !tasks;
   document.getElementById('journalRow').hidden = !journal;
   document.getElementById('notesRow').hidden = !notes;
-  chipRow.hidden = journal;
+  chipRow.hidden = journal || lists;
   if (typeof syncNav === 'function') syncNav();
   // The "Kind of note" label belongs to the note chips only.
   document.getElementById('chipRowLabel').style.display = notes ? '' : 'none';
@@ -11324,6 +11393,9 @@ function setViewMode(mode) {
     chipRow.innerHTML = '';
     showEmptyState();
     journalReady = loadJournal();
+  } else if (lists) {
+    chipRow.innerHTML = '';
+    loadLists(false);
   } else {
     chipRow.innerHTML = '';
     renderChips();
@@ -11343,6 +11415,291 @@ document.getElementById('modeJournal').addEventListener('click', () => {
 });
 document.getElementById('modeTasks').addEventListener('click', () => {
   if (viewMode !== 'tasks' && confirmLeavingEdit()) setViewMode('tasks');
+});
+
+document.getElementById('modeLists').addEventListener('click', () => {
+  if (viewMode !== 'lists' && confirmLeavingEdit()) setViewMode('lists');
+});
+
+// ---------- lists (16 Nov 2026) ----------
+// Named lists Stewart makes: shopping, packing, to read or watch, ideas, a
+// ranking, or a plain checklist. Stored in their own tables (lists,
+// list_items) through the server's list tools, not as notes or tasks, so the
+// nightly tidying, linking and task sweep leave them alone. The drawer shows
+// the lists; the main pane shows the one that is open.
+const LIST_KIND_INFO = {
+  checklist: ['Checklist', 'ph-list-checks', 'Things to tick off'],
+  shopping: ['Shopping', 'ph-shopping-cart', 'Tick as you shop, then clear the ticked'],
+  packing: ['Packing', 'ph-suitcase', 'What to take; untick it all for next time'],
+  watch: ['To read or watch', 'ph-book-bookmark', 'Books, films, articles; tick when done'],
+  ideas: ['Ideas', 'ph-lightbulb', 'Jot them down, no ticking'],
+  ranked: ['Ranked', 'ph-list-numbers', 'In order, best first; move items up or down'],
+};
+const listTicks = k => k !== 'ideas' && k !== 'ranked';
+const listKind = k => LIST_KIND_INFO[k] || LIST_KIND_INFO.checklist;
+let allLists = [];
+let listsLoaded = false;
+let openListId = null;
+
+async function listCall(name, args) {
+  const text = await callTool(name, args);
+  if (/^Could not /.test(text)) throw new Error(text.replace(/^Could not [^:]*:\s*/, ''));
+  try { return JSON.parse(text); } catch (_) { return text; }
+}
+
+async function loadLists(force) {
+  if (viewMode !== 'lists') return;
+  if (!listsLoaded || force) {
+    if (!listsLoaded) listScroll.innerHTML = '<div class="list-status">Opening the lists…</div>';
+    try { allLists = await listCall('get_lists', { format: 'json' }); listsLoaded = true; }
+    catch (err) {
+      if (viewMode === 'lists') listScroll.innerHTML = `<div class="list-status">Could not read the lists — ${escapeHtml(err.message)}</div>`;
+      return;
+    }
+    if (!Array.isArray(allLists)) allLists = [];
+  }
+  if (viewMode !== 'lists') return;
+  renderListRows();
+  if (openListId && allLists.some(l => l.id === openListId)) drawList(openListId);
+  else if (!main.querySelector('.lst-form')) showListsEmpty();
+}
+
+function listSummary(l) {
+  const n = l.items.length;
+  if (!n) return listKind(l.kind)[0] + ' · empty';
+  if (!listTicks(l.kind)) return listKind(l.kind)[0] + ' · ' + n + ' item' + (n === 1 ? '' : 's');
+  const left = l.items.filter(i => !i.done).length;
+  return listKind(l.kind)[0] + ' · ' + (left ? left + ' of ' + n + ' left' : 'all ticked');
+}
+
+function renderListRows() {
+  if (viewMode !== 'lists') return;
+  if (!allLists.length) {
+    listScroll.innerHTML = '<p class="o-meta lst-empty">No lists yet. Press New list, give it a name and pick what kind it is.</p>';
+    return;
+  }
+  listScroll.innerHTML = '<ul class="lst-rows">' + allLists.map(l => `<li><button type="button" class="lst-row${l.id === openListId ? ' is-current' : ''}" data-list="${escapeAttr(l.id)}">
+      <i class="ph-light ${listKind(l.kind)[1]}" aria-hidden="true"></i>
+      <span class="lst-row__main"><span class="lst-row__name">${escapeHtml(l.name)}</span><span class="lst-row__sub">${escapeHtml(listSummary(l))}</span></span>
+    </button></li>`).join('') + '</ul>';
+  listScroll.querySelectorAll('[data-list]').forEach(b => b.addEventListener('click', () => { drawList(b.dataset.list); }));
+}
+
+function showListsEmpty() {
+  main.innerHTML = `<div class="empty-state"><div class="glyph">§</div><p>${allLists.length ? 'Pick a list to open it, or make a new one.' : 'Make your first list with New list.'}</p></div>`;
+}
+
+function listBackHtml() {
+  return isPhone() ? '<button type="button" class="o-btn o-btn--quiet o-btn--sm lst-back"><i class="ph-light ph-caret-left" aria-hidden="true"></i> All lists</button>' : '';
+}
+function bindListBack() {
+  const b = main.querySelector('.lst-back');
+  if (b) b.addEventListener('click', () => { openListId = null; app.classList.remove('detail-open'); renderListRows(); showListsEmpty(); });
+}
+
+// The form for a new list, or for renaming one and changing its kind.
+function showListForm(editId) {
+  const l = editId && allLists.find(x => x.id === editId);
+  let kind = l ? l.kind : 'checklist';
+  main.innerHTML = `<div class="lst-screen">
+    ${listBackHtml()}
+    <h1 class="more-title"><em>${l ? 'Change list' : 'New list'}</em></h1>
+    <form class="lst-form" autocomplete="off">
+      <label class="o-label" for="lstName">Name</label>
+      <input class="o-field" id="lstName" maxlength="80" placeholder="Weekly shop, Paris trip, Films to see…" value="${l ? escapeAttr(l.name) : ''}" required>
+      <p class="o-label" style="margin-top:var(--s5)">What kind of list</p>
+      <div class="lst-kinds" role="group" aria-label="What kind of list">${Object.entries(LIST_KIND_INFO).map(([k, [label, icon, sub]]) => `
+        <button type="button" class="lst-kindpick" data-kind="${k}" aria-pressed="${k === kind}"><i class="ph-light ${icon}" aria-hidden="true"></i>
+          <span><span class="lst-kindpick__l">${escapeHtml(label)}</span><span class="lst-kindpick__s">${escapeHtml(sub)}</span></span></button>`).join('')}
+      </div>
+      <div class="lst-tools">
+        <button type="submit" class="o-btn o-btn--primary">${l ? 'Save list' : 'Make list'}</button>
+        <button type="button" class="o-btn o-btn--quiet lst-cancel">Cancel</button>
+      </div>
+      <p class="o-meta lst-status" role="status"></p>
+    </form></div>`;
+  main.scrollTop = 0;
+  app.classList.add('detail-open');
+  bindListBack();
+  const form = main.querySelector('.lst-form');
+  const status = form.querySelector('.lst-status');
+  form.querySelectorAll('[data-kind]').forEach(b => b.addEventListener('click', () => {
+    kind = b.dataset.kind;
+    form.querySelectorAll('[data-kind]').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  }));
+  form.querySelector('.lst-cancel').addEventListener('click', () => { if (l) drawList(l.id); else { app.classList.remove('detail-open'); showListsEmpty(); } });
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const name = form.querySelector('#lstName').value.trim();
+    if (!name) return;
+    status.textContent = 'Saving…';
+    form.querySelectorAll('button').forEach(b => { b.disabled = true; });
+    try {
+      const saved = await listCall('save_list', l ? { id: l.id, name, kind } : { name, kind });
+      if (l) Object.assign(l, { name: saved.name, kind: saved.kind });
+      else allLists.unshift(Object.assign(saved, { items: [] }));
+      drawList(saved.id);
+    } catch (err) {
+      status.textContent = 'Not saved — ' + err.message;
+      form.querySelectorAll('button').forEach(b => { b.disabled = false; });
+    }
+  });
+  setTimeout(() => form.querySelector('#lstName').focus(), 0);
+}
+
+function listItemHtml(l, it, i, count) {
+  const k = l.kind;
+  const lead = listTicks(k)
+    ? `<button type="button" class="o-task__tick" data-tick aria-pressed="${it.done}" aria-label="${it.done ? 'Untick' : 'Tick off'}"></button>`
+    : k === 'ranked' ? `<span class="lst-item__n">${i + 1}.</span>` : '<span class="lst-item__dot" aria-hidden="true"></span>';
+  const moves = k === 'ranked'
+    ? `<button type="button" class="lst-item__btn" data-move="up" aria-label="Move up" ${i === 0 ? 'disabled' : ''}><i class="ph-light ph-arrow-up"></i></button>
+       <button type="button" class="lst-item__btn" data-move="down" aria-label="Move down" ${i === count - 1 ? 'disabled' : ''}><i class="ph-light ph-arrow-down"></i></button>` : '';
+  return `<li class="o-task lst-item${it.done && listTicks(k) ? ' is-done' : ''}" data-item="${escapeAttr(it.id)}">
+    ${lead}<span class="o-task__title lst-item__text" tabindex="0" title="Click to change the words">${escapeHtml(it.text)}</span>
+    ${moves}<button type="button" class="lst-item__btn" data-remove aria-label="Remove ${escapeAttr(it.text)}"><i class="ph-light ph-x"></i></button></li>`;
+}
+
+function drawList(id) {
+  const l = allLists.find(x => x.id === id);
+  if (!l) { showListsEmpty(); return; }
+  if (openListId !== id && !confirmLeavingEdit()) return;
+  openListId = id;
+  selectedIndex = null;
+  editingId = null;
+  closeReference();
+  const [label, icon] = listKind(l.kind);
+  const ticks = listTicks(l.kind);
+  const open = ticks ? l.items.filter(i => !i.done) : l.items;
+  const done = ticks ? l.items.filter(i => i.done) : [];
+  const keepFocus = document.activeElement && document.activeElement.id === 'lstAdd';
+  main.innerHTML = `<div class="lst-screen" data-list-open="${escapeAttr(l.id)}">
+    ${listBackHtml()}
+    <div class="lst-head"><h1 class="more-title"><em>${escapeHtml(l.name)}</em></h1>
+      <span class="o-chip lst-kind"><i class="ph-light ${icon}" aria-hidden="true"></i>${escapeHtml(label)}</span></div>
+    <div class="o-capture lst-add">
+      <input id="lstAdd" type="text" maxlength="300" placeholder="Add to ${escapeAttr(l.name)}" aria-label="Add an item" enterkeyhint="done">
+      <button type="button" class="o-capture__btn lst-add-go" aria-label="Add" title="Add (Enter)"><i class="ph-light ph-arrow-up" aria-hidden="true"></i></button>
+    </div>
+    <p class="o-meta lst-status" role="status"></p>
+    ${l.items.length ? '' : '<p class="o-meta">Nothing on it yet. Type above and press Enter.</p>'}
+    <ul class="o-tasks lst-items">${open.map((it, i) => listItemHtml(l, it, i, open.length)).join('')}</ul>
+    ${done.length ? `<p class="o-label lst-done-head">Ticked <span class="o-num">${done.length}</span></p><ul class="o-tasks lst-items">${done.map((it, i) => listItemHtml(l, it, i, done.length)).join('')}</ul>` : ''}
+    <div class="lst-tools">
+      ${done.length && l.kind === 'packing' ? '<button type="button" class="o-btn o-btn--sm" data-lst="untick"><i class="ph-light ph-arrow-counter-clockwise" aria-hidden="true"></i> Untick all</button>' : ''}
+      ${done.length && l.kind !== 'packing' ? '<button type="button" class="o-btn o-btn--sm" data-lst="clear"><i class="ph-light ph-broom" aria-hidden="true"></i> Clear ticked</button>' : ''}
+      <button type="button" class="o-btn o-btn--sm" data-lst="edit"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i> Rename or change kind</button>
+      <button type="button" class="o-btn o-btn--quiet o-btn--sm" data-lst="archive">Archive list</button>
+    </div></div>`;
+  app.classList.add('detail-open');
+  bindListBack();
+  renderListRows();
+  const screen = main.querySelector('.lst-screen');
+  const status = screen.querySelector('.lst-status');
+  const fail = err => { status.textContent = 'Not saved — ' + err.message; };
+  const add = screen.querySelector('#lstAdd');
+  const doAdd = async () => {
+    const text = add.value.trim();
+    if (!text) return;
+    add.value = '';
+    try {
+      const it = await listCall('add_list_item', { list_id: l.id, text });
+      l.items.push(it);
+      if (openListId === l.id) { drawList(l.id); const box = main.querySelector('#lstAdd'); if (box) box.focus(); }
+    } catch (err) { add.value = text; fail(err); }
+  };
+  add.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); doAdd(); } });
+  screen.querySelector('.lst-add-go').addEventListener('click', doAdd);
+  if (keepFocus || (!isPhone() && !l.items.length)) add.focus();
+
+  screen.querySelectorAll('.lst-item').forEach(row => {
+    const it = l.items.find(x => x.id === row.dataset.item);
+    if (!it) return;
+    const tick = row.querySelector('[data-tick]');
+    if (tick) tick.addEventListener('click', async () => {
+      it.done = !it.done;
+      drawList(l.id);
+      try { await listCall('update_list_item', { id: it.id, done: it.done }); }
+      catch (err) { it.done = !it.done; drawList(l.id); const st = main.querySelector('.lst-status'); if (st) st.textContent = 'Not saved — ' + err.message; }
+    });
+    row.querySelectorAll('[data-move]').forEach(b => b.addEventListener('click', async () => {
+      const i = l.items.indexOf(it), j = b.dataset.move === 'up' ? i - 1 : i + 1;
+      if (j < 0 || j >= l.items.length) return;
+      [l.items[i], l.items[j]] = [l.items[j], l.items[i]];
+      drawList(l.id);
+      try { await listCall('update_list_item', { id: it.id, move: b.dataset.move }); }
+      catch (err) { fail(err); loadLists(true); }
+    }));
+    row.querySelector('[data-remove]').addEventListener('click', async () => {
+      const i = l.items.indexOf(it);
+      l.items.splice(i, 1);
+      drawList(l.id);
+      try { await listCall('delete_list_item', { id: it.id }); }
+      catch (err) { l.items.splice(i, 0, it); drawList(l.id); const st = main.querySelector('.lst-status'); if (st) st.textContent = 'Not removed — ' + err.message; }
+    });
+    const text = row.querySelector('.lst-item__text');
+    const edit = () => {
+      const input = document.createElement('input');
+      input.className = 'o-field lst-item__edit';
+      input.value = it.text;
+      input.maxLength = 300;
+      text.replaceWith(input);
+      input.focus();
+      input.select();
+      let done = false;
+      const finish = async save => {
+        if (done) return;
+        done = true;
+        const v = input.value.trim();
+        if (!save || !v || v === it.text) { drawList(l.id); return; }
+        const old = it.text;
+        it.text = v;
+        drawList(l.id);
+        try { await listCall('update_list_item', { id: it.id, text: v }); }
+        catch (err) { it.text = old; drawList(l.id); const st = main.querySelector('.lst-status'); if (st) st.textContent = 'Not saved — ' + err.message; }
+      };
+      input.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); finish(true); } if (e.key === 'Escape') finish(false); });
+      input.addEventListener('blur', () => finish(true));
+    };
+    text.addEventListener('click', edit);
+    text.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); edit(); } });
+  });
+
+  const tool = screen.querySelector('.lst-tools');
+  tool.addEventListener('click', async e => {
+    const b = e.target.closest('[data-lst]');
+    if (!b) return;
+    const act = b.dataset.lst;
+    if (act === 'edit') { showListForm(l.id); return; }
+    if (act === 'archive') {
+      if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Really archive this list?'; return; }
+      try { await listCall('archive_list', { id: l.id }); }
+      catch (err) { fail(err); return; }
+      allLists = allLists.filter(x => x.id !== l.id);
+      openListId = null;
+      app.classList.remove('detail-open');
+      renderListRows();
+      showListsEmpty();
+      return;
+    }
+    b.disabled = true;
+    try {
+      if (act === 'clear') {
+        await listCall('delete_list_item', { clear_ticked: l.id });
+        l.items = l.items.filter(i => !i.done);
+      } else if (act === 'untick') {
+        for (const it of l.items.filter(i => i.done)) { await listCall('update_list_item', { id: it.id, done: false }); it.done = false; }
+      }
+      drawList(l.id);
+    } catch (err) { b.disabled = false; fail(err); }
+  });
+}
+
+document.getElementById('listNewBtn').addEventListener('click', () => {
+  if (!confirmLeavingEdit()) return;
+  openListId = null;
+  renderListRows();
+  showListForm(null);
 });
 
 document.getElementById('taskAddInput').addEventListener('keydown', ev => {
@@ -11605,7 +11962,7 @@ function showInboxScreen() {
       <div class="o-capture inbox-capture">
         <textarea id="inboxInput" rows="1" placeholder="${matchMedia('(max-width: 480px)').matches ? 'Add anything' : 'Type or speak anything'}" aria-label="Add to the inbox"></textarea>
         <button type="button" class="o-capture__btn photo-add" title="Add a photo" aria-label="Add a photo"><i class="ph-light ph-camera" aria-hidden="true"></i></button>
-        ${micButtonHtml() ? '<button type="button" class="o-capture__btn o-capture__mic mic-add" aria-pressed="false" aria-label="Speak" title="Speak: tap Stop when done"><i class="ph-light ph-microphone" aria-hidden="true"></i></button>' : ''}
+        ${micButtonHtml() ? '<button type="button" class="o-capture__btn o-capture__mic mic-add" aria-pressed="false" aria-label="Transcribe" title="Transcribe: tap Stop when done"><i class="ph-light ph-microphone" aria-hidden="true"></i></button>' : ''}
         <button type="button" class="o-capture__btn inbox-send" aria-label="Add to the inbox" title="Add to the inbox (Enter)"><i class="ph-light ph-arrow-up" aria-hidden="true"></i></button>
       </div>
       <p class="inbox-add-status o-meta" aria-live="polite"></p>
@@ -12622,7 +12979,7 @@ function drawMeeting(screen, m) {
           <span class="meet-rec__status o-meta" role="status"></span>
         </div>
         <div class="meet-rec__warn" hidden>
-          <p>A work meeting. The sound goes to Parakeet through OpenRouter, a US service, as Speak does. Keep client meetings off it.</p>
+          <p>A work meeting. The sound goes to Parakeet through OpenRouter, a US service, as Transcribe does. Keep client meetings off it.</p>
           <div class="meet-rec__row"><button type="button" class="o-btn o-btn--quiet o-btn--sm" data-x="no">Cancel</button><button type="button" class="o-btn o-btn--sm" data-x="yes">Record anyway</button></div>
         </div>
         <p class="o-meta meet-rec__how">Tell everyone it is being recorded. It carries on if you open another page here, and stops if you close the app. Every ten minutes the sound is written out and thrown away; only the words are kept.</p>
@@ -12980,7 +13337,7 @@ async function meetWriteOut(key) {
 
 async function startMeetRec(m) {
   if (meetRec) return 'Already recording ' + meetRec.title + '.';
-  if (activeMic || activeRec) return 'The microphone is in use by Speak or Record. Stop that first.';
+  if (activeMic || activeRec) return 'The microphone is in use by Transcribe or Record. Stop that first.';
   if (!CAN_RECORD) return 'This browser cannot record.';
   let stream;
   try {
