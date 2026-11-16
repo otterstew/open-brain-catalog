@@ -3642,10 +3642,13 @@ a.o-card:hover{filter:brightness(.98)}
 
 <nav class="o-tabbar ob-tabbar" id="tabbar" aria-label="Sections">
   <!-- 16 Nov 2026 (v176): Today went (Calendar shows the day); Journal,
-       Tasks, Lists and Stays moved to More. Notes in the middle (v179). -->
+       Tasks, Lists and Stays moved to More. Notes in the middle (v179);
+       Tasks and Journal back on either side of it (v180). -->
   <button type="button" data-go="calendar" data-view="calendar" data-also="meetings"><i class="ph-light ph-calendar-blank"></i>Calendar</button>
+  <button type="button" data-go="modeTasks" data-view="tasks"><i class="ph-light ph-check-square"></i>Tasks</button>
   <button type="button" data-go="modeNotes" data-view="notes"><i class="ph-light ph-notebook"></i>Notes</button>
-  <button type="button" data-go="more" data-view="more" data-also="money journal tasks lists stays today plan"><i class="ph-light ph-dots-three"></i>More</button>
+  <button type="button" data-go="modeJournal" data-view="journal"><i class="ph-light ph-book-open-text"></i>Journal</button>
+  <button type="button" data-go="more" data-view="more" data-also="money lists stays today plan"><i class="ph-light ph-dots-three"></i>More</button>
 </nav>
 
 <script>
@@ -11892,9 +11895,8 @@ function openFromLink() {
 // Each item clicks the control it stands for. "More" opens a screen of the
 // rest on a phone, so the bar keeps to five.
 const MORE_ITEMS = [
-  // 16 Nov 2026 (v176): the bar keeps Notes and Calendar; the rest is here.
-  ['modeJournal', 'ph-book-open-text', 'Journal', 'A page a day'],
-  ['modeTasks', 'ph-check-square', 'Tasks', 'What to do, and when'],
+  // 16 Nov 2026 (v180): the bar has Calendar, Tasks, Notes and Journal; the
+  // rest is here, and nothing is in both places.
   ['modeLists', 'ph-list-bullets', 'Lists', 'Shopping, packing, things to watch'],
   ['stays', 'ph-house-line', 'Stays', 'Messages to send for the gîtes'],
   ['money', 'ph-coins', 'Money', 'Coming later'],
