@@ -2489,6 +2489,7 @@ a.o-card:hover{filter:brightness(.98)}
     padding: 3px 5px; border-radius: var(--r-sm); background: var(--fail); color: var(--on-ink); }
   .drawer .mode-btn .mode-n:empty { display: none; }
   .drawer .mode-btn[aria-pressed="true"] .mode-n { color: var(--on-ink); }
+  .drawer .mode-row[hidden] { display: none; }
   .mode-btn[data-mode="notes"] { --sec: var(--heather); }
   .mode-btn[data-mode="journal"] { --sec: var(--moss); }
   .mode-btn[data-mode="tasks"] { --sec: var(--teal); }
@@ -2520,6 +2521,26 @@ a.o-card:hover{filter:brightness(.98)}
   .nr-btn:hover { background: var(--stone); }
   .nr-btn:hover i { color: var(--accent); }
   .nr-new:focus-visible, .nr-btn:focus-visible, .mode-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  /* New note / New list: one plain button on paper, no longer a black bar (v176). */
+  .nr-add { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s5);
+    border: 0; border-radius: var(--r-md); background: var(--paper); color: var(--ink); font: inherit; font-size: var(--t-md); cursor: pointer; }
+  .nr-add i { font-size: 20px; color: var(--accent); }
+  .nr-add:hover { background: color-mix(in oklab, var(--accent), var(--paper) 86%); }
+  .nr-add:focus-visible, .cap-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 760px) { .nr-add { flex: 1 1 100%; } }
+  /* The ways to start a new note, big enough to see at a glance (v176). */
+  .cap-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: var(--s2); padding: var(--s4) 28px var(--s1); }
+  @media (max-width: 760px) { .cap-tiles { padding: var(--s3) 16px var(--s1); gap: var(--s1); } }
+  .index-card .cap-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 72px; padding: var(--s2) var(--s1);
+    border: 0; border-radius: var(--r-md); background: var(--stone); color: var(--ink); font: inherit; font-size: var(--t-sm); cursor: pointer; }
+  .index-card .cap-tile i { font-size: 26px; color: var(--accent); vertical-align: 0; }
+  .index-card .cap-tile .btn-lbl { display: block; }
+  .index-card .cap-tile:hover { background: color-mix(in oklab, var(--accent), var(--paper) 82%); }
+  .index-card .cap-tile.is-listening, .index-card .cap-tile[aria-pressed="true"] { background: var(--accent); color: var(--on-ink); padding: var(--s2) var(--s1); border-radius: var(--r-md); }
+  .index-card .cap-tile.is-listening i, .index-card .cap-tile[aria-pressed="true"] i { color: var(--on-ink); }
+  .index-card .cap-tile .rec-time { font-size: var(--t-xs); }
+  .ob-rail__n { margin-left: auto; font-size: var(--t-xs); color: var(--fail); }
+  .ob-rail__n:empty { display: none; }
 
   /* ---------- lists (16 Nov 2026) ---------- */
   .lst-rows { list-style: none; margin: 0; padding: 0 var(--s2); display: grid; gap: var(--s1); }
@@ -3217,7 +3238,8 @@ a.o-card:hover{filter:brightness(.98)}
   [data-view="today"], [data-view="plan"], [data-go="today"], [data-go="plan"], .today-screen, .plan-screen { --sec: var(--ochre); }
   [data-view="inbox"], [data-go="inbox"], .inbox-screen, [data-view="calendar"], [data-go="calendar"], [data-section="calendar"] { --sec: var(--sea); }
   [data-view="notes"], [data-go="statsBtn"], [data-go="newBtn"] { --sec: var(--heather); }
-  [data-view="journal"], [data-view="money"], [data-go="money"], [data-section="money"] { --sec: var(--moss); }
+  [data-view="journal"], [data-go="modeJournal"], [data-view="money"], [data-go="money"], [data-section="money"] { --sec: var(--moss); }
+  [data-view="lists"], [data-go="modeLists"] { --sec: var(--sea); }
   [data-view="tasks"], [data-go="modeTasks"], [data-view="meetings"], [data-go="meetings"], [data-section="meetings"] { --sec: var(--teal); }
   [data-view="stays"], [data-go="stays"], [data-section="stays"] { --sec: var(--blossom); }
   #statsBtn { --sec: var(--heather); }
@@ -3450,9 +3472,13 @@ a.o-card:hover{filter:brightness(.98)}
     <span class="o-wordmark ob-rail__mark">Stew's 2nd <em>Brain</em></span>
     <button type="button" class="o-rail__item ob-search-go" data-search-open title="Search by meaning"><i class="ph-light ph-magnifying-glass"></i><span class="ob-rail__label">Search</span></button>
     <button type="button" class="o-rail__item" data-go="today" data-view="today" data-also="plan" title="Today: tasks beside the hours"><i class="ph-light ph-sun"></i><span class="ob-rail__label">Today</span></button>
-    <!-- Notes, Journal and Tasks are one place with tabs at the top of the
-         list; Meetings is a tab inside Calendar (16 Nov 2026). -->
-    <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" data-also="journal tasks lists" title="Notes, Journal and Tasks"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
+    <!-- Notes, Journal, Tasks and Lists each have their own place again, now
+         the tabs above the list are gone (16 Nov 2026, v176). Meetings is a
+         tab inside Calendar. -->
+    <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" title="Notes"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
+    <button type="button" class="o-rail__item" data-go="modeJournal" data-view="journal" title="The journal, a page a day"><i class="ph-light ph-book-open-text"></i><span class="ob-rail__label">Journal</span></button>
+    <button type="button" class="o-rail__item" data-go="modeTasks" data-view="tasks" title="Tasks"><i class="ph-light ph-check-square"></i><span class="ob-rail__label">Tasks</span><span class="o-num ob-rail__n" data-task-n></span></button>
+    <button type="button" class="o-rail__item" data-go="modeLists" data-view="lists" title="Lists: shopping, packing, things to watch"><i class="ph-light ph-list-bullets"></i><span class="ob-rail__label">Lists</span></button>
     <button type="button" class="o-rail__item" data-go="calendar" data-view="calendar" data-also="meetings" title="Calendar and meetings"><i class="ph-light ph-calendar-blank"></i><span class="ob-rail__label">Calendar</span></button>
     <button type="button" class="o-rail__item" data-go="stays" data-view="stays" title="Stays: messages to send for the gîtes"><i class="ph-light ph-house-line"></i><span class="ob-rail__label">Stays</span></button>
     <button type="button" class="o-rail__item" data-go="money" data-view="money" title="Money (coming later)"><i class="ph-light ph-coins"></i><span class="ob-rail__label">Money</span></button>
@@ -3500,9 +3526,10 @@ a.o-card:hover{filter:brightness(.98)}
         </div>
       </div>
 
-      <!-- Four big tabs (16 Nov 2026): Notes, Journal, Tasks and Lists are one
-           place, and the tabs had to be obvious, not small words. -->
-      <div class="mode-row" id="modeRow">
+      <!-- The four tabs were taken off the screen on 16 Nov 2026 (v176): they
+           repeated the bar at the bottom. They stay here, hidden, as the
+           controls the rail, the bar and More press. -->
+      <div class="mode-row" id="modeRow" hidden>
         <button class="mode-btn" id="modeNotes" type="button" data-mode="notes" aria-pressed="true"><i class="ph-light ph-notebook" aria-hidden="true"></i><span>Notes</span></button>
         <button class="mode-btn" id="modeJournal" type="button" data-mode="journal" aria-pressed="false"><i class="ph-light ph-book-open-text" aria-hidden="true"></i><span>Journal</span></button>
         <button class="mode-btn" id="modeTasks" type="button" data-mode="tasks" aria-pressed="false"><span class="mode-ic"><i class="ph-light ph-check-square" aria-hidden="true"></i><span class="mode-n" id="modeTasksN"></span></span><span>Tasks</span></button>
@@ -3521,18 +3548,14 @@ a.o-card:hover{filter:brightness(.98)}
                placeholder="Add a task…  #project  due:friday" />
       </div>
 
-      <!-- What used to be the rail's "Add" group, kept with the notes it makes
-           (16 Nov 2026). Each button clicks the original control. -->
+      <!-- One New note button (16 Nov 2026, v176). Import, Photograph,
+           Transcribe and Record are big buttons inside the new note. -->
       <div class="notes-row" id="notesRow">
-        <button class="nr-new" type="button" data-notes-go="newBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New note</button>
-        <button class="nr-btn" type="button" data-notes-go="importBtn" title="A PDF, text or Markdown file becomes a note"><i class="ph-light ph-upload-simple" aria-hidden="true"></i>Import</button>
-        <button class="nr-btn" type="button" data-notes-go="photoBtn" title="A page or a sign, read into a new note"><i class="ph-light ph-camera" aria-hidden="true"></i>Photograph</button>
-        <button class="nr-btn" type="button" data-notes-mic=".mic-add" title="Talk, tap Stop, and the words are typed into a new note" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i>Transcribe</button>
-        <button class="nr-btn" type="button" data-notes-mic=".rec-add" title="Keep a voice note or a sound in a new note" hidden><i class="ph-light ph-waveform" aria-hidden="true"></i>Record</button>
+        <button class="nr-add" type="button" data-notes-go="newBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New note</button>
       </div>
 
       <div class="notes-row lists-row" id="listsRow" hidden>
-        <button class="nr-new" type="button" id="listNewBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New list</button>
+        <button class="nr-add" type="button" id="listNewBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New list</button>
       </div>
 
       <div class="journal-row" id="journalRow" hidden>
@@ -3609,11 +3632,11 @@ a.o-card:hover{filter:brightness(.98)}
 </div>
 
 <nav class="o-tabbar ob-tabbar" id="tabbar" aria-label="Sections">
-  <button type="button" data-go="today" data-view="today" data-also="plan"><i class="ph-light ph-sun"></i>Today</button>
-  <button type="button" data-go="modeNotes" data-view="notes" data-also="journal tasks lists"><i class="ph-light ph-notebook"></i>Notes</button>
+  <!-- 16 Nov 2026 (v176): Today went (Calendar shows the day); Journal,
+       Tasks, Lists and Stays moved to More. -->
+  <button type="button" data-go="modeNotes" data-view="notes"><i class="ph-light ph-notebook"></i>Notes</button>
   <button type="button" data-go="calendar" data-view="calendar" data-also="meetings"><i class="ph-light ph-calendar-blank"></i>Calendar</button>
-  <button type="button" data-go="stays" data-view="stays"><i class="ph-light ph-house-line"></i>Stays</button>
-  <button type="button" data-go="more" data-view="more" data-also="money"><i class="ph-light ph-dots-three"></i>More</button>
+  <button type="button" data-go="more" data-view="more" data-also="money journal tasks lists stays today plan"><i class="ph-light ph-dots-three"></i>More</button>
 </nav>
 
 <script>
@@ -6568,12 +6591,23 @@ function showComposer(prefill, parentId, opts) {
   // The same fields as the editor, filled in while the note is being written
   // rather than in a second pass afterwards. Anything left blank is still
   // worked out from the text when it is saved.
+  // A plain new note opens with the ways to start one as big buttons
+  // (16 Nov 2026, v176): Import and Photograph make the note from a file or a
+  // page; Transcribe and Record work in this note.
+  const startWays = !prefill && !parentId && !opts.label;
+  const ways = startWays ? `
+      <div class="cap-tiles" role="group" aria-label="Other ways to start">
+        <button class="cap-tile" type="button" data-cap-go="importBtn" title="A PDF, text or Markdown file becomes a note"><i class="ph-light ph-upload-simple" aria-hidden="true"></i><span class="btn-lbl">Import</span></button>
+        <button class="cap-tile" type="button" data-cap-go="photoBtn" title="A page or a sign, read into a note"><i class="ph-light ph-camera" aria-hidden="true"></i><span class="btn-lbl">Photograph</span></button>
+        ${micButtonHtml() ? '<button class="cap-tile mic-add" type="button" aria-pressed="false" aria-label="Transcribe" title="Talk, tap Stop, and the words are typed into this note"><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl">Transcribe</span></button>' : ''}
+        ${CAN_RECORD ? '<button class="cap-tile rec-add" type="button" aria-pressed="false" aria-label="Record a sound" title="Keep a voice note or a sound in this note"><i class="ph-light ph-waveform" aria-hidden="true"></i><span class="btn-lbl">Record</span></button>' : ''}
+      </div>` : '';
   main.innerHTML = `
     <div class="index-card">
       <div class="index-card-ribbon" style="background:var(--accent)"></div>
       <div class="index-card-head">
         <span class="index-card-type" style="color:var(--accent)">${escapeHtml(opts.label || 'New thought')}${parentId ? ' · linked' : ''}</span>
-      </div>
+      </div>${ways}
       <div class="edit-field-list">
         <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="composeTitle" type="text" placeholder="blank — worked out from the text" value="${escapeAttr(opts.title || '')}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="composeAuthor" type="text" value="${escapeAttr(SELF_AUTHOR)}" /></div>
@@ -6586,7 +6620,7 @@ function showComposer(prefill, parentId, opts) {
         <div class="edit-body-head">
           <label class="edit-body-label" for="composeText">Body</label>
           <div class="bar-actions">
-            ${photoButtonHtml()}
+            ${startWays ? '<button class="link-add-toggle photo-add" type="button">Add photo</button>' : photoButtonHtml()}
             <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
           </div>
         </div>
@@ -6609,6 +6643,10 @@ function showComposer(prefill, parentId, opts) {
   const cancelBtn = field('composeCancel');
   setupBodyLinkPicker(null, textEl, () => {});
   wirePhotoButtons(card, textEl);
+  card.querySelectorAll('[data-cap-go]').forEach(b => b.addEventListener('click', () => {
+    const target = document.getElementById(b.dataset.capGo);
+    if (target) target.click();
+  }));
 
   // With six fields as well as the body there is now real work to lose, so the
   // composer takes part in the same unsaved-changes guard as the editor.
@@ -10284,6 +10322,7 @@ async function loadTasks(keepSelection) {
   }
 }
 
+const taskDueWords = () => { const n = document.getElementById('modeTasksN'); return n ? n.textContent : ''; };
 function renderTaskCount() {
   const el = document.getElementById('modeTasksN');
   if (!el) return;
@@ -10296,6 +10335,7 @@ function renderTaskCount() {
   // Said in words, as a badge (16 Nov 2026): a bare "9" in the tab's corner
   // read as a stray digit.
   el.textContent = pressing ? pressing + ' due' : '';
+  document.querySelectorAll('[data-task-n]').forEach(n => { n.textContent = pressing ? pressing + ' due' : ''; });
   const tab = document.getElementById('modeTasks');
   if (tab) tab.title = pressing ? pressing + ' task' + (pressing === 1 ? '' : 's') + ' due today or overdue' : 'Tasks';
 }
@@ -11409,6 +11449,8 @@ function setViewMode(mode) {
   const tasks = mode === 'tasks';
   const lists = mode === 'lists';
 
+  const head = document.querySelector('.drawer-title');
+  if (head) head.innerHTML = notes ? 'Stew\'s 2nd&nbsp;<em>Brain</em>' : '<em>' + ({ journal: 'Journal', tasks: 'Tasks', lists: 'Lists' })[mode] + '</em>';
   document.getElementById('modeLists').setAttribute('aria-pressed', String(lists));
   document.getElementById('listsRow').hidden = !lists;
   document.getElementById('modeNotes').setAttribute('aria-pressed', String(notes));
@@ -11836,8 +11878,11 @@ function openFromLink() {
 // Each item clicks the control it stands for. "More" opens a screen of the
 // rest on a phone, so the bar keeps to five.
 const MORE_ITEMS = [
-  // 16 Nov 2026: Tasks, Journal and adding notes live in Notes' tabs and
-  // buttons, Meetings in Calendar, so More keeps only what has no other home.
+  // 16 Nov 2026 (v176): the bar keeps Notes and Calendar; the rest is here.
+  ['modeJournal', 'ph-book-open-text', 'Journal', 'A page a day'],
+  ['modeTasks', 'ph-check-square', 'Tasks', 'What to do, and when'],
+  ['modeLists', 'ph-list-bullets', 'Lists', 'Shopping, packing, things to watch'],
+  ['stays', 'ph-house-line', 'Stays', 'Messages to send for the gîtes'],
   ['money', 'ph-coins', 'Money', 'Coming later'],
   ['statsBtn', 'ph-chart-bar', 'Statistics', 'The shape of the archive'],
   ['themeBtn', 'ph-circle-half', 'Colours', 'Follow the device, or always light or dark'],
@@ -11864,13 +11909,23 @@ function showMoreScreen() {
       <div class="o-stones">${items.map(([id, icon, label, sub]) => `
         <button type="button" class="o-stone" data-go="${id}">
           <i class="ph-light ${icon}" aria-hidden="true"></i>
-          <span class="o-stone__main"><span class="o-stone__title">${label}${id === 'workBtn' && workMode ? ' is on' : ''}</span><span class="o-stone__sub">${escapeHtml(id === 'themeBtn' ? ((document.getElementById('themeBtn').title || '').replace(/^Colours:\s*/, '').replace(/^./, c => c.toUpperCase()) || sub) : sub)}</span></span>
+          <span class="o-stone__main"><span class="o-stone__title">${label}${id === 'workBtn' && workMode ? ' is on' : ''}</span><span class="o-stone__sub">${escapeHtml(id === 'modeTasks' && taskDueWords() ? taskDueWords() : id === 'themeBtn' ? ((document.getElementById('themeBtn').title || '').replace(/^Colours:\s*/, '').replace(/^./, c => c.toUpperCase()) || sub) : sub)}</span></span>
         </button>`).join('')}
       </div>
     </div>`;
   main.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
     const id = b.dataset.go;
     if (id === 'modeTasks') { openAllTasks(); return; }
+    if (/^mode/.test(id)) {
+      // Journal or Lists: the drawer shows it; on a computer the More screen clears.
+      if (!confirmLeavingEdit()) return;
+      const was = viewMode;
+      document.getElementById(id).click();
+      if (was === viewMode) app.classList.remove('detail-open');
+      showEmptyState();
+      syncNav();
+      return;
+    }
     if (id === 'plan') { showPlanScreen(); return; }
     if (SECTION_SCREENS[id]) { showSectionScreen(id); return; }
     if (id === 'speakNote' || id === 'recordNote') { startNoteWithMic(id === 'speakNote' ? '.mic-add' : '.rec-add'); return; }
