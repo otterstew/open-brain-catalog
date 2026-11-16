@@ -2456,8 +2456,15 @@ a.o-card:hover{filter:brightness(.98)}
   .body-link:hover, .thought-link:hover { border-bottom-color: var(--accent); }
 
   /* ---------- rail and tab bar (Otter v2.1) ---------- */
-  .app { grid-template-columns: 216px 380px minmax(0, 1fr); }
-  .app.ref-open { grid-template-columns: 216px 380px minmax(0, 1fr) 320px; }
+  /* The list column was widened from 380px on 16 Nov 2026 (Stewart: the list should be wider). */
+  .app { grid-template-columns: 216px 480px minmax(0, 1fr); }
+  .app.ref-open { grid-template-columns: 216px 480px minmax(0, 1fr) 320px; }
+  /* Today, Calendar, Meetings and Stays need the room beside the list, so the
+     list goes back to 380px while one of them is open. */
+  @media (min-width: 761px) {
+    .app.on-screen { grid-template-columns: 216px 380px minmax(0, 1fr); }
+    .app.on-screen.ref-open { grid-template-columns: 216px 380px minmax(0, 1fr) 320px; }
+  }
   .ob-rail { height: 100%; overflow-y: auto; box-sizing: border-box; padding-top: 22px; }
   .ob-rail__mark { font-size: 1.6rem; font-weight: 500; padding-bottom: var(--s5); }
   .ob-rail__mark em { font-style: italic; }
@@ -2492,7 +2499,16 @@ a.o-card:hover{filter:brightness(.98)}
   .notes-row[hidden] { display: none; }
   /* In cards view the drawer spans the page; the tabs and buttons keep to a
      sensible width rather than stretching across it. */
-  .app.notes-cards .drawer .mode-row, .app.notes-cards .drawer .notes-row { max-width: 560px; }
+  /* In cards view everything above the cards is one centred column, and the
+     cards are centred under it (Stewart, 16 Nov 2026). Otter's rule is one
+     left edge; this is his call for this screen. */
+  .app.notes-cards .drawer-header > * { width: 100%; max-width: 560px; margin-left: auto; margin-right: auto; box-sizing: border-box; }
+  .app.notes-cards .main > .results--cards { margin-left: auto; margin-right: auto; }
+  /* Cards keep a steady width and the row of them sits in the middle, with no
+     empty column left over on the right. */
+  .app.notes-cards .note-cards { grid-template-columns: repeat(auto-fit, minmax(200px, 250px)); justify-content: center; }
+  .app.notes-cards .colour-filter { justify-content: center; text-align: center; }
+  .app.notes-cards .colour-filter-hint { flex-basis: 100%; }
   .nr-new { flex: 1 1 100%; display: flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px;
     border: 0; border-radius: var(--r-md); background: var(--ink); color: var(--on-ink); font: inherit; font-size: var(--t-md); cursor: pointer; }
   .nr-new i { font-size: 20px; }
@@ -2617,6 +2633,9 @@ a.o-card:hover{filter:brightness(.98)}
   .section-links { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s5); }
   .section-links a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
   .section-stays { max-width: 640px; }
+  .section-stays > .today-sub { margin: 24px 0 8px; }
+  .section-stays > .today-sub:first-child { margin-top: 0; }
+  .section-stays .o-task > .o-btn { flex: none; align-self: center; }
   /* Calendar (5 Nov 2026) */
   .cal-screen { max-width: 1160px; }
   .cal-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3) var(--s5); }
@@ -2848,8 +2867,10 @@ a.o-card:hover{filter:brightness(.98)}
   @media (min-width: 761px) and (max-width: 1180px) {
     .app.notes-cards { grid-template-columns: 64px minmax(0, 1fr); }
     .app.notes-cards.ref-open { grid-template-columns: 64px minmax(0, 1fr) 300px; }
-    .app { grid-template-columns: 64px 340px minmax(0, 1fr); }
-    .app.ref-open { grid-template-columns: 64px 340px minmax(0, 1fr) 300px; }
+    .app { grid-template-columns: 64px 400px minmax(0, 1fr); }
+    .app.ref-open { grid-template-columns: 64px 400px minmax(0, 1fr) 300px; }
+    .app.on-screen { grid-template-columns: 64px 340px minmax(0, 1fr); }
+    .app.on-screen.ref-open { grid-template-columns: 64px 340px minmax(0, 1fr) 300px; }
     .ob-rail { padding-left: var(--s2); padding-right: var(--s2); }
     .ob-rail__label, .o-rail__item .o-num, .o-rail__group { display: none; }
     .ob-rail .ob-rail__mark { display: none; }
@@ -12567,7 +12588,7 @@ const SECTION_SCREENS = {
   },
   stays: {
     title: 'Stays', icon: 'ph-house-line',
-    lead: 'Messages to send for the next fortnight’s stays, and today’s arrivals and departures, from the bookings system. Tick one when it has gone.',
+    lead: 'What needs doing for the gîtes: your own tasks and the French rentals emails still waiting on you, then the guest messages to send for the next fortnight’s stays and today’s arrivals and departures. Tick one when it is done.',
     links: [['https://owner.thewishingstream.com/', 'Owner page']],
   },
   money: {
@@ -12591,7 +12612,9 @@ function showSectionScreen(kind) {
       <h1 class="more-title"><em>${escapeHtml(def.title)}</em></h1>
       ${workMode ? personalHiddenHtml(def.title) : `
       <p class="section-lead">${escapeHtml(def.lead)}</p>
-      ${kind === 'stays' ? '<div class="section-stays" id="sectionStays"><p class="o-meta">Reading the stays…</p></div>' : ''}
+      ${kind === 'stays' ? `<div class="section-stays" id="sectionStays">
+        <div class="today-sub">Your actions</div><div id="stayActions"><p class="o-meta">Reading your tasks and the French rentals mail…</p></div>
+        <div class="today-sub">Guest messages</div><div id="stayMessages"><p class="o-meta">Reading the stays…</p></div></div>` : ''}
       ${def.links.length ? `<div class="section-links">${def.links.map(([href, label]) => /^https?:/.test(href)
         ? `<a class="o-btn o-btn--sm" href="${escapeAttr(href)}" target="_blank" rel="noopener">${escapeHtml(label)} <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>`
         : `<button type="button" class="o-btn o-btn--sm" data-section-go="${escapeAttr(href)}">${escapeHtml(label)}</button>`).join('')}</div>` : ''}`}
@@ -12605,13 +12628,88 @@ function showSectionScreen(kind) {
 
 async function loadStaysScreen() {
   const box = document.getElementById('sectionStays');
-  try {
-    const x = JSON.parse(await callTool('today_extras', { date: todayISO(), stay_days: 14, format: 'json' }));
-    if (document.getElementById('sectionStays') !== box) return;
-    renderStays(box, x.stays, (x.problems || []).filter(p => /^stays/.test(p)), {});
-  } catch (err) {
-    if (box) box.innerHTML = `<p class="o-meta">Could not read the stays — ${escapeHtml(err.message)}</p>`;
+  if (!box) return;
+  const actions = document.getElementById('stayActions'), messages = document.getElementById('stayMessages');
+  const extras = callTool('today_extras', { date: todayISO(), stay_days: 14, stay_mail: true, format: 'json' })
+    .then(text => { try { return JSON.parse(text); } catch (_) { throw new Error(text.slice(0, 160)); } });
+  const tasks = callTool('list_tasks', { format: 'json', owner: 'me', limit: 200 })
+    .then(text => { let raw; try { raw = JSON.parse(text); } catch (_) { throw new Error(text.slice(0, 160)); } return (Array.isArray(raw) ? raw : []).map(normalizeTask); });
+  const [x, t] = await Promise.allSettled([extras, tasks]);
+  if (document.getElementById('sectionStays') !== box) return;
+  if (x.status === 'fulfilled') {
+    renderStays(messages, x.value.stays, (x.value.problems || []).filter(p => /^stays:/.test(p)), {});
+  } else {
+    messages.innerHTML = `<p class="o-meta">Could not read the stays — ${escapeHtml(x.reason.message)}</p>`;
   }
+  renderStayActions(actions,
+    t.status === 'fulfilled' ? t.value.filter(isStayTask) : null,
+    x.status === 'fulfilled' ? x.value.mail : null,
+    [t.status === 'rejected' ? 'tasks: ' + t.reason.message : '',
+     ...(x.status === 'fulfilled' ? (x.value.problems || []).filter(p => /^stay emails/.test(p)) : ['stay emails: ' + x.reason.message])].filter(Boolean));
+}
+
+// Your own gîte jobs on the Stays page (16 Nov 2026): open tasks in the
+// "france" project (where the gîte tasks are filed) or naming Vrbo, a gîte or
+// the Wishing Stream, and the French rentals emails still waiting on you. An
+// email a task already links to (its Gmail thread id is in the notes) shows on
+// that task instead of twice. Emails have no tick: one leaves the list once it
+// is read and out of the inbox, or answered from Gmail.
+function isStayTask(t) {
+  return String(t.project || '').toLowerCase() === 'france' || /\bvrbo\b|g[iî]tes?\b|wishing stream/i.test(t.title || '');
+}
+
+function renderStayActions(box, tasks, mail, problems) {
+  if (!box) return;
+  const today = todayISO();
+  tasks = (tasks || []).slice().sort((a, b) => String(a.due_date || '9999').localeCompare(String(b.due_date || '9999')) || a.title.localeCompare(b.title));
+  const linked = new Map();
+  (mail || []).forEach(m => { const t = tasks.find(t => String(t.notes || '').includes(m.id)); if (t) linked.set(t.id, m); });
+  const loose = (mail || []).filter(m => ![...linked.values()].includes(m));
+  const notes = problems.map(p => `<p class="o-meta">Could not read the ${escapeHtml(p.split(':')[0])} — ${escapeHtml(p.replace(/^[^:]*:\s*/, ''))}</p>`).join('');
+  if (!tasks.length && !loose.length) {
+    box.innerHTML = notes + (problems.length ? '' : '<p class="o-meta">Nothing waiting on you for the gîtes.</p>');
+    return;
+  }
+  const mailLink = (m, label) => `<a class="o-btn o-btn--quiet o-btn--sm" href="${escapeAttr(m.url)}" target="_blank" rel="noopener">${label} <i class="ph-light ph-arrow-up-right" aria-hidden="true"></i></a>`;
+  box.innerHTML = notes + `<ul class="o-tasks">${loose.map(m => `
+      <li class="o-task is-mail">
+        <i class="ph-light ph-envelope-simple today-move-icon" aria-hidden="true"></i>
+        <span class="o-task__main"><span class="o-task__title">Reply: ${escapeHtml(m.subject)}</span>
+          <span class="o-task__meta">${escapeHtml(m.from)}${m.unread ? ' · unread' : ''}${m.snippet ? ' · ' + escapeHtml(m.snippet.slice(0, 90)) : ''}</span></span>
+        <span class="o-task__time">${escapeHtml(m.date ? dueLabel(m.date, today).text.replace(/^./, c => c.toUpperCase()) : '')}</span>
+        ${mailLink(m, 'Open')}
+      </li>`).join('')}${tasks.map(t => {
+      const due = t.due_date ? dueLabel(t.due_date, today) : null, m = linked.get(t.id);
+      return `
+      <li class="o-task" data-id="${escapeAttr(t.id)}">
+        <button type="button" class="o-task__tick" aria-label="Mark “${escapeAttr(t.title)}” done"></button>
+        <button type="button" class="o-task__main o-task__open" title="Open this task in Tasks"><span class="o-task__title">${escapeHtml(t.title)}</span>
+          <span class="o-task__meta">${escapeHtml(t.project || 'task')}${m ? ' · email waiting' : ''}</span></button>
+        ${due ? `<span class="o-task__time${t.due_date <= today ? ' is-due' : ''}">${escapeHtml(due.text.replace(/^./, c => c.toUpperCase()))}</span>` : ''}
+        ${m ? mailLink(m, 'Email') : ''}
+      </li>`;
+    }).join('')}
+    </ul>`;
+  const byId = new Map(tasks.map(t => [t.id, t]));
+  box.querySelectorAll('.o-task__open').forEach(btn => btn.addEventListener('click', () => {
+    const t = byId.get(btn.closest('.o-task').dataset.id);
+    if (!t) return;
+    setViewMode('tasks');
+    selectTask(t);
+  }));
+  box.querySelectorAll('.o-task[data-id]').forEach(row => {
+    row.querySelector('.o-task__tick').addEventListener('click', async () => {
+      if (row.classList.contains('is-done')) return;
+      row.classList.add('is-done');
+      try {
+        await callTool('complete_task', { id: row.dataset.id });
+        setTimeout(() => row.remove(), 900);
+      } catch (err) {
+        row.classList.remove('is-done');
+        showToastStatus('Could not complete that — ' + err.message);
+      }
+    });
+  });
 }
 
 // ---------- Meetings: prep, notes and actions, then File to Open Brain (5 Nov 2026) ----------
