@@ -63,7 +63,9 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Pinned on 16 Nov 2026: "latest" asks GitHub's API which release that
+          # is, and that call failed twice on a rate limit, stopping the deploy.
+          version: 2.114.0
 
       # --no-verify-jwt is required, not cosmetic: the function authenticates
       # requests itself on the x-brain-key header. Deploying with JWT
