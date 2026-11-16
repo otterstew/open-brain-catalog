@@ -2,7 +2,7 @@
 // the bookings system.
 //   deno run --no-config supabase/functions/open-brain-mcp/tests/briefing_test.ts
 
-import { shapeStays, shapeSun, shapeTides } from "../briefing.ts";
+import { decodeEntities, senderName, shapeStayMail, shapeStays, shapeSun, shapeTides } from "../briefing.ts";
 
 let pass = 0, fail = 0;
 function eq(label: string, got: unknown, want: unknown) {
@@ -49,6 +49,29 @@ eq("stays: the task keeps what Today shows", stays.tasks[0].label + " · " + sta
 eq("stays: no phone or email ever crosses", JSON.stringify(stays).includes("+33") || JSON.stringify(stays).includes("@"), false);
 eq("stays: only arrivals and departures", stays.movements.length, 1);
 eq("stays: an empty answer is empty lists", shapeStays(null), { tasks: [], movements: [] });
+
+// French rentals mail (16 Nov 2026): Gmail threads, format=metadata.
+const hdr = (from: string, subject: string) => ({ headers: [{ name: "From", value: from }, { name: "Subject", value: subject }] });
+const mail = shapeStayMail([
+  { id: "a1", messages: [{ labelIds: ["UNREAD", "INBOX", "Label_5"], snippet: "has replied &quot;change&quot; &amp; more", internalDate: "1794782607000",
+    payload: hdr('"Willeke Van den Boogaart" <sender@messages.example.com>', "Reservation from Willeke") }] },
+  { id: "b2", messages: [
+    { labelIds: ["INBOX"], internalDate: "1794000000000", payload: hdr("Guest <g@example.com>", "Question") },
+    { labelIds: ["SENT"], internalDate: "1794100000000", payload: hdr("Stewart <me@example.com>", "Re: Question") },
+  ] },
+  { id: "c3", messages: [{ labelIds: ["UNREAD"], internalDate: "1794750296000", payload: hdr("noreply@vrbo.example.com", "Reservation from Marius") }] },
+  { messages: [] },
+]);
+eq("mail: answered threads (last message SENT) are left out", mail.map((m) => m.id), ["a1", "c3"]);
+eq("mail: newest first, London date", mail[0].date, "2026-11-15");
+eq("mail: sender is the display name only", mail[0].from, "Willeke Van den Boogaart");
+eq("mail: a bare address keeps only the part before @", mail[1].from, "noreply");
+eq("mail: no address ever crosses", JSON.stringify(mail).includes("@"), false);
+eq("mail: snippet entities decoded", mail[0].snippet, 'has replied "change" & more');
+eq("mail: inbox and unread flags", [mail[0].in_inbox, mail[0].unread, mail[1].in_inbox], [true, true, false]);
+eq("mail: link opens the thread", mail[0].url, "https://mail.google.com/mail/u/0/#all/a1");
+eq("mail: numeric entities", decodeEntities("it&#39;s &#x2014;"), "it's \u2014");
+eq("mail: plain name passes", senderName("Office de Tourisme"), "Office de Tourisme");
 
 console.log(`${pass} passed, ${fail} failed`);
 if (fail) Deno.exit(1);

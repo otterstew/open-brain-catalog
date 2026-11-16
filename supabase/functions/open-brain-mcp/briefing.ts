@@ -17,6 +17,8 @@
 // the JERSEY_TIDES_URL secret, not here: this file is mirrored to a public repo.
 // Sunrise and sunset are Open-Meteo's, for St Helier, no key.
 
+import { accessToken } from "./calendar.ts";
+
 export const TIMEZONE = "Europe/London";
 const ST_HELIER = { lat: 49.19, lon: -2.11 };
 const BOOKINGS_URL = "https://wqncpiokoaqwhpcwtawd.supabase.co/functions/v1/bookings";
@@ -41,11 +43,26 @@ export interface StayTask {
 export interface StayMovement { kind: "arrival" | "departure"; gite: string; guest_name: string | null }
 export interface Stays { tasks: StayTask[]; movements: StayMovement[] }
 
+// A thread in Gmail's "Important emails/French rentals" label that is still
+// waiting on Stewart (16 Nov 2026: "any actions I've got to do ... should be on
+// the Stays page"). Only the sender's display name crosses, never an address.
+export interface StayMail {
+  id: string;
+  subject: string;
+  from: string;
+  date: string;      // YYYY-MM-DD, of the latest message
+  snippet: string;
+  unread: boolean;
+  in_inbox: boolean;
+  url: string;
+}
+
 export interface TodayExtras {
   date: string;
   sun: Sun | null;
   tides: Tide[];
   stays: Stays | null;
+  mail?: StayMail[] | null;   // only when asked for (stay_mail), so Today does not read Gmail
   problems: string[];
 }
 
@@ -93,6 +110,57 @@ export function shapeStays(body: unknown): Stays {
     .filter((m) => m && (m.kind === "arrival" || m.kind === "departure"))
     .map((m) => ({ kind: m.kind, gite: String(m.gite || ""), guest_name: m.guest_name ? String(m.guest_name) : null }));
   return { tasks, movements };
+}
+
+// Gmail threads (format=metadata) → the rows the Stays page shows. A thread
+// whose latest message is Stewart's own (SENT) is answered, so it is left out.
+type RawGmailMessage = {
+  id?: string; labelIds?: string[]; snippet?: string; internalDate?: string;
+  payload?: { headers?: { name?: string; value?: string }[] };
+};
+type RawGmailThread = { id?: string; messages?: RawGmailMessage[] };
+
+export function decodeEntities(s: string): string {
+  return s.replace(/&(#\d+|#x[0-9a-f]+|quot|amp|lt|gt|apos|nbsp);/gi, (m, e: string) => {
+    const k = e.toLowerCase();
+    if (k[0] === "#") {
+      const n = k[1] === "x" ? parseInt(k.slice(2), 16) : parseInt(k.slice(1), 10);
+      return Number.isFinite(n) ? String.fromCodePoint(n) : m;
+    }
+    return ({ quot: '"', amp: "&", lt: "<", gt: ">", apos: "'", nbsp: " " } as Record<string, string>)[k] ?? m;
+  });
+}
+
+export function senderName(from: string): string {
+  const m = from.match(/^\s*"?([^"<]*?)"?\s*<[^>]+>\s*$/);
+  const name = (m ? m[1] : from).trim();
+  // A bare address: keep the part before the @ only, so no address crosses.
+  return name.includes("@") ? name.split("@")[0] : name;
+}
+
+export function shapeStayMail(threads: RawGmailThread[]): StayMail[] {
+  const out: StayMail[] = [];
+  for (const th of threads) {
+    const msgs = th.messages || [];
+    const last = msgs[msgs.length - 1];
+    if (!th.id || !last) continue;
+    const labels = new Set(msgs.flatMap((m) => m.labelIds || []));
+    if ((last.labelIds || []).includes("SENT")) continue;
+    const header = (m: RawGmailMessage, name: string) =>
+      (m.payload?.headers || []).find((h) => (h.name || "").toLowerCase() === name)?.value || "";
+    const ms = Number(last.internalDate);
+    out.push({
+      id: th.id,
+      subject: header(msgs[0], "subject") || header(last, "subject") || "(no subject)",
+      from: senderName(header(last, "from")) || "someone",
+      date: Number.isFinite(ms) && ms > 0 ? new Date(ms).toLocaleDateString("en-CA", { timeZone: TIMEZONE }) : "",
+      snippet: decodeEntities(String(last.snippet || "")).slice(0, 200),
+      unread: labels.has("UNREAD"),
+      in_inbox: labels.has("INBOX"),
+      url: `https://mail.google.com/mail/u/0/#all/${th.id}`,
+    });
+  }
+  return out.sort((a, b) => b.date.localeCompare(a.date));
 }
 
 // --- The network parts ---
@@ -145,16 +213,40 @@ async function fetchSun(date: string): Promise<Sun | null> {
   return shapeSun(await res.json(), date);
 }
 
+// The label the gîte mail is filed under (a Gmail filter puts Vrbo, Office de
+// Tourisme and similar mail there). Waiting on Stewart = still in the inbox or
+// unread, from the last 60 days, and the latest message is not his.
+export const STAY_MAIL_QUERY = 'label:"Important emails/French rentals" newer_than:60d {in:inbox is:unread}';
+
+export async function fetchStayMail(): Promise<StayMail[]> {
+  const token = await accessToken();
+  const api = "https://gmail.googleapis.com/gmail/v1/users/me/threads";
+  const get = async (url: string) => {
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15_000) });
+    if (res.status === 403) throw new Error("Gmail said 403; the Google sign-in may need the gmail.readonly scope again (python3 google-reauth.py)");
+    if (!res.ok) throw new Error(`Gmail said ${res.status}`);
+    return await res.json();
+  };
+  const list = await get(`${api}?maxResults=15&q=${encodeURIComponent(STAY_MAIL_QUERY)}`);
+  const ids: string[] = (list.threads || []).map((t: { id: string }) => t.id);
+  const threads = await Promise.all(ids.map((id) =>
+    get(`${api}/${encodeURIComponent(id)}?format=metadata&metadataHeaders=From&metadataHeaders=Subject`)));
+  return shapeStayMail(threads);
+}
+
 // Each part on its own: one that fails is named in problems, the rest still show.
-export async function todayExtras(date: string, stayDays: number): Promise<TodayExtras> {
+export async function todayExtras(date: string, stayDays: number, withMail = false): Promise<TodayExtras> {
   const problems: string[] = [];
   const settle = async <T>(what: string, fallback: T, fn: () => Promise<T>): Promise<T> => {
     try { return await fn(); } catch (err) { problems.push(`${what}: ${(err as Error).message}`); return fallback; }
   };
-  const [sun, tides, stays] = await Promise.all([
+  const [sun, tides, stays, mail] = await Promise.all([
     settle<Sun | null>("sunrise and sunset", null, () => fetchSun(date)),
     settle<Tide[]>("tides", [], () => fetchTides(date)),
     settle<Stays | null>("stays", null, () => fetchStays(stayDays)),
+    withMail ? settle<StayMail[] | null>("stay emails", null, fetchStayMail) : Promise.resolve(undefined),
   ]);
-  return { date, sun, tides, stays, problems };
+  const out: TodayExtras = { date, sun, tides, stays, problems };
+  if (withMail) out.mail = mail;
+  return out;
 }

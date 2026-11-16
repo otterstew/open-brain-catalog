@@ -86,7 +86,9 @@ export function londonToday(now = new Date()): string {
 
 let cachedToken: { token: string; until: number } | null = null;
 
-async function accessToken(): Promise<string> {
+// Exported since 16 Nov 2026: briefing.ts reads the French rentals mail with
+// the same token (its gmail.readonly scope was already granted).
+export async function accessToken(): Promise<string> {
   if (cachedToken && cachedToken.until > Date.now() + 30_000) return cachedToken.token;
   const res = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",

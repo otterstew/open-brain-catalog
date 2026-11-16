@@ -2775,17 +2775,18 @@ function buildServer(): McpServer {
     {
       title: "Today Extras",
       description:
-        "For one day in Jersey: sunrise and sunset, high and low tides with heights, and the rental stay tasks from the Wishing Stream bookings system (welcome and goodbye messages, review requests) due within stay_days, with today's arrivals and departures. Used by the catalog's Today and Stays pages. A part that cannot be read is named in problems.",
+        "For one day in Jersey: sunrise and sunset, high and low tides with heights, and the rental stay tasks from the Wishing Stream bookings system (welcome and goodbye messages, review requests) due within stay_days, with today's arrivals and departures. Used by the catalog's Today and Stays pages. With stay_mail, also the emails in Gmail's French rentals label still waiting on Stewart (in the inbox or unread, last message not his). A part that cannot be read is named in problems.",
       annotations: { readOnlyHint: true, openWorldHint: true },
       inputSchema: {
         date: z.string().optional().describe("YYYY-MM-DD; defaults to today in London"),
         stay_days: z.number().optional().describe("Show stay tasks due within this many days (overdue ones always). Default 2, at most 60."),
+        stay_mail: z.boolean().optional().describe("Also read the French rentals emails waiting on Stewart (the Stays page asks; Today does not)."),
         format: z.enum(["text", "json"]).optional().describe("\"text\" (default) or \"json\", used by the Open Brain Catalog GUI."),
       },
     },
-    async ({ date, stay_days, format }) => {
+    async ({ date, stay_days, stay_mail, format }) => {
       const day = date && isDay(date) ? date : londonToday();
-      const out = await todayExtras(day, typeof stay_days === "number" ? stay_days : 2);
+      const out = await todayExtras(day, typeof stay_days === "number" ? stay_days : 2, !!stay_mail);
       if (format === "json") return { content: [{ type: "text" as const, text: JSON.stringify(out) }] };
       const lines: string[] = [day];
       if (out.sun) lines.push(`Sunrise ${out.sun.sunrise}, sunset ${out.sun.sunset}`);
@@ -2794,6 +2795,10 @@ function buildServer(): McpServer {
         for (const m of out.stays.movements) lines.push(`${m.kind === "arrival" ? "Arriving" : "Leaving"} today: ${m.guest_name ?? "a guest"} at ${m.gite}`);
         for (const t of out.stays.tasks) lines.push(`- ${t.label} for ${t.guest_name ?? "a guest"} at ${t.gite}, due ${t.due_on} [stay task id: ${t.id}]`);
         if (!out.stays.tasks.length && !out.stays.movements.length) lines.push("No stay tasks due.");
+      }
+      if (out.mail) {
+        for (const m of out.mail) lines.push(`Email waiting: "${m.subject}" from ${m.from}, ${m.date}${m.unread ? " (unread)" : ""} ${m.url}`);
+        if (!out.mail.length) lines.push("No French rentals emails waiting.");
       }
       if (out.problems.length) lines.push("Problems: " + out.problems.join("; "));
       return { content: [{ type: "text" as const, text: lines.join("\n") }] };
