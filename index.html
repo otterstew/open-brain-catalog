@@ -2464,7 +2464,18 @@ a.o-card:hover{filter:brightness(.98)}
   .o-rail__item { width: 100%; text-align: left; font: inherit; font-size: var(--t-sm); background: none; color: var(--ink-2); cursor: pointer; }
   .o-rail__item.is-on i { color: var(--accent); }
   .o-rail__item.is-on .ob-rail__label::after { content: ' · on'; color: var(--ink-3); }
-  .drawer-title, .header-actions, .mode-row { display: none !important; }
+  .drawer-title, .header-actions { display: none !important; }
+  /* Notes, Journal and Tasks are one place: tabs at the top of the list
+     (16 Nov 2026), in place of three items in the rail. */
+  .drawer .mode-row { display: flex; gap: var(--s5); justify-content: flex-start; margin: 0 0 var(--s4); border-bottom: 1px solid var(--stone-2); }
+  .drawer .mode-btn { flex: 0 0 auto; font-family: var(--type); font-size: var(--t-sm); color: var(--ink-2); padding: var(--s2) 0; min-height: 40px; }
+  .drawer .mode-btn:hover { color: var(--ink); }
+  .drawer .mode-btn[aria-pressed="true"] { color: var(--ink); }
+  .drawer .mode-btn .mode-n { font-family: var(--mono); font-size: var(--t-xs); }
+  .notes-row { flex-wrap: wrap; margin: 0 0 var(--s3); }
+  .notes-row .task-btn { display: inline-flex; align-items: center; gap: var(--s1); }
+  .notes-row .task-btn i { font-size: 16px; }
+  .notes-row[hidden] { display: none; }
   .drawer-title-row { display: none; }
   .more-screen { width: 100%; max-width: 720px; padding: var(--s4) 0 var(--s8); }
   .more-title { font-family: var(--serif); font-weight: 500; font-size: 2.25rem; margin: 0 0 var(--s5); }
@@ -2597,6 +2608,10 @@ a.o-card:hover{filter:brightness(.98)}
   }
   /* Meetings (5 Nov 2026) */
   .meet-screen { max-width: 760px; }
+  .cal-tabs { margin: 0 0 var(--s5); }
+  .cal-ev[data-meet-ev] { cursor: pointer; }
+  .cal-ev[data-meet-ev]:hover { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--sec, var(--accent)) 45%, transparent); }
+  .cal-ev[data-meet-ev]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
   .meet-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); }
   .meet-head .more-title { margin-bottom: 0; }
   .meet-head + .section-lead { margin-top: var(--s4); }
@@ -2754,7 +2769,7 @@ a.o-card:hover{filter:brightness(.98)}
     .ob-rail__label, .o-rail__item .o-num, .o-rail__group { display: none; }
     .ob-rail .ob-rail__mark { display: none; }
     .o-rail__item { justify-content: center; padding: 8px 0; }
-    .o-rail__group + .o-rail__item, .o-rail__item[data-go="newBtn"], .o-rail__item[data-go="statsBtn"], .o-rail__item[data-go="workBtn"] { margin-top: var(--s4); }
+    .o-rail__group + .o-rail__item, .o-rail__item[data-go="statsBtn"], .o-rail__item[data-go="themeBtn"] { margin-top: var(--s4); }
   }
   @media (max-width: 760px) {
     .app, .app.detail-open, .app.ref-open { grid-template-columns: minmax(0, 1fr); }
@@ -3328,25 +3343,16 @@ a.o-card:hover{filter:brightness(.98)}
   <nav class="o-rail ob-rail" id="rail" aria-label="Sections">
     <span class="o-wordmark ob-rail__mark">Stew's 2nd <em>Brain</em></span>
     <button type="button" class="o-rail__item ob-search-go" data-search-open title="Search by meaning"><i class="ph-light ph-magnifying-glass"></i><span class="ob-rail__label">Search</span></button>
-    <button type="button" class="o-rail__item" data-go="today" data-view="today" title="Today: tasks beside the hours"><i class="ph-light ph-sun"></i><span class="ob-rail__label">Today</span></button>
-    <button type="button" class="o-rail__item" data-go="inbox" data-view="inbox" title="Inbox: put anything here, sort it later"><i class="ph-light ph-tray"></i><span class="ob-rail__label">Inbox</span><span class="o-num" id="railInboxN"></span></button>
-    <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" title="Notes"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
-    <button type="button" class="o-rail__item" data-go="modeJournal" data-view="journal" title="Journal"><i class="ph-light ph-book-open-text"></i><span class="ob-rail__label">Journal</span></button>
-    <button type="button" class="o-rail__item" data-go="modeTasks" data-view="tasks" title="Tasks"><i class="ph-light ph-check-square"></i><span class="ob-rail__label">Tasks</span><span class="o-num" id="railTasksN"></span></button>
-    <button type="button" class="o-rail__item" data-go="calendar" data-view="calendar" title="Calendar"><i class="ph-light ph-calendar-blank"></i><span class="ob-rail__label">Calendar</span></button>
-    <button type="button" class="o-rail__item" data-go="meetings" data-view="meetings" title="Meetings"><i class="ph-light ph-users-three"></i><span class="ob-rail__label">Meetings</span></button>
+    <button type="button" class="o-rail__item" data-go="today" data-view="today" data-also="plan" title="Today: tasks beside the hours"><i class="ph-light ph-sun"></i><span class="ob-rail__label">Today</span></button>
+    <!-- Notes, Journal and Tasks are one place with tabs at the top of the
+         list; Meetings is a tab inside Calendar (16 Nov 2026). -->
+    <button type="button" class="o-rail__item" data-go="modeNotes" data-view="notes" data-also="journal tasks" title="Notes, Journal and Tasks"><i class="ph-light ph-notebook"></i><span class="ob-rail__label">Notes</span></button>
+    <button type="button" class="o-rail__item" data-go="calendar" data-view="calendar" data-also="meetings" title="Calendar and meetings"><i class="ph-light ph-calendar-blank"></i><span class="ob-rail__label">Calendar</span></button>
     <button type="button" class="o-rail__item" data-go="stays" data-view="stays" title="Stays: messages to send for the gîtes"><i class="ph-light ph-house-line"></i><span class="ob-rail__label">Stays</span></button>
     <button type="button" class="o-rail__item" data-go="money" data-view="money" title="Money (coming later)"><i class="ph-light ph-coins"></i><span class="ob-rail__label">Money</span></button>
-    <div class="o-rail__group">Helpers</div>
-    <button type="button" class="o-rail__item" data-go="plan" data-view="plan" title="Morning plan: fit today's tasks around the calendar"><i class="ph-light ph-sun-horizon"></i><span class="ob-rail__label">Morning plan</span></button>
-    <div class="o-rail__group">Add</div>
-    <button type="button" class="o-rail__item" data-go="newBtn" title="New note"><i class="ph-light ph-plus-circle"></i><span class="ob-rail__label">New note</span></button>
-    <button type="button" class="o-rail__item" data-go="importBtn" title="Import a file"><i class="ph-light ph-upload-simple"></i><span class="ob-rail__label">Import a file</span></button>
-    <button type="button" class="o-rail__item" data-go="photoBtn" title="Photograph text"><i class="ph-light ph-camera"></i><span class="ob-rail__label">Photograph text</span></button>
     <div class="o-rail__group">Look</div>
     <button type="button" class="o-rail__item" data-go="statsBtn" title="The shape of the archive"><i class="ph-light ph-chart-bar"></i><span class="ob-rail__label">Statistics</span></button>
     <div class="o-rail__group">This device</div>
-    <button type="button" class="o-rail__item" data-go="workBtn" data-mirror="workBtn" title="Work mode"><i class="ph-light ph-briefcase"></i><span class="ob-rail__label">Work mode</span></button>
     <button type="button" class="o-rail__item" data-go="themeBtn" data-mirror="themeBtn" title="Colours"><i class="ph-light ph-circle-half"></i><span class="ob-rail__label">Colours</span></button>
     <button type="button" class="o-rail__item" data-go="refreshBtn" title="Refresh from archive"><i class="ph-light ph-arrows-clockwise"></i><span class="ob-rail__label">Refresh</span></button>
     <button type="button" class="o-rail__item" data-go="lockBtn" title="Forget the access key on this device"><i class="ph-light ph-lock"></i><span class="ob-rail__label">Lock</span></button>
@@ -3406,6 +3412,16 @@ a.o-card:hover{filter:brightness(.98)}
       <div class="search-row" id="taskAddRow" hidden>
         <input class="search-input" id="taskAddInput" type="text"
                placeholder="Add a task…  #project  due:friday" />
+      </div>
+
+      <!-- What used to be the rail's "Add" group, kept with the notes it makes
+           (16 Nov 2026). Each button clicks the original control. -->
+      <div class="journal-row notes-row" id="notesRow">
+        <button class="task-btn" type="button" data-notes-go="newBtn"><i class="ph-light ph-plus" aria-hidden="true"></i>New note</button>
+        <button class="task-btn ghost" type="button" data-notes-go="importBtn" title="A PDF, text or Markdown file becomes a note"><i class="ph-light ph-upload-simple" aria-hidden="true"></i>Import</button>
+        <button class="task-btn ghost" type="button" data-notes-go="photoBtn" title="A page or a sign, read into a new note"><i class="ph-light ph-camera" aria-hidden="true"></i>Photograph</button>
+        <button class="task-btn ghost" type="button" data-notes-mic=".mic-add" title="Talk and it types a new note" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i>Speak</button>
+        <button class="task-btn ghost" type="button" data-notes-mic=".rec-add" title="Keep a sound in a new note" hidden><i class="ph-light ph-waveform" aria-hidden="true"></i>Record</button>
       </div>
 
       <div class="journal-row" id="journalRow" hidden>
@@ -3482,11 +3498,11 @@ a.o-card:hover{filter:brightness(.98)}
 </div>
 
 <nav class="o-tabbar ob-tabbar" id="tabbar" aria-label="Sections">
-  <button type="button" data-go="modeNotes" data-view="notes"><i class="ph-light ph-notebook"></i>Notes</button>
-  <button type="button" data-go="modeJournal" data-view="journal"><i class="ph-light ph-book-open-text"></i>Journal</button>
-  <button type="button" data-go="inbox" data-view="inbox"><span class="ob-tab-icon"><i class="ph-light ph-tray"></i><span class="ob-tab-n o-num" id="tabInboxN" hidden></span></span>Inbox</button>
-  <button type="button" data-go="today" data-view="today" data-also="tasks plan"><i class="ph-light ph-sun"></i>Today</button>
-  <button type="button" data-go="more" data-view="more" data-also="calendar meetings stays money"><i class="ph-light ph-dots-three"></i>More</button>
+  <button type="button" data-go="today" data-view="today" data-also="plan"><i class="ph-light ph-sun"></i>Today</button>
+  <button type="button" data-go="modeNotes" data-view="notes" data-also="journal tasks"><i class="ph-light ph-notebook"></i>Notes</button>
+  <button type="button" data-go="calendar" data-view="calendar" data-also="meetings"><i class="ph-light ph-calendar-blank"></i>Calendar</button>
+  <button type="button" data-go="stays" data-view="stays"><i class="ph-light ph-house-line"></i>Stays</button>
+  <button type="button" data-go="more" data-view="more" data-also="money"><i class="ph-light ph-dots-three"></i>More</button>
 </nav>
 
 <script>
@@ -4111,7 +4127,11 @@ function noteThoughts() {
 // nothing personal is in memory to show by accident. It fails closed: until
 // the tag headings have loaded, no note counts as work. The Journal and Tasks
 // are hidden. It stays on, per device, until the archive key is typed.
-const workMode = (() => { try { return localStorage.getItem('ob.workMode') === '1'; } catch (_) { return false; } })();
+// Work mode is retired (16 Nov 2026): Stewart no longer uses it. It is always
+// off, and a device that still had it switched on is switched off here. The
+// code that read it stays, inert, so nothing else has to change.
+const workMode = false;
+try { localStorage.removeItem('ob.workMode'); } catch (_) {}
 if (workMode) activeSide = 'work';
 function isWorkNote(t) {
   return headingSides.size > 0 && noteSides(t).has('work');
@@ -4928,9 +4948,11 @@ function returnToList() {
 // whatever note or list came before.
 const SCREEN_SHOWS = {
   more: () => showMoreScreen(),
-  inbox: () => showInboxScreen(),
+  // The Inbox and the Morning plan were taken out (16 Nov 2026); an old Back
+  // entry for either opens Today instead.
+  inbox: () => showTodayScreen(),
   today: () => showTodayScreen(),
-  plan: () => showPlanScreen(),
+  plan: () => showTodayScreen(),
 };
 
 function recordScreen(id) {
@@ -11276,6 +11298,7 @@ function setViewMode(mode) {
   document.getElementById('searchRow').hidden = !notes;
   document.getElementById('taskAddRow').hidden = !tasks;
   document.getElementById('journalRow').hidden = !journal;
+  document.getElementById('notesRow').hidden = !notes;
   chipRow.hidden = journal;
   if (typeof syncNav === 'function') syncNav();
   // The "Kind of note" label belongs to the note chips only.
@@ -11406,20 +11429,10 @@ function openFromLink() {
 // Each item clicks the control it stands for. "More" opens a screen of the
 // rest on a phone, so the bar keeps to five.
 const MORE_ITEMS = [
-  // Shortcuts (5 Nov 2026): a new note with the microphone already on.
-  ['modeTasks', 'ph-check-square', 'Tasks', 'Every task, by when it is due'],
-  ['calendar', 'ph-calendar-blank', 'Calendar', 'The week or the month, and adding events'],
-  ['meetings', 'ph-users-three', 'Meetings', 'Prep, notes and actions, filed to Open Brain'],
-  ['stays', 'ph-house-line', 'Stays', 'Messages to send for the gîtes'],
+  // 16 Nov 2026: Tasks, Journal and adding notes live in Notes' tabs and
+  // buttons, Meetings in Calendar, so More keeps only what has no other home.
   ['money', 'ph-coins', 'Money', 'Coming later'],
-  ['plan', 'ph-sun-horizon', 'Morning plan', 'Fit today’s tasks around the calendar'],
-  ['newBtn', 'ph-plus-circle', 'New note', 'A blank note to write in'],
-  ['speakNote', 'ph-microphone', 'Speak a note', 'Talk and it types a new note'],
-  ['recordNote', 'ph-waveform', 'Record a sound', 'Keep a sound in a new note'],
-  ['importBtn', 'ph-upload-simple', 'Import a file', 'A PDF, text or Markdown file becomes a note'],
-  ['photoBtn', 'ph-camera', 'Photograph text', 'A page or a sign, read into a new note'],
   ['statsBtn', 'ph-chart-bar', 'Statistics', 'The shape of the archive'],
-  ['workBtn', 'ph-briefcase', 'Work mode', 'Only work notes, for sharing your screen'],
   ['themeBtn', 'ph-circle-half', 'Colours', 'Follow the device, or always light or dark'],
   ['refreshBtn', 'ph-arrows-clockwise', 'Refresh', 'Fetch the archive again'],
   ['lockBtn', 'ph-lock', 'Lock', 'Forget the access key on this device'],
@@ -11771,7 +11784,6 @@ function showTodayScreen() {
         <section class="today-tasks" aria-label="To do today">
           <h2 class="today-h">To do</h2>
           <div class="today-stays" id="todayStays" hidden></div>
-          <button type="button" class="o-btn o-btn--sm today-plan"><i class="ph-light ph-sun-horizon" aria-hidden="true"></i><span>Plan my day</span></button>
           <div class="o-capture today-add">
             <input id="todayAdd" type="text" placeholder="Add a task for today" aria-label="Add a task for today" enterkeyhint="done">
           </div>
@@ -11798,7 +11810,6 @@ function showTodayScreen() {
     if (b.dataset.todayTab === 'hours') scrollTodayToNow();
   }));
   main.querySelector('.today-all').addEventListener('click', openAllTasks);
-  main.querySelector('.today-plan').addEventListener('click', showPlanScreen);
   const add = document.getElementById('todayAdd');
   add.addEventListener('keydown', e => {
     if (e.key !== 'Enter' || e.isComposing) return;
@@ -12353,13 +12364,32 @@ function meetDayLabel(iso) {
   return calDayName(iso, { weekday: 'long', day: 'numeric', month: 'short' });
 }
 
-function showMeetingsScreen(openKey) {
+// Calendar and Meetings are one place with two tabs (16 Nov 2026).
+function calTabsHtml(cur) {
+  return `<div class="o-tabs cal-tabs" role="tablist" aria-label="Calendar or meetings">
+    <button type="button" class="o-tab" role="tab" data-cal-tab="calendar" aria-selected="${cur === 'calendar'}">Calendar</button>
+    <button type="button" class="o-tab" role="tab" data-cal-tab="meetings" aria-selected="${cur === 'meetings'}">Meetings</button>
+  </div>`;
+}
+main.addEventListener('click', e => {
+  const t = e.target.closest('[data-cal-tab]');
+  if (!t || t.getAttribute('aria-selected') === 'true') return;
+  if (t.dataset.calTab === 'meetings') showMeetingsScreen(); else showSectionScreen('calendar');
+});
+
+// A meeting opened from the calendar that falls outside the Meetings
+// screen's fortnight: drawMeetings adds it so it still opens.
+let meetPending = null;
+
+function showMeetingsScreen(openKey, fromCal) {
   if (!confirmLeavingEdit()) return;
   selectedIndex = null;
   editingId = null;
   closeReference();
   meetOpenKey = openKey || null;
-  main.innerHTML = `<div class="more-screen section-screen meet-screen" data-section="meetings"></div>`;
+  meetPending = fromCal || null;
+  recordScreen('meetings');
+  main.innerHTML = `<div class="more-screen section-screen" data-section="meetings">${calTabsHtml('meetings')}<div class="meet-screen"></div></div>`;
   main.scrollTop = 0;
   app.classList.add('detail-open');
   syncNav('meetings');
@@ -12375,6 +12405,7 @@ async function drawMeetings(force) {
     catch (err) { if (main.querySelector('.meet-screen') === screen) screen.innerHTML = `<h1 class="more-title"><em>Meetings</em></h1><p class="o-meta">Could not read the meetings — ${escapeHtml(err.message)}</p>`; return; }
     if (main.querySelector('.meet-screen') !== screen) return;
   }
+  if (meetOpenKey && meetPending && meetPending.key === meetOpenKey && !meetData.meetings.some(x => x.key === meetOpenKey)) meetData.meetings.push(meetPending);
   const m = meetOpenKey && meetData.meetings.find(x => x.key === meetOpenKey);
   if (m) drawMeeting(screen, m); else { meetOpenKey = null; drawMeetingList(screen); }
 }
@@ -13100,6 +13131,7 @@ function showCalendarScreen() {
   if (!calAnchor) calAnchor = todayISO();
   main.innerHTML = `
     <div class="more-screen section-screen cal-screen" data-section="calendar">
+      ${calTabsHtml('calendar')}
       <div class="cal-head">
         <h1 class="more-title"><em>Calendar</em></h1>
         <div class="cal-tools">
@@ -13172,7 +13204,8 @@ async function drawCalendar(force) {
   const by = calByDay(data.events);
   note.textContent = (data.problems || []).length ? 'Some of the calendar could not be read: ' + data.problems.join('; ') : '';
   const today = todayISO();
-  const evHtml = e => `<li class="cal-ev${e.calendar === 'work' ? ' is-work' : ''}${e.all_day ? ' is-allday' : ''}">
+  const evKey = e => meetKey(new Date(e.start).toLocaleDateString('en-CA'), hhmm(e.start), e.title);
+  const evHtml = e => `<li class="cal-ev${e.calendar === 'work' ? ' is-work' : ''}${e.all_day ? ' is-allday' : ''}"${e.all_day ? '' : ` data-meet-ev="${escapeAttr(e.id || evKey(e))}" role="button" tabindex="0" title="Open as a meeting: prep, notes and actions"`}>
       ${e.all_day ? '' : `<span class="cal-ev__time o-num">${escapeHtml(clockOf(e.start))}</span>`}
       <span class="cal-ev__title">${escapeHtml(e.title)}</span>${e.where ? `<span class="cal-ev__where">${escapeHtml(e.where)}</span>` : ''}</li>`;
   if (calView === 'week') {
@@ -13215,6 +13248,19 @@ async function drawCalendar(force) {
     }));
   }
   body.querySelectorAll('[data-add-on]').forEach(b => b.addEventListener('click', ev => { ev.stopPropagation(); openCalendarAdd(b.dataset.addOn); }));
+  // A timed event opens on the Meetings tab, as that meeting (16 Nov 2026).
+  const timed = (data.events || []).filter(e => !e.all_day);
+  const openEv = el => {
+    const e = timed.find(x => (x.id || evKey(x)) === el.dataset.meetEv);
+    if (!e) return;
+    const date = new Date(e.start).toLocaleDateString('en-CA');
+    const key = evKey(e);
+    showMeetingsScreen(key, { key, title: e.title, date, time: hhmm(e.start), until: hhmm(e.end), where: e.where || '', calendar: e.calendar, prep: null });
+  };
+  body.querySelectorAll('[data-meet-ev]').forEach(el => {
+    el.addEventListener('click', ev => { ev.stopPropagation(); openEv(el); });
+    el.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openEv(el); } });
+  });
 }
 
 // Google Calendar's own add screen, filled in: the way to add while the
@@ -13568,9 +13614,7 @@ function syncNav(override) {
 document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.addEventListener('click', () => {
   const id = b.dataset.go;
   if (id === 'more') { showMoreScreen(); return; }
-  if (id === 'inbox') { showInboxScreen(); return; }
   if (id === 'today') { showTodayScreen(); return; }
-  if (id === 'plan') { showPlanScreen(); return; }
   if (SECTION_SCREENS[id]) { showSectionScreen(id); return; }
   const fromBar = !!b.closest('#tabbar');
   if (fromBar && /^mode/.test(id)) {
@@ -13586,6 +13630,16 @@ document.querySelectorAll('#rail [data-go], #tabbar [data-go]').forEach(b => b.a
   if (/^mode/.test(id) && main.querySelector('.more-screen, .inbox-screen, .today-screen, .plan-screen')) { app.classList.remove('detail-open'); showEmptyState(); }
   syncNav();
 }));
+
+document.querySelectorAll('#notesRow [data-notes-go]').forEach(b => b.addEventListener('click', () => {
+  const target = document.getElementById(b.dataset.notesGo);
+  if (target) target.click();
+}));
+// Speak a note / Record a sound: a new note with the microphone already on.
+document.querySelectorAll('#notesRow [data-notes-mic]').forEach(b => {
+  b.hidden = b.dataset.notesMic === '.mic-add' ? !micButtonHtml() : !CAN_RECORD;
+  b.addEventListener('click', () => startNoteWithMic(b.dataset.notesMic));
+});
 
 // Whatever replaces the More screen (a note, a list) takes "More" off.
 new MutationObserver(() => { if (navOverride && !main.querySelector('.more-screen, .inbox-screen, .today-screen, .plan-screen')) syncNav(); })
@@ -13644,9 +13698,11 @@ syncNav();
 (() => {
   const n = document.getElementById('modeTasksN');
   const r = document.getElementById('railTasksN');
-  const copy = () => { r.textContent = n.textContent.replace(/[^0-9]/g, ''); };
-  new MutationObserver(copy).observe(n, { childList: true, characterData: true, subtree: true });
-  copy();
+  if (r) {
+    const copy = () => { r.textContent = n.textContent.replace(/[^0-9]/g, ''); };
+    new MutationObserver(copy).observe(n, { childList: true, characterData: true, subtree: true });
+    copy();
+  }
   const theme = document.getElementById('themeBtn');
   const railTheme = document.querySelector('#rail [data-mirror="themeBtn"]');
   const copyTheme = () => { railTheme.title = theme.title; };
@@ -13689,7 +13745,7 @@ syncNav();
   });
 })();
 
-if (mcpAccessKey) loadAll().then(openFromLink).then(refreshInboxCount);
+if (mcpAccessKey) loadAll().then(openFromLink);
 
 else showUnlock();
 
