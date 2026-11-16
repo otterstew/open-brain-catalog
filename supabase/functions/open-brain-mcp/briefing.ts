@@ -215,8 +215,12 @@ async function fetchSun(date: string): Promise<Sun | null> {
 
 // The label the gîte mail is filed under (a Gmail filter puts Vrbo, Office de
 // Tourisme and similar mail there). Waiting on Stewart = still in the inbox or
-// unread, from the last 60 days, and the latest message is not his.
-export const STAY_MAIL_QUERY = 'label:"Important emails/French rentals" newer_than:60d {in:inbox is:unread}';
+// unread, from the last 60 days, and the latest message is not his. Automated
+// senders (no-reply, notifications, Google Maps / Business Profile, Vrbo
+// statements) are left out: on 16 Nov they filled the list with notices that
+// needed no answer, while guest messages come through Vrbo's own relay address.
+export const STAY_MAIL_QUERY = 'label:"Important emails/French rentals" newer_than:60d {in:inbox is:unread} ' +
+  "-from:(noreply OR no-reply OR donotreply OR do-not-reply OR notifications OR notification OR google.com)";
 
 export async function fetchStayMail(): Promise<StayMail[]> {
   const token = await accessToken();

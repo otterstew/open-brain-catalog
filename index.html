@@ -12855,6 +12855,15 @@ async function loadStaysScreen() {
 // email a task already links to (its Gmail thread id is in the notes) shows on
 // that task instead of twice. Emails have no tick: one leaves the list once it
 // is read and out of the inbox, or answered from Gmail.
+// When an email came, not when it is due: Today, Yesterday, or the date.
+function receivedLabel(iso, today) {
+  if (!iso) return '';
+  if (iso === today) return 'Today';
+  const y = new Date(today + 'T12:00:00Z'); y.setUTCDate(y.getUTCDate() - 1);
+  if (iso === y.toISOString().slice(0, 10)) return 'Yesterday';
+  return formatDate(iso + 'T00:00:00Z');
+}
+
 function isStayTask(t) {
   return String(t.project || '').toLowerCase() === 'france' || /\bvrbo\b|g[iî]tes?\b|wishing stream/i.test(t.title || '');
 }
@@ -12877,7 +12886,7 @@ function renderStayActions(box, tasks, mail, problems) {
         <i class="ph-light ph-envelope-simple today-move-icon" aria-hidden="true"></i>
         <span class="o-task__main"><span class="o-task__title">Reply: ${escapeHtml(m.subject)}</span>
           <span class="o-task__meta">${escapeHtml(m.from)}${m.unread ? ' · unread' : ''}${m.snippet ? ' · ' + escapeHtml(m.snippet.slice(0, 90)) : ''}</span></span>
-        <span class="o-task__time">${escapeHtml(m.date ? dueLabel(m.date, today).text.replace(/^./, c => c.toUpperCase()) : '')}</span>
+        <span class="o-task__time">${escapeHtml(receivedLabel(m.date, today))}</span>
         ${mailLink(m, 'Open')}
       </li>`).join('')}${tasks.map(t => {
       const due = t.due_date ? dueLabel(t.due_date, today) : null, m = linked.get(t.id);
