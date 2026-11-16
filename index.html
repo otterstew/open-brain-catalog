@@ -2539,6 +2539,27 @@ a.o-card:hover{filter:brightness(.98)}
   .index-card .cap-tile.is-listening, .index-card .cap-tile[aria-pressed="true"] { background: var(--accent); color: var(--on-ink); padding: var(--s2) var(--s1); border-radius: var(--r-md); }
   .index-card .cap-tile.is-listening i, .index-card .cap-tile[aria-pressed="true"] i { color: var(--on-ink); }
   .index-card .cap-tile .rec-time { font-size: var(--t-xs); }
+  /* Just the note (v181): the title, the words and Save; nothing else. */
+  .index-card-head .compose-clean-btn { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s1); min-height: 40px; padding: 0 var(--s3);
+    border: 0; border-radius: var(--r-md); background: var(--stone); color: var(--ink-2); font: inherit; font-size: var(--t-sm); cursor: pointer; }
+  .index-card-head .compose-clean-btn i { font-size: 18px; color: var(--accent); }
+  .index-card-head .compose-clean-btn:hover { color: var(--ink); }
+  .index-card-head .compose-clean-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  @media (max-width: 760px) { .index-card-head .compose-clean-btn { min-height: 44px; } }
+  html.compose-clean .ob-rail, html.compose-clean .drawer, html.compose-clean #tabbar, html.compose-clean .ref-panel { display: none !important; }
+  html.compose-clean .app, html.compose-clean .app.detail-open, html.compose-clean .app.ref-open { grid-template-columns: minmax(0, 1fr) !important; height: 100dvh; }
+  html.compose-clean .main > .back-btn, html.compose-clean .cap-tiles, html.compose-clean .index-card-type,
+  html.compose-clean .index-card-ribbon, html.compose-clean .edit-body-head, html.compose-clean .compose-cancel,
+  html.compose-clean .compose-title-row .edit-field-label { display: none !important; }
+  html.compose-clean .index-card { max-width: 720px; margin: 0 auto; background: transparent; }
+  html.compose-clean .compose-title-row .edit-field-row { display: block; }
+  html.compose-clean #composeTitle { width: 100%; background: transparent; border: 0; padding: 0; font-family: var(--serif); font-size: 30px; color: var(--ink); }
+  html.compose-clean #composeTitle:focus { outline: none; }
+  html.compose-clean .compose-textarea { min-height: 60vh; font-size: 18px; line-height: 1.7; }
+  html.compose-clean .index-card-foot { border-top: 0; }
+  .tag-details { padding: 0; margin: var(--s4) 0 0; }
+  .compose-details[hidden], .tag-details[hidden] { display: none; }
+  @media (max-width: 760px) { .compose-actions .compose-save, .compose-actions .compose-cancel { min-height: 44px; padding: 0 var(--s4); font-size: var(--t-sm); } }
   /* The new note: title, body, then the details (v178). */
   .compose-title-row { padding-bottom: 0; }
   .compose-details { padding-top: var(--s2); padding-bottom: var(--s4); }
@@ -3381,6 +3402,14 @@ a.o-card:hover{filter:brightness(.98)}
                placeholder="Type a tag — matches appear as you type, Enter to add"
                autocomplete="off" aria-label="Add a tag" />
         <button class="import-btn ghost" id="importTagAdd" type="button">Add</button>
+      </div>
+      <!-- A new note's details, moved here from the note itself (v181). -->
+      <div class="edit-field-list tag-details" id="tagDetails" hidden>
+        <div class="import-tags-head">Details</div>
+        <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="tagAuthor" type="text" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="tagPublished" type="text" placeholder="dd/mm/yyyy" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="tagSource" type="text" placeholder="the book and page, the site, the shop…" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="tagUrl" type="text" /></div>
       </div>
       <div class="import-status" id="tagStatus"></div>
       <div class="import-actions">
@@ -6594,6 +6623,8 @@ function showEmptyState() {
 // opts (all optional): label, title and tags to start with, focusBody to put the
 // caret in the text, openAfter to open the note once saved, intro for a line of
 // guidance in the status slot. The journal uses these; a plain new note uses none.
+const NEW_NOTE_DRAFT = 'ob.newNoteDraft';
+const COMPOSE_CLEAN_KEY = 'ob.composeClean';
 function showComposer(prefill, parentId, opts) {
   opts = opts || {};
   selectedIndex = null;
@@ -6619,6 +6650,7 @@ function showComposer(prefill, parentId, opts) {
       <div class="index-card-ribbon" style="background:var(--accent)"></div>
       <div class="index-card-head">
         <span class="index-card-type" style="color:var(--accent)">${escapeHtml(opts.label || 'New thought')}${parentId ? ' · linked' : ''}</span>
+        <button class="compose-clean-btn" type="button" data-compose-clean aria-pressed="false" title="Hide everything but the title, the note and Save"><i class="ph-light ph-arrows-out" aria-hidden="true"></i><span>Just the note</span></button>
       </div>${ways}
       <!-- Title, then straight into the note; the rest waits underneath
            (Stewart, 16 Nov 2026, v178: the body was too far down on a phone). -->
@@ -6636,8 +6668,10 @@ function showComposer(prefill, parentId, opts) {
         ${bodyLinkPickerHtml()}
         <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought…">${escapeHtml(prefill || '')}</textarea>
       </div>
-      <div class="edit-field-list compose-details" role="group" aria-label="Details">
-        <span class="edit-body-label compose-details__head">Details</span>
+      <!-- Not shown since v181 (Stewart: the details belong in the step after
+           saving, with the tags). Kept, hidden, so a journal entry or a
+           linked note can still arrive with its tags filled in. -->
+      <div class="edit-field-list compose-details" hidden>
         <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="composeTags" type="text" placeholder="comma, separated — blank to suggest them after saving" value="${escapeAttr((opts.tags || []).join(', '))}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="composeAuthor" type="text" value="${escapeAttr(SELF_AUTHOR)}" /></div>
         <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="composePublished" type="text" placeholder="dd/mm/yyyy" value="${escapeAttr(formatDateInput(todayISO()))}" /></div>
@@ -6646,7 +6680,7 @@ function showComposer(prefill, parentId, opts) {
       </div>
       <div class="index-card-foot compose-actions">
         <span class="compose-status" id="composeStatus"></span>
-        <button class="compose-cancel" id="composeCancel" type="button">Cancel</button>
+        <button class="compose-cancel" id="composeCancel" type="button">${startWays ? 'Discard' : 'Cancel'}</button>
         <button class="compose-save" id="composeSave" type="button">Save to archive</button>
       </div>
     </div>
@@ -6665,13 +6699,60 @@ function showComposer(prefill, parentId, opts) {
     if (target) target.click();
   }));
 
-  // With six fields as well as the body there is now real work to lose, so the
-  // composer takes part in the same unsaved-changes guard as the editor.
+  // A plain new note is kept on this device as it is written (v181), so going
+  // somewhere else loses nothing: New note brings it back until it is saved
+  // or discarded. Only the title and the words; nothing goes to the archive
+  // until Save.
+  const titleEl = field('composeTitle');
+  let restored = false;
+  const clearDraft = () => { try { localStorage.removeItem(NEW_NOTE_DRAFT); } catch (_) { /* storage blocked */ } };
+  const keepDraft = () => {
+    if (!startWays || !document.body.contains(textEl)) return;
+    try {
+      if (textEl.value.trim() || titleEl.value.trim()) localStorage.setItem(NEW_NOTE_DRAFT, JSON.stringify({ title: titleEl.value, text: textEl.value, at: Date.now() }));
+      else localStorage.removeItem(NEW_NOTE_DRAFT);
+    } catch (_) { /* storage blocked: the leaving prompt below still guards it */ }
+  };
+  let draftKept = false;
+  if (startWays) {
+    try {
+      const d = JSON.parse(localStorage.getItem(NEW_NOTE_DRAFT) || 'null');
+      if (d && (d.text || d.title)) { titleEl.value = d.title || ''; textEl.value = d.text || ''; restored = true; }
+      localStorage.setItem(NEW_NOTE_DRAFT + '.probe', '1'); localStorage.removeItem(NEW_NOTE_DRAFT + '.probe');
+      draftKept = true;
+    } catch (_) { draftKept = false; }
+    titleEl.addEventListener('input', keepDraft);
+    textEl.addEventListener('input', keepDraft);
+    // Transcribe and Record type in without an input event on some phones.
+    const tick = setInterval(() => { if (!document.body.contains(textEl)) clearInterval(tick); else keepDraft(); }, 2000);
+  }
+
+  // Just the note: everything but the title, the words and Save hidden. The
+  // choice is remembered, so a new note opens the way it was last used.
+  const cleanBtn = card.querySelector('[data-compose-clean]');
+  const setClean = on => {
+    document.documentElement.classList.toggle('compose-clean', on);
+    cleanBtn.setAttribute('aria-pressed', String(on));
+    cleanBtn.querySelector('span').textContent = on ? 'Show everything' : 'Just the note';
+    cleanBtn.querySelector('i').className = 'ph-light ' + (on ? 'ph-arrows-in' : 'ph-arrows-out');
+  };
+  let cleanPref = false;
+  try { cleanPref = localStorage.getItem(COMPOSE_CLEAN_KEY) === '1'; } catch (_) { /* storage blocked */ }
+  setClean(cleanPref);
+  cleanBtn.addEventListener('click', () => {
+    const on = !document.documentElement.classList.contains('compose-clean');
+    setClean(on);
+    try { localStorage.setItem(COMPOSE_CLEAN_KEY, on ? '1' : '0'); } catch (_) { /* storage blocked */ }
+    textEl.focus();
+  });
+
+  // Anything else that is written in the composer takes part in the same
+  // unsaved-changes guard as the editor; a kept draft needs no guard.
   const COMPOSE_FIELDS = ['composeTitle', 'composeAuthor', 'composePublished', 'composeSource',
                           'composeTags', 'composeUrl', 'composeText'];
   const snapshot = () => COMPOSE_FIELDS.map(id => (field(id) || {}).value || '').join('\u0000');
   const original = snapshot();
-  editorIsDirty = () => Boolean(field('composeText')) && snapshot() !== original;
+  editorIsDirty = (startWays && draftKept) ? null : () => Boolean(field('composeText')) && snapshot() !== original;
   function leave() {
     if (!confirmLeavingEdit()) return false;
     editorIsDirty = null;
@@ -6704,7 +6785,10 @@ function showComposer(prefill, parentId, opts) {
     if (statusEl.textContent === DATE_HINT) setStatus('', '');
   });
 
-  if (opts.focusBody) {
+  if (restored) {
+    textEl.focus();
+    textEl.setSelectionRange(textEl.value.length, textEl.value.length);
+  } else if (opts.focusBody) {
     // Straight to the first prompt, ready to answer it.
     const firstPrompt = /:[ \t]*$/m.exec(textEl.value);
     const at = firstPrompt ? firstPrompt.index + firstPrompt[0].length : textEl.value.length;
@@ -6714,8 +6798,17 @@ function showComposer(prefill, parentId, opts) {
     field('composeTitle').focus();
   }
   if (opts.intro) setStatus(opts.intro, 'var(--ink-3)');
+  if (restored) setStatus('Your unsaved note is back.', 'var(--ink-3)');
 
-  cancelBtn.addEventListener('click', () => { if (leave()) showEmptyState(); });
+  cancelBtn.addEventListener('click', () => {
+    if (startWays && draftKept) {
+      if ((textEl.value.trim() || titleEl.value.trim()) && !confirm('Throw away this new note?')) return;
+      clearDraft();
+      showEmptyState();
+      return;
+    }
+    if (leave()) showEmptyState();
+  });
 
   async function submit() {
     const content = textEl.value.trim();
@@ -6761,6 +6854,7 @@ function showComposer(prefill, parentId, opts) {
     }
     // The note exists from here on: never re-enable Save, or a retry files it twice.
     editorIsDirty = null;
+    if (startWays) clearDraft();
     const saved = /id: ([0-9a-f-]{36})/.exec(res);
     const savedId = saved && saved[1];
 
@@ -6794,7 +6888,7 @@ function showComposer(prefill, parentId, opts) {
       // Tags typed in were a decision already made. The confirmation step is
       // only for the extractor's guesses — which read the text with no idea
       // what this archive collects, and once tagged a note on light waves "AI".
-      if (savedId && !tags.length) await confirmTags(savedId);
+      if (savedId && !tags.length) await confirmTags(savedId, { details: true });
     }, extraFailed ? 2500 : 500);
   }
 
@@ -6805,6 +6899,9 @@ function showComposer(prefill, parentId, opts) {
 }
 
 newBtn.addEventListener('click', () => { if (confirmLeavingEdit()) showComposer(); });
+// Leaving the composer (Save, Discard, or anywhere else) brings the app back.
+new MutationObserver(() => { if (!document.getElementById('composeText')) document.documentElement.classList.remove('compose-clean'); })
+  .observe(main, { childList: true });
 
 function showStatus(msg, isError, retryFn) {
   listScroll.innerHTML = '';
@@ -8139,7 +8236,8 @@ function fillTagSuggestions() {
 // Resolves once the user has accepted or corrected the tags. Never rejects —
 // the note is already saved by this point, so a problem here must not read as
 // the save having failed.
-async function confirmTags(id) {
+let tagDetailOriginal = null;   // the details as saved, while the step shows them
+async function confirmTags(id, opts) {
   // Do NOT depend on the note being in allThoughts. loadAll() refetches the
   // whole archive and swallows its own errors, so on a slow connection the
   // list can silently stay stale — and this step then did nothing at all, with
@@ -8148,17 +8246,35 @@ async function confirmTags(id) {
   // list has not caught up. max_chars keeps that to a few hundred bytes rather
   // than pulling a whole article back.
   let topics = [];
+  let facts = {};
   const note = allThoughts.find(t => t.id === id);
   if (note) {
     topics = (note.topics || []).slice();
+    facts = { author: note.author, published_date: note.published_date, source_name: note.source, source_url: note.source_url };
   } else {
     try {
       const doc = JSON.parse(await callTool('fetch', { id: id, max_chars: 1 }));
       const t = doc && doc.metadata && doc.metadata.topics;
       topics = Array.isArray(t) ? t : [];
+      facts = (doc && doc.metadata) || {};
     } catch (_) {
       topics = [];   // still offer the step; better to tag by hand than not at all
     }
+  }
+  const details = document.getElementById('tagDetails');
+  const showDetails = !!(opts && opts.details);
+  details.hidden = !showDetails;
+  document.getElementById('importTagSave').textContent = showDetails ? 'Save' : 'Save tags';
+  tagDetailOriginal = null;
+  if (showDetails) {
+    tagDetailOriginal = {
+      author: facts.author || '', published_date: facts.published_date || '',
+      source_name: facts.source_name || '', source_url: facts.source_url || '',
+    };
+    document.getElementById('tagAuthor').value = tagDetailOriginal.author;
+    document.getElementById('tagPublished').value = tagDetailOriginal.published_date ? formatDateInput(tagDetailOriginal.published_date) : '';
+    document.getElementById('tagSource').value = tagDetailOriginal.source_name;
+    document.getElementById('tagUrl').value = tagDetailOriginal.source_url;
   }
   tagNoteId = id;
   tagOriginal = topics.slice();
@@ -8194,11 +8310,25 @@ document.getElementById('importTagSave').addEventListener('click', async ev => {
   const btn = ev.currentTarget;
   const same = tagDraft.length === tagOriginal.length &&
                tagDraft.every((t, i) => t === tagOriginal[i]);
-  if (same) { finishTags(); return; }
+  // The details, when the step shows them: only what was changed is sent.
+  const extra = {};
+  if (tagDetailOriginal) {
+    const v = id => document.getElementById(id).value.trim();
+    const pubRaw = v('tagPublished');
+    const pub = pubRaw ? parseDateInput(pubRaw) : '';
+    if (pub === null) { setTagStatus('Date not recognised — try 01/08/1974, 1 Aug 1974 or 1974-08-01.', true); return; }
+    if (v('tagAuthor') !== tagDetailOriginal.author) extra.author = v('tagAuthor') || null;
+    if ((pub || '') !== tagDetailOriginal.published_date) extra.published_date = pub || null;
+    if (v('tagSource') !== tagDetailOriginal.source_name) extra.source_name = v('tagSource') || null;
+    if (v('tagUrl') !== tagDetailOriginal.source_url) extra.source_url = v('tagUrl') || null;
+  }
+  if (same && !Object.keys(extra).length) { finishTags(); return; }
   btn.disabled = true;
-  setTagStatus('Saving tags…');
+  setTagStatus('Saving…');
   try {
-    await callTool('update_thought', { id: tagNoteId, topics: tagDraft });
+    const args = Object.assign({ id: tagNoteId }, extra);
+    if (!same) args.topics = tagDraft;
+    await callTool('update_thought', args);
     await loadAll();
     setTagStatus('');
     btn.disabled = false;
