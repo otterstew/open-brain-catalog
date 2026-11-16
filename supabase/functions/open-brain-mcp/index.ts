@@ -9,6 +9,7 @@ import { chunkText } from "./chunks.ts";
 import { addCalendarEvent, calendarDay, calendarRange, londonToday, NEEDS_WRITE } from "./calendar.ts";
 import { tickStayTask, todayExtras } from "./briefing.ts";
 import { checkPlan, isDay, type PlanBlockIn } from "./plan.ts";
+import { checkItemText, checkList, isId, LIST_KINDS, type ListItemRow, type ListRow, listsAsText } from "./lists.ts";
 import { fallbackSuggestion, FILED_AS, type InboxRow, normaliseSuggestion, SORTER_MODEL, sorterPrompt, type Suggestion } from "./inbox.ts";
 import { AUDIO_BUCKET, audioFormat, cleanAudioPaths, cleanPaths, cleanTranscript, decodeAudio, decodeImage, isAudioPath, newAudioPath, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS, toBase64, TRANSCRIBE_MAX_BYTES, TRANSCRIBE_MODEL } from "./photos.ts";
 
@@ -2866,6 +2867,168 @@ function buildServer(): McpServer {
         if (ins.error) return { content: [{ type: "text" as const, text: `Could not save the plan: ${ins.error.message}` }], isError: true };
       }
       return { content: [{ type: "text" as const, text: checked.rows.length ? `Saved ${checked.rows.length} block(s) for ${date}.` : `Cleared the plan for ${date}.` }] };
+    }
+  );
+
+  // --- Lists (16 Nov 2026; see lists.ts) ---
+  // Named lists Stewart makes in the catalog's Lists tab. Not tasks.
+  const listErr = (what: string, msg: string) => ({ content: [{ type: "text" as const, text: `Could not ${what}: ${msg}` }], isError: true });
+  const listOk = (v: unknown) => ({ content: [{ type: "text" as const, text: typeof v === "string" ? v : JSON.stringify(v) }] });
+  const touchList = (id: string) => supabase.from("lists").update({ updated_at: new Date().toISOString() }).eq("id", id);
+
+  server.registerTool(
+    "get_lists",
+    {
+      title: "Get Lists",
+      description: `Stewart's named lists (shopping, packing, to read or watch, ideas, ranked, checklists) with their items. Kinds: ${Object.entries(LIST_KINDS).map(([k, v]) => `${k} (${v.label})`).join(", ")}.`,
+      annotations: { readOnlyHint: true },
+      inputSchema: {
+        list_id: z.string().optional().describe("Only this list"),
+        format: z.enum(["text", "json"]).optional().describe("\"text\" (default) or \"json\", used by the Open Brain Catalog GUI."),
+      },
+    },
+    async ({ list_id, format }) => {
+      let q = supabase.from("lists").select("id, name, kind, created_at, updated_at").is("archived_at", null).order("updated_at", { ascending: false });
+      if (list_id) { if (!isId(list_id)) return listErr("read the lists", "that is not a list id"); q = q.eq("id", list_id); }
+      const { data: lists, error } = await q;
+      if (error) return listErr("read the lists", error.message);
+      const ids = (lists || []).map((l: ListRow) => l.id);
+      let items: ListItemRow[] = [];
+      if (ids.length) {
+        const r = await supabase.from("list_items").select("id, list_id, text, done, position").in("list_id", ids).order("position").order("created_at");
+        if (r.error) return listErr("read the lists", r.error.message);
+        items = r.data || [];
+      }
+      const full = (lists || []).map((l: ListRow) => ({ ...l, items: items.filter((i) => i.list_id === l.id) }));
+      return listOk(format === "json" ? full : listsAsText(full));
+    }
+  );
+
+  server.registerTool(
+    "save_list",
+    {
+      title: "Save List",
+      description: "Make a new named list, or rename one / change its kind when an id is given. Only for lists Stewart asked for.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+      inputSchema: {
+        id: z.string().optional().describe("The list to change; leave out to make a new one"),
+        name: z.string().describe("The list's name"),
+        kind: z.enum(Object.keys(LIST_KINDS) as [string, ...string[]]).optional().describe("How its items behave; default checklist"),
+      },
+    },
+    async ({ id, name, kind }) => {
+      const checked = checkList(name, kind);
+      if ("problem" in checked) return listErr("save the list", checked.problem);
+      if (id) {
+        if (!isId(id)) return listErr("save the list", "that is not a list id");
+        const { data, error } = await supabase.from("lists").update({ ...checked.row, updated_at: new Date().toISOString() }).eq("id", id).select("id, name, kind, created_at, updated_at").single();
+        return error ? listErr("save the list", error.message) : listOk(data);
+      }
+      const { data, error } = await supabase.from("lists").insert(checked.row).select("id, name, kind, created_at, updated_at").single();
+      return error ? listErr("make the list", error.message) : listOk(data);
+    }
+  );
+
+  server.registerTool(
+    "archive_list",
+    {
+      title: "Archive List",
+      description: "Take a list away from the Lists tab. It is archived, not deleted, so it can be brought back. Only when Stewart asks.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+      inputSchema: { id: z.string().describe("The list's id") },
+    },
+    async ({ id }) => {
+      if (!isId(id)) return listErr("archive the list", "that is not a list id");
+      const { error } = await supabase.from("lists").update({ archived_at: new Date().toISOString() }).eq("id", id);
+      return error ? listErr("archive the list", error.message) : listOk("Archived.");
+    }
+  );
+
+  server.registerTool(
+    "add_list_item",
+    {
+      title: "Add List Item",
+      description: "Add an item to the end of one of Stewart's lists.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+      inputSchema: { list_id: z.string().describe("The list's id"), text: z.string().describe("The item, one line") },
+    },
+    async ({ list_id, text }) => {
+      if (!isId(list_id)) return listErr("add the item", "that is not a list id");
+      const t = checkItemText(text);
+      if ("problem" in t) return listErr("add the item", t.problem);
+      const last = await supabase.from("list_items").select("position").eq("list_id", list_id).order("position", { ascending: false }).limit(1);
+      if (last.error) return listErr("add the item", last.error.message);
+      const position = ((last.data && last.data[0] && last.data[0].position) || 0) + 1;
+      const { data, error } = await supabase.from("list_items").insert({ list_id, text: t.text, position }).select("id, list_id, text, done, position").single();
+      if (error) return listErr("add the item", error.message);
+      await touchList(list_id);
+      return listOk(data);
+    }
+  );
+
+  server.registerTool(
+    "update_list_item",
+    {
+      title: "Update List Item",
+      description: "Tick or untick an item, change its words, or move it up or down its list.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: false },
+      inputSchema: {
+        id: z.string().describe("The item's id"),
+        text: z.string().optional(),
+        done: z.boolean().optional(),
+        move: z.enum(["up", "down"]).optional().describe("Swap it with the item above or below"),
+      },
+    },
+    async ({ id, text, done, move }) => {
+      if (!isId(id)) return listErr("change the item", "that is not an item id");
+      const cur = await supabase.from("list_items").select("id, list_id, position").eq("id", id).single();
+      if (cur.error) return listErr("change the item", cur.error.message);
+      const patch: Record<string, unknown> = { updated_at: new Date().toISOString() };
+      if (text !== undefined) { const t = checkItemText(text); if ("problem" in t) return listErr("change the item", t.problem); patch.text = t.text; }
+      if (done !== undefined) patch.done = !!done;
+      if (move) {
+        const up = move === "up";
+        const nb = await supabase.from("list_items").select("id, position").eq("list_id", cur.data.list_id)
+          [up ? "lt" : "gt"]("position", cur.data.position).order("position", { ascending: !up }).limit(1);
+        if (nb.error) return listErr("move the item", nb.error.message);
+        const other = nb.data && nb.data[0];
+        if (other) {
+          const sw = await supabase.from("list_items").update({ position: cur.data.position }).eq("id", other.id);
+          if (sw.error) return listErr("move the item", sw.error.message);
+          patch.position = other.position;
+        }
+      }
+      const { data, error } = await supabase.from("list_items").update(patch).eq("id", id).select("id, list_id, text, done, position").single();
+      if (error) return listErr("change the item", error.message);
+      await touchList(cur.data.list_id);
+      return listOk(data);
+    }
+  );
+
+  server.registerTool(
+    "delete_list_item",
+    {
+      title: "Delete List Item",
+      description: "Remove one item from a list, or every ticked item in a list (clear_ticked with the list's id). Only when Stewart asks.",
+      annotations: { readOnlyHint: false, openWorldHint: false, destructiveHint: true },
+      inputSchema: {
+        id: z.string().optional().describe("The item's id"),
+        clear_ticked: z.string().optional().describe("A list's id: remove all its ticked items"),
+      },
+    },
+    async ({ id, clear_ticked }) => {
+      if (clear_ticked) {
+        if (!isId(clear_ticked)) return listErr("clear the ticked items", "that is not a list id");
+        const { data, error } = await supabase.from("list_items").delete().eq("list_id", clear_ticked).eq("done", true).select("id");
+        if (error) return listErr("clear the ticked items", error.message);
+        await touchList(clear_ticked);
+        return listOk(`Cleared ${(data || []).length} ticked item(s).`);
+      }
+      if (!isId(id)) return listErr("remove the item", "that is not an item id");
+      const { data, error } = await supabase.from("list_items").delete().eq("id", id).select("list_id");
+      if (error) return listErr("remove the item", error.message);
+      if (data && data[0]) await touchList(data[0].list_id);
+      return listOk("Removed.");
     }
   );
 
