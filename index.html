@@ -2539,6 +2539,11 @@ a.o-card:hover{filter:brightness(.98)}
   .index-card .cap-tile.is-listening, .index-card .cap-tile[aria-pressed="true"] { background: var(--accent); color: var(--on-ink); padding: var(--s2) var(--s1); border-radius: var(--r-md); }
   .index-card .cap-tile.is-listening i, .index-card .cap-tile[aria-pressed="true"] i { color: var(--on-ink); }
   .index-card .cap-tile .rec-time { font-size: var(--t-xs); }
+  /* The new note: title, body, then the details (v178). */
+  .compose-title-row { padding-bottom: 0; }
+  .compose-details { padding-top: var(--s2); padding-bottom: var(--s4); }
+  .compose-details__head { display: block; margin-bottom: var(--s1); }
+  @media (max-width: 760px) { .compose-title-row, .compose-details { padding-left: 16px; padding-right: 16px; } }
   .ob-rail__n { margin-left: auto; font-size: var(--t-xs); color: var(--fail); }
   .ob-rail__n:empty { display: none; }
 
@@ -6608,24 +6613,29 @@ function showComposer(prefill, parentId, opts) {
       <div class="index-card-head">
         <span class="index-card-type" style="color:var(--accent)">${escapeHtml(opts.label || 'New thought')}${parentId ? ' · linked' : ''}</span>
       </div>${ways}
-      <div class="edit-field-list">
+      <!-- Title, then straight into the note; the rest waits underneath
+           (Stewart, 16 Nov 2026, v178: the body was too far down on a phone). -->
+      <div class="edit-field-list compose-title-row">
         <div class="edit-field-row"><span class="edit-field-label">Title</span><input class="edit-field-input" id="composeTitle" type="text" placeholder="blank — worked out from the text" value="${escapeAttr(opts.title || '')}" /></div>
-        <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="composeAuthor" type="text" value="${escapeAttr(SELF_AUTHOR)}" /></div>
-        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="composePublished" type="text" placeholder="dd/mm/yyyy" value="${escapeAttr(formatDateInput(todayISO()))}" /></div>
-        <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="composeSource" type="text" placeholder="blank — worked out from the text" /></div>
-        <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="composeTags" type="text" placeholder="comma, separated — blank to suggest them after saving" value="${escapeAttr((opts.tags || []).join(', '))}" /></div>
-        <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="composeUrl" type="text" /></div>
       </div>
       <div class="index-card-body">
         <div class="edit-body-head">
           <label class="edit-body-label" for="composeText">Body</label>
           <div class="bar-actions">
-            ${startWays ? '<button class="link-add-toggle photo-add" type="button">Add photo</button>' : photoButtonHtml()}
+            ${startWays ? '' : photoButtonHtml()}
             <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
           </div>
         </div>
         ${bodyLinkPickerHtml()}
         <textarea class="compose-textarea" id="composeText" placeholder="Write a clear, standalone thought…">${escapeHtml(prefill || '')}</textarea>
+      </div>
+      <div class="edit-field-list compose-details" role="group" aria-label="Details">
+        <span class="edit-body-label compose-details__head">Details</span>
+        <div class="edit-field-row"><span class="edit-field-label">Tags</span><input class="edit-field-input" id="composeTags" type="text" placeholder="comma, separated — blank to suggest them after saving" value="${escapeAttr((opts.tags || []).join(', '))}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Author</span><input class="edit-field-input" id="composeAuthor" type="text" value="${escapeAttr(SELF_AUTHOR)}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Published</span><input class="edit-field-input" id="composePublished" type="text" placeholder="dd/mm/yyyy" value="${escapeAttr(formatDateInput(todayISO()))}" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">Source</span><input class="edit-field-input" id="composeSource" type="text" placeholder="blank — worked out from the text" /></div>
+        <div class="edit-field-row"><span class="edit-field-label">URL</span><input class="edit-field-input" id="composeUrl" type="text" /></div>
       </div>
       <div class="index-card-foot compose-actions">
         <span class="compose-status" id="composeStatus"></span>
