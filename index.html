@@ -2582,8 +2582,26 @@ a.o-card:hover{filter:brightness(.98)}
     .task-detail .edit-body-head .link-add-toggle { min-height: 44px; padding: 0 var(--s4); font-size: var(--t-sm); border-radius: var(--r-md); }
     .edit-body-head .bar-actions { flex-wrap: wrap; justify-content: flex-end; }
   }
-  .photo-add { display: inline-flex; align-items: center; gap: 2px; }
-  .photo-add i { font-size: 1.35em; }
+  .bar-actions .link-add-toggle { display: inline-flex; align-items: center; gap: 2px; }
+  .bar-actions .link-add-toggle > i { font-size: 1.35em; }
+  .lbl-short { display: none; }
+  /* The phone: one row of equal tiles, an icon over a short word (v184). */
+  @media (max-width: 760px) {
+    .edit-body-head:has(.bar-actions) { display: block; }
+    .edit-body-head:has(.bar-actions) .edit-body-label { display: none; }
+    .edit-body-head .bar-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); gap: var(--s1); width: 100%; }
+    .index-card .edit-body-head .bar-actions .link-add-toggle,
+    .task-detail .edit-body-head .bar-actions .link-add-toggle {
+      flex-direction: column; justify-content: center; gap: 2px; min-height: 60px; padding: var(--s1) 2px;
+      font-family: var(--type); font-size: 12px; border-radius: var(--r-md); white-space: nowrap; overflow: hidden; }
+    .edit-body-head .bar-actions .link-add-toggle > i { font-size: 22px; }
+    .edit-body-head .bar-actions .btn-lbl { display: block; }
+    .edit-body-head .bar-actions .lbl-long { display: none; }
+    .edit-body-head .bar-actions .lbl-short { display: inline; }
+    .edit-body-head .bar-actions .rec-msg, .edit-body-head .bar-actions .rec-time { font-size: 11px; white-space: normal; text-align: center; line-height: 1.2; }
+  }
+  /* A journal entry: just the words (v184). */
+  .index-card.is-journal .edit-field-list, .index-card.is-journal .edit-actions-bottom { display: none; }
   /* Photos in a task's notes, and beside a list item (v183). */
   .task-photos { margin-top: var(--s3); }
   .task-photos__row { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s1); }
@@ -6098,17 +6116,24 @@ function wireTagSuggestions(fieldId) {
 
 // anchorOffset: a character position in the note to open at, so that leaving
 // the reading view halfway down an article does not land at the top of it.
-function startEdit(t, anchorOffset) {
+// opts.fill: something to write in once it arrives (today's journal morning).
+function startEdit(t, anchorOffset, opts) {
+  opts = opts || {};
   editingId = t.id;
   closeReference();
   renderList(displayed, searchMode);
   const style = typeStyle(t.type);
+  // A journal entry or the template needs only its words: the title, date and
+  // tags are the app's business (Stewart, 17 Nov 2026, v184). They stay in the
+  // page, hidden, so saving is unchanged.
+  const journal = (t.topics || []).includes(JOURNAL_TOPIC);
+  const template = journal && isJournalTemplate(t);
 
   main.innerHTML = `
-    <div class="index-card">
+    <div class="index-card${journal ? ' is-journal' : ''}">
       <div class="index-card-ribbon" style="background:${style.color}"></div>
       <div class="index-card-head">
-        <span class="index-card-type" style="color:${style.color}">${style.label} · editing</span>
+        <span class="index-card-type" style="color:${style.color}">${journal ? (template ? 'Journal template' : 'Journal') : style.label + ' · editing'}</span>
         <div class="index-card-head-right">
           <span class="index-card-date">${formatDate(t.created_at)}</span>
         </div>
@@ -6131,9 +6156,9 @@ function startEdit(t, anchorOffset) {
           <div class="edit-body-head">
             <label class="edit-body-label" for="editContent">Body</label>
             <div class="bar-actions">
-              <button class="link-add-toggle top-btn" type="button">↑ Top</button>
+              <button class="link-add-toggle top-btn" type="button"><i class="ph-light ph-arrow-up" aria-hidden="true"></i><span class="btn-lbl"> Top</span></button>
               ${photoButtonHtml()}
-              <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+              ${linkButtonHtml()}
             </div>
           </div>
           ${bodyLinkPickerHtml()}
@@ -6169,7 +6194,7 @@ function startEdit(t, anchorOffset) {
                        'editTags', 'editUrl', 'editContent'];
   const editSnapshot = () =>
     EDIT_FIELDS.map(id => (document.getElementById(id) || {}).value || '').join('\u0000');
-  const editOriginal = editSnapshot();
+  let editOriginal = editSnapshot();
   editorIsDirty = () => {
     // The editor may already have been replaced by whatever we were guarding
     // against; there is nothing left to lose in that case.
@@ -6208,6 +6233,14 @@ function startEdit(t, anchorOffset) {
   setupBodyLinkPicker(t, bodyEl, autoGrow);
   wirePhotoButtons(main, bodyEl, autoGrow);
   wireTopButtons();
+  if (template) setStatus('The app fills in the Morning line when it starts the day’s entry.', 'var(--ink-3)');
+  if (opts.fill) Promise.resolve(opts.fill).then(f => {
+    if (!f || !bodyEl.isConnected) return;
+    const untouched = editSnapshot() === editOriginal;
+    fillTextarea(bodyEl, f);
+    if (untouched) editOriginal = editSnapshot();
+    if (f.note) setStatus(f.note, 'var(--ink-3)');
+  }).catch(() => {});
   if (anchorOffset != null) {
     // After layout, or the textarea has not grown to its full height yet.
     requestAnimationFrame(() => placeCaretInView(bodyEl, anchorOffset));
@@ -6671,7 +6704,7 @@ function showComposer(prefill, parentId, opts) {
         ${CAN_RECORD ? '<button class="cap-tile rec-add" type="button" aria-pressed="false" aria-label="Record a sound" title="Keep a voice note or a sound in this note"><i class="ph-light ph-waveform" aria-hidden="true"></i><span class="btn-lbl">Record</span></button>' : ''}
       </div>` : '';
   main.innerHTML = `
-    <div class="index-card">
+    <div class="index-card${opts.journal ? ' is-journal' : ''}">
       <div class="index-card-ribbon" style="background:var(--accent)"></div>
       <div class="index-card-head">
         <span class="index-card-type" style="color:var(--accent)">${escapeHtml(opts.label || 'New thought')}${parentId ? ' · linked' : ''}</span>
@@ -6687,7 +6720,7 @@ function showComposer(prefill, parentId, opts) {
           <label class="edit-body-label" for="composeText">Body</label>
           <div class="bar-actions">
             ${startWays ? photoOnlyButtonHtml() : photoButtonHtml()}
-            <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+            ${linkButtonHtml()}
           </div>
         </div>
         ${bodyLinkPickerHtml()}
@@ -6832,16 +6865,7 @@ function showComposer(prefill, parentId, opts) {
   if (opts.fill) Promise.resolve(opts.fill).then(f => {
     if (!f || !textEl.isConnected) return;
     const untouched = snapshot() === original;
-    const before = textEl.value, after = f.apply(before);
-    if (after !== before) {
-      const pos = textEl.selectionStart, atEnd = pos === before.length;
-      let diff = 0;
-      while (diff < before.length && before[diff] === after[diff]) diff++;
-      textEl.value = after;
-      const to = atEnd ? after.length : pos >= diff ? pos + after.length - before.length : pos;
-      if (document.activeElement === textEl) textEl.setSelectionRange(to, to);
-      textEl.dispatchEvent(new Event('input', { bubbles: true }));
-    }
+    fillTextarea(textEl, f);
     if (untouched) original = snapshot();
     if (f.note) setStatus(f.note, 'var(--ink-3)');
   }).catch(() => {});
@@ -7811,7 +7835,10 @@ async function hydratePhotos() {
 new MutationObserver(() => { clearTimeout(photoTimer); photoTimer = setTimeout(() => { hydratePhotos(); hydrateAudio(); }, 30); })
   .observe(document.body, { childList: true, subtree: true });
 
-const photoOnlyButtonHtml = () => '<button class="link-add-toggle photo-add" type="button" title="Take a photo or choose one"><i class="ph-light ph-camera" aria-hidden="true"></i><span class="btn-lbl"> Add photo</span></button>';
+// On a phone these show as a row of equal tiles, an icon over one short word
+// (v184; they used to wrap into three ragged rows).
+const photoOnlyButtonHtml = () => '<button class="link-add-toggle photo-add" type="button" title="Take a photo or choose one"><i class="ph-light ph-camera" aria-hidden="true"></i><span class="btn-lbl"><span class="lbl-long"> Add photo</span><span class="lbl-short">Photo</span></span></button>';
+const linkButtonHtml = () => '<button class="link-add-toggle link-btn" id="editLinkToggle" type="button" title="Link to another note"><i class="ph-light ph-link" aria-hidden="true"></i><span class="btn-lbl"><span class="lbl-long"> ' + LINK_SHORTCUT + 'Link to a note</span><span class="lbl-short">Link</span></span></button>';
 const photoButtonHtml = () => photoOnlyButtonHtml() + micButtonHtml() + recordButtonHtml();
 
 // ---------- speaking into a note (4 Nov 2026, Otter v2.1 capture) ----------
@@ -11011,7 +11038,7 @@ function selectTask(t) {
           <label class="task-label" for="tdNotes">Notes</label>
           <div class="bar-actions">
             ${photoButtonHtml()}
-            <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
+            ${linkButtonHtml()}
           </div>
         </div>
         ${bodyLinkPickerHtml()}
@@ -11277,13 +11304,18 @@ const JOURNAL_TEMPLATE_TITLE = 'Journal template';
 // 7am, sunrise and sunset, the moon, and the sea and the wind at 7am. Tides and
 // the sun come from the server (today_extras: Jersey Met, Open-Meteo); the sea
 // and the wind from Open-Meteo directly (no key, nothing personal sent); the
-// moon is worked out here. Only template lines still empty ("Wind: ") are
-// filled, and a part that cannot be read stays blank and is named.
-const MORNING_LABELS = ['Tide', 'Sunrise', 'Sunset', 'Moon', 'Sea', 'Wind'];
+// moon is worked out here. Since v184 it is one line, "Morning: Low tide 07:58
+// (2.1 m) · Sunrise 07:41 · …" (Stewart: "morning should be one line"). The
+// line is filled only while empty, added at the top of today's entry if it has
+// none, and v183's six-line block is folded into it. A part that cannot be read
+// is left out and named.
 const MORNING_HOUR = 7;
 const ST_HELIER_AT = 'latitude=49.19&longitude=-2.11';
 const JERSEY_SEA_AT = 'latitude=49.15&longitude=-2.10';   // open water south of the island; the marine model has nothing inside the harbour
-const MORNING_PROMPT_RE = new RegExp('^(?:' + MORNING_LABELS.join('|') + '):', 'i');
+const MORNING_PROMPT_RE = /^Morning:/i;
+const MORNING_EMPTY_RE = /^Morning:[ \t]*$/im;
+const MORNING_BLOCK_RE = /^Morning[ \t]*\n(?:(?:Tide|Sunrise|Sunset|Moon|Sea|Wind):[^\n]*(?:\n|$))+/im;   // v183's six lines
+const morningWanted = text => MORNING_EMPTY_RE.test(text) || MORNING_BLOCK_RE.test(text) || !/^Morning:/im.test(text);
 
 const compassPoint = d => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round((((d % 360) + 360) % 360) / 45) % 8];
 // The shipping forecast's words for the height of the waves (Douglas scale).
@@ -11296,7 +11328,8 @@ function moonPhase(when) {
   const lit = Math.round((1 - Math.cos(2 * Math.PI * age / SYNODIC)) / 2 * 100);
   const names = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous',
     'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
-  return names[Math.floor(age / SYNODIC * 8 + 0.5) % 8] + ', ' + lit + '% lit';
+  const name = names[Math.floor(age / SYNODIC * 8 + 0.5) % 8];
+  return (/moon$/.test(name) ? name : name + ' moon') + ' (' + lit + '% lit)';
 }
 
 async function morningJson(url) {
@@ -11305,7 +11338,7 @@ async function morningJson(url) {
   return r.json();
 }
 
-// What to write after each label, for one day.
+// The morning line for one day, and how to put it in an entry.
 async function journalMorning(date) {
   const hour = date + 'T' + String(MORNING_HOUR).padStart(2, '0') + ':00';
   const day = '&timezone=Europe%2FLondon&start_date=' + date + '&end_date=' + date;
@@ -11314,16 +11347,16 @@ async function journalMorning(date) {
     morningJson('https://api.open-meteo.com/v1/forecast?' + ST_HELIER_AT + '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=mph' + day),
     morningJson('https://marine-api.open-meteo.com/v1/marine?' + JERSEY_SEA_AT + '&hourly=wave_height,wave_direction' + day),
   ]);
-  const v = {}, missed = [];
+  const parts = [], missed = [];
   const x = extras.status === 'fulfilled' ? extras.value : null;
-  if (x && x.sun) { v.Sunrise = x.sun.sunrise; v.Sunset = x.sun.sunset; } else missed.push('sun');
   const mins = hm => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
   const tides = (x && x.tides) || [];
   if (tides.length) {
     const t = tides.reduce((a, b) => Math.abs(mins(b.time) - MORNING_HOUR * 60) < Math.abs(mins(a.time) - MORNING_HOUR * 60) ? b : a);
-    v.Tide = (t.type === 'high' ? 'High' : 'Low') + ' ' + t.time + ', ' + Number(t.height_m).toFixed(1) + ' m';
+    parts.push((t.type === 'high' ? 'High' : 'Low') + ' tide ' + t.time + ' (' + Number(t.height_m).toFixed(1) + ' m)');
   } else missed.push('tide');
-  v.Moon = moonPhase(new Date(date + 'T07:00:00'));
+  if (x && x.sun) parts.push('Sunrise ' + x.sun.sunrise, 'Sunset ' + x.sun.sunset); else missed.push('sun');
+  parts.push(moonPhase(new Date(date + 'T07:00:00')));
   const at = (res, keys) => {
     const h = res.status === 'fulfilled' && res.value && res.value.hourly;
     const i = h && h.time ? h.time.indexOf(hour) : -1;
@@ -11331,17 +11364,34 @@ async function journalMorning(date) {
     const out = keys.map(k => (h[k] || [])[i]);
     return out.every(n => typeof n === 'number') ? out : null;
   };
-  const w = at(air, ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m']);
-  if (w) v.Wind = compassPoint(w[1]) + ' ' + Math.round(w[0]) + ' mph, gusting ' + Math.round(w[2]);
-  else missed.push('wind');
   const s = at(sea, ['wave_height', 'wave_direction']);
-  if (s) v.Sea = seaWord(s[0]) + ', ' + s[0].toFixed(1) + ' m waves from the ' + compassPoint(s[1]);
+  if (s) parts.push('Sea ' + seaWord(s[0]).toLowerCase() + ', ' + s[0].toFixed(1) + ' m from the ' + compassPoint(s[1]));
   else missed.push('sea');
+  const w = at(air, ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m']);
+  if (w) parts.push('Wind ' + compassPoint(w[1]) + ' ' + Math.round(w[0]) + ' mph, gusts ' + Math.round(w[2]));
+  else missed.push('wind');
+  const line = 'Morning: ' + parts.join(' · ');
   return {
-    apply: text => MORNING_LABELS.reduce((acc, k) => v[k] == null ? acc
-      : acc.replace(new RegExp('^(' + k + '):[ \\t]*$', 'im'), (_m, label) => label + ': ' + v[k]), text),
+    line,
+    apply: text => MORNING_EMPTY_RE.test(text) ? text.replace(MORNING_EMPTY_RE, line)
+      : MORNING_BLOCK_RE.test(text) ? text.replace(MORNING_BLOCK_RE, line + '\n')
+      : /^Morning:/im.test(text) ? text
+      : line + '\n\n' + text.replace(/^\s+/, ''),
     note: missed.length ? 'Not read: ' + missed.join(', ') + '.' : '',
   };
+}
+
+// Puts what a fill gives into a text box, keeping the cursor on the same words.
+function fillTextarea(el, f) {
+  const before = el.value, after = f.apply(before);
+  if (after === before) return;
+  const pos = el.selectionStart, atEnd = pos === before.length;
+  let diff = 0;
+  while (diff < before.length && before[diff] === after[diff]) diff++;
+  el.value = after;
+  const to = atEnd ? after.length : pos >= diff ? pos + after.length - before.length : pos;
+  if (document.activeElement === el) el.setSelectionRange(to, to);
+  el.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 // Used until a "Journal template" note exists. The template lives in the
@@ -11349,9 +11399,7 @@ async function journalMorning(date) {
 // the laptop too. The body is plain text — the catalog does not render markdown.
 // Since 17 Nov 2026 it is just the morning (Stewart: "remove everything else");
 // the app fills these lines in when it starts the day's entry.
-// The Morning heading also lets the Life Engine (Telegram) keep this template:
-// it only counts fill-in lines under a heading (life-engine-tick/journal.ts).
-const DEFAULT_JOURNAL_TEMPLATE = ['Morning', ...MORNING_LABELS.map(k => k + ': ')].join('\n');
+const DEFAULT_JOURNAL_TEMPLATE = 'Morning: ';
 
 let journalLoaded = false;
 let journalReady = Promise.resolve();
@@ -11641,7 +11689,8 @@ async function openTodaysJournal() {
   const existing = allJournal.find(t => journalDate(t) === today);
   if (existing) {
     selectThought(existing);
-    startEdit(existing, existing.content.length);
+    startEdit(existing, existing.content.length,
+      morningWanted(existing.content) ? { fill: journalMorning(today) } : null);
     return;
   }
   const template = (journalTemplate ? journalTemplate.content : DEFAULT_JOURNAL_TEMPLATE).replace(/\s*$/, '') + '\n\n';
@@ -11651,6 +11700,7 @@ async function openTodaysJournal() {
     tags: [JOURNAL_TOPIC],
     focusBody: true,
     openAfter: true,
+    journal: true,
     fill: journalMorning(today),
   });
 }
@@ -11665,7 +11715,8 @@ async function openJournalTemplate() {
     tags: [JOURNAL_TOPIC],
     focusBody: true,
     openAfter: true,
-    intro: 'Every new entry starts with this text. Add or change headings, then save.',
+    journal: true,
+    intro: 'Every new entry starts with this text. The app fills in the Morning line with the day’s tide, sun, moon, sea and wind.',
   });
 }
 
