@@ -25,13 +25,16 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/light/style.css">
 <style>
-/* otter:start v2.1 — Otter design language. Source: ~/.claude/skills/otter-design/otter.css
+/* otter:start v2.2 — Otter design language. Source: ~/.claude/skills/otter-design/otter.css
    Paste this block whole into an app's <style>. Re-sync by replacing everything
    between otter:start and otter:end. App-specific CSS goes after otter:end.
    Also needed in <head>:
    <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
-   App colour: <html lang="en-GB" data-hue="heather|sea|teal|moss|ochre|blossom">  */
+   App colour: <html lang="en-GB" data-hue="heather|sea|teal|moss|ochre|blossom">
+   Contrast (v2.2): ink, ink-2, ink-3 and accent-deep pass WCAG AA (4.5:1) for text on
+   ground, paper and stone in light and dark, as do ok-text, warn-text and fail-text;
+   accent-mark and the signals pass 3:1 for icons, rings and dots. ink-dim is decoration only (focus-mode fade, strike lines).  */
 
 /* ── Typewriter faces: iA Writer Quattro (words) and Mono (numbers). SIL OFL, pinned. ── */
 @font-face{font-family:"iA Quattro";font-weight:400;font-style:normal;font-display:swap;src:url("https://cdn.jsdelivr.net/gh/iaolo/iA-Fonts@c6588670c71e9ac628acc27b72cde4bf12726b7f/iA%20Writer%20Quattro/Webfonts/iAWriterQuattroS-Regular.woff2") format("woff2")}
@@ -75,37 +78,43 @@
   --paper:#F6F5F2;    /* the note, rows, panels */
   --stone:#E1DFD8;    /* fields, chips, tracks */
   --stone-2:#CAC4BE;  /* rules, faded marks */
-  --taupe:#908077;    /* the ticker */
-  --ink:#3D3D39; --ink-2:#6B6A64; --ink-3:#9C9A93; --ink-dim:#B9B6AE;
+  --taupe:#6F6258;    /* the ticker */
+  --ink:#3D3D39; --ink-2:#4F4E48; --ink-3:#63615B; --ink-dim:#B9B6AE;
   --on-ink:#F6F5F2;
   --accent-tint:color-mix(in oklab,var(--accent),var(--paper) 86%);
-  --accent-deep:color-mix(in oklab,var(--accent),black 18%);
+  --accent-deep:color-mix(in oklab,var(--accent),black 18%);  /* accent for text */
+  --accent-mark:var(--accent);  /* accent for icons, rings, underlines, fills under icons */
   --ok-tint:color-mix(in oklab,var(--ok),var(--paper) 84%);
   --warn-tint:color-mix(in oklab,var(--warn),var(--paper) 84%);
   --fail-tint:color-mix(in oklab,var(--fail),var(--paper) 86%);
+  --ok-text:color-mix(in oklab,var(--ok),black 24%); --warn-text:color-mix(in oklab,var(--warn),black 24%); --fail-text:color-mix(in oklab,var(--fail),black 24%);  /* signals as words */
   color-scheme:light;
 }
 /* ── Dark: warm charcoal, not blue-black ── */
 @media (prefers-color-scheme:dark){
   :root:not([data-theme="light"]),:root:not([data-theme="light"]) [data-hue]{
     --ground:#1C1B19; --paper:#252421; --stone:#302E2B; --stone-2:#4A4743; --taupe:#5E544D;
-    --ink:#E8E5DF; --ink-2:#B3AFA7; --ink-3:#85827B; --ink-dim:#5C5954; --on-ink:#1C1B19;
+    --ink:#E8E5DF; --ink-2:#B3AFA7; --ink-3:#9A9790; --ink-dim:#5C5954; --on-ink:#1C1B19;
     --accent-tint:color-mix(in oklab,var(--accent),var(--paper) 72%);
-    --accent-deep:color-mix(in oklab,var(--accent),white 30%);
+    --accent-deep:color-mix(in oklab,var(--accent),white 38%); --accent-mark:var(--accent-deep);
+    --ok:#849A75; --warn:#BE965E; --fail:#C17569;
     --ok-tint:color-mix(in oklab,var(--ok),var(--paper) 70%);
     --warn-tint:color-mix(in oklab,var(--warn),var(--paper) 70%);
     --fail-tint:color-mix(in oklab,var(--fail),var(--paper) 70%);
+    --ok-text:color-mix(in oklab,var(--ok),white 35%); --warn-text:color-mix(in oklab,var(--warn),white 35%); --fail-text:color-mix(in oklab,var(--fail),white 35%);
     color-scheme:dark;
   }
 }
 :root[data-theme="dark"],:root[data-theme="dark"] [data-hue]{
   --ground:#1C1B19; --paper:#252421; --stone:#302E2B; --stone-2:#4A4743; --taupe:#5E544D;
-  --ink:#E8E5DF; --ink-2:#B3AFA7; --ink-3:#85827B; --ink-dim:#5C5954; --on-ink:#1C1B19;
+  --ink:#E8E5DF; --ink-2:#B3AFA7; --ink-3:#9A9790; --ink-dim:#5C5954; --on-ink:#1C1B19;
   --accent-tint:color-mix(in oklab,var(--accent),var(--paper) 72%);
-  --accent-deep:color-mix(in oklab,var(--accent),white 30%);
+  --accent-deep:color-mix(in oklab,var(--accent),white 38%); --accent-mark:var(--accent-deep);
+    --ok:#849A75; --warn:#BE965E; --fail:#C17569;
   --ok-tint:color-mix(in oklab,var(--ok),var(--paper) 70%);
   --warn-tint:color-mix(in oklab,var(--warn),var(--paper) 70%);
   --fail-tint:color-mix(in oklab,var(--fail),var(--paper) 70%);
+    --ok-text:color-mix(in oklab,var(--ok),white 35%); --warn-text:color-mix(in oklab,var(--warn),white 35%); --fail-text:color-mix(in oklab,var(--fail),white 35%);
   color-scheme:dark;
 }
 
@@ -119,8 +128,8 @@ h1{font-size:var(--t-3xl)} h2{font-size:var(--t-2xl)} h3{font-size:var(--t-xl)} 
 h1 em,h2 em,h3 em,h4 em{font-style:italic; font-weight:400}
 p{margin:0 0 var(--s4)}
 a{color:var(--accent-deep); text-decoration-thickness:1px; text-underline-offset:3px}
-a:hover{color:var(--accent)}
-:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--r-xs)}
+a:hover{color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent-mark); outline-offset:2px; border-radius:var(--r-xs)}
 ::selection{background:var(--accent-tint); color:var(--ink)}
 code,kbd,pre,.o-mono{font-family:var(--mono); font-size:.92em}
 .o-num{font-family:var(--mono); font-variant-numeric:tabular-nums}
@@ -135,7 +144,7 @@ hr,.o-rule{border:0; height:1px; background:var(--stone-2); margin:var(--s7) 0}
 .o-dateline{font-family:var(--mono); font-size:var(--t-xs); letter-spacing:.14em; text-transform:uppercase; color:var(--ink-3); margin-bottom:var(--s4)}
 .o-ticker{display:flex; gap:var(--s6); overflow:hidden; white-space:nowrap; padding:9px var(--s5);
   background:var(--taupe); color:#F6F5F2; font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase}
-.o-ticker > :nth-child(n+3){opacity:.75}
+.o-ticker > :nth-child(n+3){opacity:.9}
 @media (max-width:640px){.o-ticker > :nth-child(n+2){display:none}}
 
 /* ── Labels and small print: sentence case ── */
@@ -144,7 +153,7 @@ hr,.o-rule{border:0; height:1px; background:var(--stone-2); margin:var(--s7) 0}
 .o-lede{font-size:var(--t-lg); color:var(--ink-2); max-width:62ch}
 
 /* ── Text that types itself: add .o-typing; the cursor is the app's colour ── */
-.o-typing::after,.o-cursor{content:""; display:inline-block; width:2px; height:1.1em; background:var(--accent); margin-left:2px; vertical-align:-3px; animation:o-blink 1s steps(1) infinite}
+.o-typing::after,.o-cursor{content:""; display:inline-block; width:2px; height:1.1em; background:var(--accent-mark); margin-left:2px; vertical-align:-3px; animation:o-blink 1s steps(1) infinite}
 @keyframes o-blink{50%{opacity:0}}
 
 /* ── App bar: quiet, on the ground. Serif wordmark, text links, accent underline. ── */
@@ -152,7 +161,7 @@ hr,.o-rule{border:0; height:1px; background:var(--stone-2); margin:var(--s7) 0}
 .o-bar__spacer{flex:1}
 .o-bar a,.o-bar__link{font:inherit; font-size:var(--t-sm); color:var(--ink-2); text-decoration:none; background:none; border:0; padding:var(--s1) 0; cursor:pointer}
 .o-bar a:hover,.o-bar__link:hover{color:var(--ink)}
-.o-bar .is-current,.o-bar [aria-current]{color:var(--ink); text-decoration:underline; text-decoration-color:var(--accent); text-decoration-thickness:2px; text-underline-offset:7px}
+.o-bar .is-current,.o-bar [aria-current]{color:var(--ink); text-decoration:underline; text-decoration-color:var(--accent-mark); text-decoration-thickness:2px; text-underline-offset:7px}
 
 /* ── Page ── */
 .o-page{max-width:1080px; margin:0 auto; padding:var(--s6) var(--s5) var(--s8)}
@@ -164,21 +173,22 @@ hr,.o-rule{border:0; height:1px; background:var(--stone-2); margin:var(--s7) 0}
   border:0; border-radius:var(--r-sm); background:transparent; color:var(--ink); box-shadow:inset 0 0 0 1px var(--ink-3);
   font:inherit; font-size:.9375rem; line-height:1; cursor:pointer; text-decoration:none; transition:background .15s,color .15s,box-shadow .15s}
 .o-btn:hover{box-shadow:inset 0 0 0 1px var(--ink); color:var(--ink)}
-.o-btn:disabled,.o-btn[aria-disabled="true"]{opacity:.45; cursor:not-allowed}
 .o-btn--primary{background:var(--ink); color:var(--on-ink); box-shadow:none}
 .o-btn--primary:hover{background:color-mix(in oklab,var(--ink),var(--accent) 22%); color:var(--on-ink); box-shadow:none}
-.o-btn--danger{background:var(--fail); color:#fff; box-shadow:none}
-.o-btn--danger:hover{background:color-mix(in oklab,var(--fail),black 12%); color:#fff; box-shadow:none}
+.o-btn--danger{background:var(--fail); color:var(--on-ink); box-shadow:none}
+.o-btn--danger:hover{background:color-mix(in oklab,var(--fail),var(--ink) 12%); color:var(--on-ink); box-shadow:none}
 .o-btn--quiet{box-shadow:none; color:var(--accent-deep); padding:0 var(--s1); text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px}
-.o-btn--quiet:hover{box-shadow:none; color:var(--accent)}
+.o-btn--quiet:hover{box-shadow:none; color:var(--ink)}
 .o-btn--sm{min-height:34px; padding:0 var(--s4); font-size:var(--t-sm)}
 .o-btn--block{width:100%}
+/* Off but still readable: stone fill, grey words, no fade (v2.2). After the variants so it wins on hover too. */
+.o-btn:disabled,.o-btn[aria-disabled="true"],.o-btn:disabled:hover,.o-btn[aria-disabled="true"]:hover{background:var(--stone); color:var(--ink-3); box-shadow:none; text-decoration:none; cursor:not-allowed}
 
 /* ── Fields: a stone fill; paper and an accent ring when typing ── */
 .o-field{display:block; width:100%; min-height:46px; padding:var(--s3) var(--s4); border:0; border-radius:var(--r-md);
   background:var(--stone); color:var(--ink); font:inherit; box-shadow:inset 0 0 0 1.5px transparent; transition:background .15s,box-shadow .15s}
 .o-field::placeholder{color:var(--ink-3)}
-.o-field:focus{outline:none; background:var(--paper); box-shadow:inset 0 0 0 1.5px var(--accent)}
+.o-field:focus{outline:none; background:var(--paper); box-shadow:inset 0 0 0 1.5px var(--accent-mark)}
 textarea.o-field{min-height:140px; resize:vertical; line-height:1.6}
 
 /* ── Chips ── */
@@ -219,7 +229,7 @@ a.o-card:hover{filter:brightness(.98)}
 .o-tabs{display:flex; gap:var(--s5); border-bottom:1px solid var(--stone-2)}
 .o-tab{border:0; background:none; font:inherit; font-size:var(--t-sm); color:var(--ink-2); padding:var(--s2) 0; margin-bottom:-1px; cursor:pointer; border-bottom:2px solid transparent}
 .o-tab:hover{color:var(--ink)}
-.o-tab[aria-selected="true"],.o-tab.is-current{color:var(--ink); border-bottom-color:var(--accent)}
+.o-tab[aria-selected="true"],.o-tab.is-current{color:var(--ink); border-bottom-color:var(--accent-mark)}
 
 /* ── Stats ── */
 .o-stat{display:flex; flex-direction:column; gap:var(--s1)}
@@ -309,7 +319,7 @@ a.o-card:hover{filter:brightness(.98)}
 .o-rail__item .o-num{margin-left:auto; font-size:var(--t-xs); color:var(--ink-3)}
 .o-rail__item:hover{background:var(--stone); color:var(--ink)}
 .o-rail__item.is-current,.o-rail__item[aria-current]{background:var(--paper); color:var(--ink)}
-.o-rail__item.is-current i,.o-rail__item[aria-current] i{color:var(--accent)}
+.o-rail__item.is-current i,.o-rail__item[aria-current] i{color:var(--accent-mark)}
 .o-main{background:var(--paper); padding:var(--s6) var(--s6) var(--s7); min-width:0}
 .o-side{background:var(--ground); padding:var(--s5) var(--s4); min-width:0}
 .o-tabbar{display:none}
@@ -323,7 +333,7 @@ a.o-card:hover{filter:brightness(.98)}
     border:0; background:none; font:inherit; font-size:var(--t-xs); color:var(--ink-3); text-decoration:none; cursor:pointer}
   .o-tabbar i{font-size:24px}
   .o-tabbar .is-current,.o-tabbar [aria-current]{color:var(--ink)}
-  .o-tabbar .is-current i,.o-tabbar [aria-current] i{color:var(--accent)}
+  .o-tabbar .is-current i,.o-tabbar [aria-current] i{color:var(--accent-mark)}
 }
 
 /* ── Capture: one field for anything, with photo and mic buttons (Todoist's
@@ -331,11 +341,11 @@ a.o-card:hover{filter:brightness(.98)}
 .o-capture{display:flex; align-items:center; gap:var(--s2); background:var(--ground); border-radius:var(--r-md); padding:var(--s2) var(--s2) var(--s2) var(--s4); min-height:52px}
 .o-capture input,.o-capture textarea{flex:1; min-width:0; border:0; background:none; font:inherit; color:var(--ink); padding:var(--s2) 0; resize:none}
 .o-capture input:focus,.o-capture textarea:focus{outline:none}
-.o-capture:focus-within{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.o-capture:focus-within{box-shadow:inset 0 0 0 1.5px var(--accent-mark)}
 .o-capture__btn{display:grid; place-items:center; width:40px; height:40px; border:0; border-radius:var(--r-sm); background:none; color:var(--ink-2); cursor:pointer; font-size:22px}
 .o-capture__btn:hover{background:var(--stone); color:var(--ink)}
-.o-capture.is-listening{box-shadow:inset 0 0 0 1.5px var(--accent)}
-.o-capture.is-listening .o-capture__mic{background:var(--accent); color:var(--on-ink)}
+.o-capture.is-listening{box-shadow:inset 0 0 0 1.5px var(--accent-mark)}
+.o-capture.is-listening .o-capture__mic{background:var(--accent-mark); color:var(--on-ink)}
 
 /* ── Task row: round tick, the words, quiet meta, a time in mono on the right (Sunsama). ── */
 .o-tasks{list-style:none; margin:0; padding:0}
@@ -343,12 +353,9 @@ a.o-card:hover{filter:brightness(.98)}
 .o-task + .o-task{box-shadow:0 -1px 0 var(--stone)}
 .o-task__tick{flex:none; width:20px; height:20px; margin-top:2px; border:0; border-radius:50%; box-shadow:inset 0 0 0 1.5px var(--ink-3);
   background:none; color:transparent; display:grid; place-items:center; font-size:13px; cursor:pointer}
-.o-task__tick:hover{box-shadow:inset 0 0 0 1.5px var(--accent)}
-.o-task.is-done .o-task__tick{background:var(--accent); box-shadow:none; color:var(--on-ink)}
+.o-task__tick:hover{box-shadow:inset 0 0 0 1.5px var(--accent-mark)}
+.o-task.is-done .o-task__tick{background:var(--accent-mark); box-shadow:none; color:var(--on-ink)}
 .o-task__main{flex:1; min-width:0}
-.o-task__open{background:none; border:0; padding:0; margin:0; text-align:left; font:inherit; color:inherit; cursor:pointer}
-.o-task__open:hover .o-task__title{color:var(--accent)}
-.o-task__open:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:var(--r-sm)}
 .o-task__title{display:block}
 .o-task.is-done .o-task__title{color:var(--ink-3); text-decoration:line-through; text-decoration-color:var(--ink-dim)}
 .o-task__meta{display:block; margin-top:2px; font-size:var(--t-xs); color:var(--ink-3)}
@@ -368,8 +375,8 @@ a.o-card:hover{filter:brightness(.98)}
 .o-day__block[data-tint]{background:color-mix(in oklab,var(--tint),var(--paper) 78%)}
 .o-day__block[data-tint="heather"]{--tint:var(--heather)} .o-day__block[data-tint="sea"]{--tint:var(--sea)} .o-day__block[data-tint="teal"]{--tint:var(--teal)}
 .o-day__block[data-tint="moss"]{--tint:var(--moss)} .o-day__block[data-tint="ochre"]{--tint:var(--ochre)} .o-day__block[data-tint="blossom"]{--tint:var(--blossom)}
-.o-day__now{position:absolute; left:36px; right:0; height:2px; background:var(--accent)}
-.o-day__now::before{content:""; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--accent)}
+.o-day__now{position:absolute; left:36px; right:0; height:2px; background:var(--accent-mark)}
+.o-day__now::before{content:""; position:absolute; left:-4px; top:-3px; width:8px; height:8px; border-radius:50%; background:var(--accent-mark)}
 
 /* ── Suggestion: a helper's proposal waiting for a yes. Nothing is filed until Stewart taps.
    .o-suggest > __said (with .o-meta) + __to (icon + one <span> of words) + __acts; .is-filed after. ── */
@@ -378,7 +385,7 @@ a.o-card:hover{filter:brightness(.98)}
 .o-suggest__said{margin:0 0 var(--s3)}
 .o-suggest__said .o-meta{display:block; margin-bottom:var(--s1)}
 .o-suggest__to{display:flex; align-items:flex-start; gap:var(--s2); margin-bottom:var(--s3); font-size:var(--t-sm)}
-.o-suggest__to i{flex:none; margin-top:1px; font-size:18px; color:var(--accent)}
+.o-suggest__to i{flex:none; margin-top:1px; font-size:18px; color:var(--accent-mark)}
 .o-suggest__to > span{flex:1; min-width:0}
 .o-suggest__acts{display:flex; flex-wrap:wrap; gap:var(--s2)}
 .o-suggest.is-filed{opacity:.55}
@@ -386,6 +393,10 @@ a.o-card:hover{filter:brightness(.98)}
 
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important; animation:none!important}}
 /* otter:end */
+/* This app's own additions, moved out of the Otter block at the v2.2 re-sync (16 Nov 2026). */
+.o-task__open{background:none; border:0; padding:0; margin:0; text-align:left; font:inherit; color:inherit; cursor:pointer}
+.o-task__open:hover .o-task__title{color:var(--accent-deep)}
+.o-task__open:focus-visible{outline:2px solid var(--accent-mark); outline-offset:2px; border-radius:var(--r-sm)}
 
 /* App layer: Open Brain catalog (Otter v2, heather). Old token names kept as aliases
    for anything still reading them from JS. */
@@ -479,8 +490,8 @@ a.o-card:hover{filter:brightness(.98)}
     transition: border-color 120ms, color 120ms, transform 400ms;
     flex-shrink: 0;
   }
-  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .refresh-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .refresh-btn:hover { border-color: var(--accent-mark); color: var(--accent-deep); }
+  .refresh-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .refresh-btn.spinning svg { animation: spin 700ms linear; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
@@ -502,7 +513,7 @@ a.o-card:hover{filter:brightness(.98)}
     transition: border-color 120ms;
   }
   .search-input::placeholder { color: var(--ink-3); font-style: italic; }
-  .search-input:focus { border-color: var(--accent); }
+  .search-input:focus { border-color: var(--accent-mark); }
 
   .search-clear {
     position: absolute;
@@ -517,7 +528,7 @@ a.o-card:hover{filter:brightness(.98)}
     line-height: 1;
     padding: 2px;
   }
-  .search-clear:hover { color: var(--accent); }
+  .search-clear:hover { color: var(--accent-deep); }
 
   .chip-row {
     display: flex;
@@ -543,7 +554,7 @@ a.o-card:hover{filter:brightness(.98)}
   }
   .chip:hover { border-color: var(--ink-2); }
   .chip.active { color: var(--ground); border-color: transparent; }
-  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chip:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .chip .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
   /* Matches .facet-n, so a count reads the same wherever it appears. On an
      active chip the background is the type colour, so the faint ink would
@@ -614,13 +625,13 @@ a.o-card:hover{filter:brightness(.98)}
   .lh-count { font-family: var(--mono); font-size: 11px; 
               color: var(--ink-2); margin-right: 2px; white-space: nowrap; }
   .lh-chip { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer;
-             padding: 5px 10px; border-radius: var(--r-sm); border: 1px solid var(--accent);
+             padding: 5px 10px; border-radius: var(--r-sm); border: 1px solid var(--accent-mark);
              background: color-mix(in oklab, var(--accent) 12%, transparent); color: var(--ink); font-family: var(--mono); font-size: 11px; }
-  .lh-chip span { color: var(--accent); margin-left: 2px; }
+  .lh-chip span { color: var(--accent-deep); margin-left: 2px; }
   .lh-top { margin-left: auto; flex-shrink: 0; cursor: pointer; padding: 5px 9px; background: var(--stone);
             border: 1px solid transparent; border-radius: var(--r-sm); color: var(--ink-2);
             font-family: var(--mono); font-size: 10.5px;  }
-  .lh-chip:focus-visible, .lh-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .lh-chip:focus-visible, .lh-top:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
 
   /* The notes line and the folded filters (5 Nov 2026). */
   .drawer:not(.filters-open) .facet-bar, .drawer:not(.filters-open) .facet-panel { display: none; }
@@ -632,8 +643,8 @@ a.o-card:hover{filter:brightness(.98)}
   .nh-filter i { font-size: 18px; }
   .nh-filter:hover { background: var(--stone); color: var(--ink); }
   .nh-filter[aria-expanded="true"] { background: var(--stone); color: var(--ink); }
-  .nh-filter[aria-expanded="true"] i { color: var(--accent); }
-  .nh-n { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent); color: var(--on-ink);
+  .nh-filter[aria-expanded="true"] i { color: var(--accent-mark); }
+  .nh-n { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: var(--accent-mark); color: var(--on-ink);
     font-size: 11px; line-height: 18px; text-align: center; }
   .nh-views { display: inline-flex; gap: 2px; padding: 3px; background: var(--stone); border-radius: var(--r-md); }
   .nh-views button { display: inline-flex; align-items: center; gap: 6px; min-height: 30px; padding: 0 var(--s3); border: 0;
@@ -641,9 +652,9 @@ a.o-card:hover{filter:brightness(.98)}
   .nh-views button i { font-size: 16px; }
   .nh-views button:hover { color: var(--ink); }
   .nh-views button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
-  .nh-views button[aria-pressed="true"] i { color: var(--accent); }
+  .nh-views button[aria-pressed="true"] i { color: var(--accent-mark); }
   .nh-chips { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 6px; }
-  .nh-filter:focus-visible, .nh-views button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nh-filter:focus-visible, .nh-views button:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .drawer.filters-open .facet-bar { margin-top: var(--s2); }
 
   .card-row {
@@ -672,7 +683,7 @@ a.o-card:hover{filter:brightness(.98)}
   }
 
   .card-row:hover .card-row-body { background: color-mix(in oklab, var(--ink) 3%, transparent); transform: translateX(2px); }
-  .card-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .card-row:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -2px; }
   .card-row.selected .card-row-body { background: color-mix(in oklab, var(--accent) 8%, transparent); }
   .card-row.referencing .card-row-body { background: color-mix(in oklab, var(--sea) 10%, transparent); }
 
@@ -683,7 +694,7 @@ a.o-card:hover{filter:brightness(.98)}
     font-family: var(--mono);
     font-size: 10.5px;
     
-    color: var(--heather);
+    color: color-mix(in oklab, var(--heather), var(--ink) 45%);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -739,7 +750,7 @@ a.o-card:hover{filter:brightness(.98)}
     font-size: 11px;
     font-style: normal;
     text-decoration: underline;
-    color: var(--accent);
+    color: var(--accent-deep);
     cursor: pointer;
     background: none;
     border: none;
@@ -846,7 +857,7 @@ a.o-card:hover{filter:brightness(.98)}
   }
 
   .body-link {
-    color: var(--sea);
+    color: color-mix(in oklab, var(--sea), var(--ink) 45%);
     text-decoration: none;
     border-bottom: 1px solid color-mix(in oklab, var(--sea) 40%, transparent);
   }
@@ -854,12 +865,12 @@ a.o-card:hover{filter:brightness(.98)}
 
   /* In-brain link: [Text](thought:<id>) — opens another note in place. */
   .thought-link {
-    color: var(--accent);
+    color: var(--accent-deep);
     text-decoration: none;
     border-bottom: 1px solid color-mix(in oklab, var(--warn) 45%, transparent);
     cursor: pointer;
   }
-  .thought-link:hover { border-bottom-color: var(--accent); }
+  .thought-link:hover { border-bottom-color: var(--accent-mark); }
   .thought-link.missing {
     color: var(--ink-2);
     border-bottom-style: dotted;
@@ -904,7 +915,7 @@ a.o-card:hover{filter:brightness(.98)}
     text-align: left; color: inherit; cursor: pointer; font: inherit;
   }
   .result-row:hover { background: var(--paper); }
-  .result-row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .result-row:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -2px; }
   .result-meta { display: flex; flex-direction: column; gap: 3px; font-family: var(--mono); font-size: 10px;  padding-top: 3px; }
   .result-meta .result-date { color: var(--ink-3); text-transform: none; letter-spacing: 0; }
   .result-title { font-family: var(--type); font-size: 15.5px; line-height: 1.4; color: var(--ink); }
@@ -914,8 +925,8 @@ a.o-card:hover{filter:brightness(.98)}
     display: block; background: none; border: 0; padding: 4px 0; margin: 0 0 14px; cursor: pointer;
     color: var(--ink-2); font-family: var(--mono); font-size: 11px; 
   }
-  .list-return:hover { color: var(--accent); }
-  .list-return:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .list-return:hover { color: var(--accent-deep); }
+  .list-return:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   /* Keyed on the link itself, not a class on .main: every other view that
      fills .main (editor, journal, tasks) would otherwise inherit the column. */
   /* flex-start: the base rule's centring, turned into a column, centres the card
@@ -959,21 +970,21 @@ a.o-card:hover{filter:brightness(.98)}
     transition: border-color 120ms, color 120ms;
     flex-shrink: 0;
   }
-  .icon-btn:hover { border-color: var(--fail); color: var(--fail); }
-  .icon-btn#editBtn:hover { border-color: var(--accent); color: var(--accent); }
+  .icon-btn:hover { border-color: var(--fail); color: var(--fail-text); }
+  .icon-btn#editBtn:hover { border-color: var(--accent-mark); color: var(--accent-deep); }
   .icon-btn:focus-visible { outline: 2px solid var(--fail); outline-offset: 2px; }
   .icon-btn:disabled { opacity: 0.35; cursor: default; }
   .icon-btn:disabled:hover { border-color: var(--stone); color: var(--ink-3); }
   /* Task / Journal: worded, because they make something rather than change the note. */
   .icon-btn--word { width: auto; gap: 5px; padding: 0 8px; font-family: var(--mono); font-size: 11px; color: var(--ink-2); border-color: var(--stone); }
-  .icon-btn--word:hover { border-color: var(--accent); color: var(--accent-deep, var(--accent)); }
-  .icon-btn--word:focus-visible { outline-color: var(--accent); }
+  .icon-btn--word:hover { border-color: var(--accent-mark); color: var(--accent-deep, var(--accent)); }
+  .icon-btn--word:focus-visible { outline-color: var(--accent-mark); }
   .index-card-confirm.is-make { background: color-mix(in oklab, var(--accent) 7%, transparent); }
   .note-make { display: flex; flex-direction: column; gap: 8px; width: 100%; }
   .note-make-label { font-size: 12.5px; color: var(--ink-2); }
   .note-make-field { width: 100%; box-sizing: border-box; font: inherit; font-size: var(--t-sm, 14px); color: var(--ink);
     background: var(--paper); border: 1px solid var(--stone); border-radius: var(--r-sm); padding: 8px 10px; resize: vertical; }
-  .note-make-field:focus { outline: 2px solid var(--accent); outline-offset: 0; border-color: transparent; }
+  .note-make-field:focus { outline: 2px solid var(--accent-mark); outline-offset: 0; border-color: transparent; }
   .note-make-row { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; }
   .note-make-due { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--ink-2); }
   .note-make-due input { font: inherit; color: var(--ink); background: var(--paper); border: 1px solid var(--stone); border-radius: var(--r-sm); padding: 4px 6px; }
@@ -1076,7 +1087,7 @@ a.o-card:hover{filter:brightness(.98)}
 
   .compose-save {
     background: var(--ink);
-    border: 1px solid var(--accent);
+    border: 1px solid var(--accent-mark);
     color: var(--on-ink);
     font-weight: 500;
   }
@@ -1111,7 +1122,7 @@ a.o-card:hover{filter:brightness(.98)}
     word-break: break-word;
   }
   .field-value.empty { opacity: 0.5; font-style: italic; }
-  .field-value a { color: var(--sea); text-decoration: none; }
+  .field-value a { color: color-mix(in oklab, var(--sea), var(--ink) 45%); text-decoration: none; }
   .field-value a:hover { text-decoration: underline; }
   .field-tag-btn {
     background: none;
@@ -1123,7 +1134,7 @@ a.o-card:hover{filter:brightness(.98)}
     cursor: pointer;
     text-decoration: none;
   }
-  .field-tag-btn:hover { color: var(--accent); text-decoration: underline; }
+  .field-tag-btn:hover { color: var(--accent-deep); text-decoration: underline; }
   .field-tags { display: flex; flex-wrap: wrap; gap: 4px 10px; }
 
   /* ---------- edit mode ---------- */
@@ -1158,7 +1169,7 @@ a.o-card:hover{filter:brightness(.98)}
     border-radius: var(--r-sm);
     outline: none;
   }
-  .edit-field-input:focus { border-color: var(--accent); }
+  .edit-field-input:focus { border-color: var(--accent-mark); }
   .edit-body-label {
     font-family: var(--mono);
     font-size: 10px;
@@ -1183,7 +1194,7 @@ a.o-card:hover{filter:brightness(.98)}
     color: var(--ink);
     padding: 12px 14px;
   }
-  .edit-body-textarea:focus { border-color: var(--accent); }
+  .edit-body-textarea:focus { border-color: var(--accent-mark); }
   .edit-body-head {
     display: flex;
     align-items: baseline;
@@ -1208,7 +1219,7 @@ a.o-card:hover{filter:brightness(.98)}
   .inline-link-picker { padding: 0 0 10px; }
   .inline-link-picker[hidden] { display: none; }
   .inline-link-picker .link-picker-item { border: 1px solid transparent; }
-  .inline-link-picker .link-picker-item:hover { border-color: var(--accent); color: var(--accent); }
+  .inline-link-picker .link-picker-item:hover { border-color: var(--accent-mark); color: var(--accent-deep); }
   .inline-link-picker .link-picker-hint {
     font-family: var(--mono);
     font-size: 10px;
@@ -1249,7 +1260,7 @@ a.o-card:hover{filter:brightness(.98)}
     font-size: 12.5px;
   }
   .link-open {
-    color: var(--sea);
+    color: color-mix(in oklab, var(--sea), var(--ink) 45%);
     text-decoration: none;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -1273,7 +1284,7 @@ a.o-card:hover{filter:brightness(.98)}
     flex: 1;
     min-width: 0;
   }
-  .linked-note-open:hover { color: var(--accent); }
+  .linked-note-open:hover { color: var(--accent-deep); }
   /* A journal day's links sit in plain view above the text; on a phone the
      Linked notes section is folded away under "Details, links & tags". */
   .journal-links {
@@ -1290,7 +1301,7 @@ a.o-card:hover{filter:brightness(.98)}
     
     color: var(--ink-2);
   }
-  .journal-links .linked-note-open { flex: 0 1 auto; color: var(--sea); }
+  .journal-links .linked-note-open { flex: 0 1 auto; color: color-mix(in oklab, var(--sea), var(--ink) 45%); }
   .link-create-btn, .link-add-toggle {
     font-family: var(--mono);
     font-size: 10px;
@@ -1304,7 +1315,7 @@ a.o-card:hover{filter:brightness(.98)}
     flex-shrink: 0;
     white-space: nowrap;
   }
-  .link-create-btn:hover, .link-add-toggle:hover { border-color: var(--accent); color: var(--accent); }
+  .link-create-btn:hover, .link-add-toggle:hover { border-color: var(--accent-mark); color: var(--accent-deep); }
   .linked-note-unlink {
     background: none;
     border: none;
@@ -1315,7 +1326,7 @@ a.o-card:hover{filter:brightness(.98)}
     padding: 0 2px;
     flex-shrink: 0;
   }
-  .linked-note-unlink:hover { color: var(--fail); }
+  .linked-note-unlink:hover { color: var(--fail-text); }
 
   .link-picker {
     padding: 8px 28px 16px;
@@ -1332,7 +1343,7 @@ a.o-card:hover{filter:brightness(.98)}
     outline: none;
     margin-bottom: 6px;
   }
-  .link-picker-input:focus { border-color: var(--accent); }
+  .link-picker-input:focus { border-color: var(--accent-mark); }
   .link-picker-results { max-height: 160px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
   .link-picker-item {
     background: none;
@@ -1388,7 +1399,7 @@ a.o-card:hover{filter:brightness(.98)}
     font-size: 14px;
     line-height: 1;
   }
-  .ref-panel-close:hover { border-color: var(--fail); color: var(--fail); }
+  .ref-panel-close:hover { border-color: var(--fail); color: var(--fail-text); }
   .ref-panel-body { padding: 16px 20px 30px; }
   .ref-panel-title {
     font-family: var(--serif);
@@ -1408,14 +1419,14 @@ a.o-card:hover{filter:brightness(.98)}
     font-family: var(--mono);
     font-size: 10.5px;
     
-    color: var(--accent);
+    color: var(--accent-deep);
     background: var(--stone);
     border: 1px solid transparent;
     border-radius: var(--r-sm);
     padding: 6px 12px;
     cursor: pointer;
   }
-  .ref-panel-open-full:hover { border-color: var(--accent); }
+  .ref-panel-open-full:hover { border-color: var(--accent-mark); }
 
   /* Facet disclosure. The full rail is 573px on a 375x812 screen — 70% of the
      viewport before a single note — so on a phone the topic/author/source
@@ -1436,7 +1447,7 @@ a.o-card:hover{filter:brightness(.98)}
   /* The counts are a caption on the archive, not its headline — the graph below
      is what deserves the room, so the figures stay close to label size. */
   .stats-tiles .n { display: block; font-family: var(--mono); font-variant-numeric: tabular-nums;
-                    font-size: 15px; color: var(--accent); margin-bottom: 2px; }
+                    font-size: 15px; color: var(--accent-deep); margin-bottom: 2px; }
   .stats-tiles .k { font-family: var(--mono); font-size: 9.5px;  color: var(--ink-3); }
 
   .stats-card { background: var(--paper); border: 1px solid transparent; border-radius: var(--r-sm);
@@ -1446,7 +1457,7 @@ a.o-card:hover{filter:brightness(.98)}
   .note-line { margin: 10px 0 0; font-size: 12.5px; color: var(--ink-3); }
 
   .meter { height: 10px; background: var(--ground); border: 1px solid transparent; border-radius: var(--r-md); overflow: hidden; }
-  .meter-fill { height: 100%; background: var(--accent); }
+  .meter-fill { height: 100%; background: var(--accent-mark); }
   .meter-label { margin: 8px 0 0; font-size: 13px; color: var(--ink-2); }
   .meter-label strong { color: var(--ink); }
 
@@ -1462,7 +1473,7 @@ a.o-card:hover{filter:brightness(.98)}
   .chart { width: 100%; height: auto; display: block; }
   .chart .axis { stroke: var(--stone); stroke-width: 1; }
   .chart .bar { fill: var(--sea); }
-  .chart .bar:hover { fill: var(--accent); }
+  .chart .bar:hover { fill: var(--accent-mark); }
   .axis-label { display: flex; justify-content: space-between; margin: 4px 2px 0;
                 font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); }
 
@@ -1471,7 +1482,7 @@ a.o-card:hover{filter:brightness(.98)}
              align-items: center; gap: 10px; padding: 5px 0; font-size: 13px; }
   .bars .t { color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .bars .track { background: var(--ground); border-radius: var(--r-sm); height: 9px; }
-  .bars .fill { display: block; height: 100%; background: var(--accent); border-radius: var(--r-sm); }
+  .bars .fill { display: block; height: 100%; background: var(--accent-mark); border-radius: var(--r-sm); }
   .bars .v { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3);
              text-align: right; font-variant-numeric: tabular-nums; }
 
@@ -1480,7 +1491,7 @@ a.o-card:hover{filter:brightness(.98)}
              padding: 7px 0; border-bottom: 1px solid var(--stone); }
   .hubs button { background: none; border: none; color: var(--ink); font-family: var(--type);
                  font-size: 13.5px; text-align: left; cursor: pointer; padding: 0; }
-  .hubs button:hover { color: var(--accent); }
+  .hubs button:hover { color: var(--accent-deep); }
   .hubs span { font-family: var(--mono); font-size: 11.5px; color: var(--ink-3); }
 
   #graphCanvas { width: 100%; height: 580px; display: block; cursor: pointer;
@@ -1497,7 +1508,7 @@ a.o-card:hover{filter:brightness(.98)}
   .home-graph-head .hint { font-family: var(--mono); font-size: 10.5px;  color: var(--ink-3); }
   .home-graph-more { margin-left: auto; background: none; border: 0; padding: 2px 0; cursor: pointer;
                      color: var(--ink-2); font-family: var(--mono); font-size: 11px;  }
-  .home-graph-more:hover { color: var(--accent); }
+  .home-graph-more:hover { color: var(--accent-deep); }
   .home-graph-canvas { width: 100%; height: 420px; display: block; cursor: pointer;
                        touch-action: pan-y; }
 
@@ -1509,15 +1520,15 @@ a.o-card:hover{filter:brightness(.98)}
   .graph-tabs button, .map-modes button { background: none; border: 0; padding: 4px 10px; cursor: pointer;
     color: var(--ink-2); font-family: var(--mono); font-size: 10.5px;  }
   .graph-tabs button + button, .map-modes button + button { border-left: 1px solid var(--stone); }
-  .graph-tabs button[aria-pressed="true"], .map-modes button[aria-pressed="true"] { background: var(--stone); color: var(--accent); }
-  .graph-tabs button:focus-visible, .map-modes button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .graph-tabs button[aria-pressed="true"], .map-modes button[aria-pressed="true"] { background: var(--stone); color: var(--accent-deep); }
+  .graph-tabs button:focus-visible, .map-modes button:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -2px; }
   .graph-tools { position: absolute; top: 6px; right: 6px; display: flex; gap: 4px; }
   .graph-tools button { min-width: 30px; height: 30px; padding: 0 8px; cursor: pointer;
                         background: color-mix(in oklab, var(--ground) 88%, transparent); color: var(--ink-2);
                         border: 1px solid transparent; border-radius: var(--r-sm);
                         font-family: var(--mono); font-size: 14px; line-height: 1; }
   .graph-tools button[data-zoom="fit"] { font-size: 10.5px;  }
-  .graph-tools button:hover { color: var(--accent); border-color: var(--accent); }
+  .graph-tools button:hover { color: var(--accent-deep); border-color: var(--accent-mark); }
 
   /* The full-screen graph: above the stats panel (80), below the hover tip
      (90) and the node list (95), so both still show over it. */
@@ -1570,13 +1581,13 @@ a.o-card:hover{filter:brightness(.98)}
   .ex-crumbs button { background: none; border: 0; padding: 6px 3px; cursor: pointer; color: var(--ink-2);
                       font: inherit; letter-spacing: inherit; max-width: 18ch; overflow: hidden;
                       text-overflow: ellipsis; flex-shrink: 0; }
-  .ex-crumbs button:hover { color: var(--accent); }
-  .ex-crumbs button.here { color: var(--accent); max-width: 26ch; }
+  .ex-crumbs button:hover { color: var(--accent-deep); }
+  .ex-crumbs button.here { color: var(--accent-deep); max-width: 26ch; }
   .ex-crumbs .sep { color: var(--ink-3); padding: 0 1px; flex-shrink: 0; }
   .ex-back { flex-shrink: 0; background: var(--stone); border: 1px solid transparent; border-radius: var(--r-sm);
              color: var(--ink); cursor: pointer; padding: 5px 10px; font-family: var(--mono);
              font-size: 11px;  }
-  .ex-back:hover { border-color: var(--accent); color: var(--accent); }
+  .ex-back:hover { border-color: var(--accent-mark); color: var(--accent-deep); }
   .explore-stage { position: relative; width: 100%; margin-top: 6px; overflow: hidden; }
   .explore-lines { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
   .ex-empty { margin: 30px 0; text-align: center; color: var(--ink-3); font-style: italic; }
@@ -1585,8 +1596,8 @@ a.o-card:hover{filter:brightness(.98)}
              font-family: var(--type); font-size: 12.5px; line-height: 1.2; color: var(--ink);
              background: var(--stone); border: 1px solid transparent; border-radius: var(--r-md);
              transition: opacity 260ms ease, border-color 120ms; will-change: transform; }
-  .ex-pill:hover { border-color: var(--accent); }
-  .ex-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .ex-pill:hover { border-color: var(--accent-mark); }
+  .ex-pill:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   /* People, topics and sources are rounded and take their colour; notes are
      cards with a dot in their kind's colour — the two read apart at a glance. */
   .ex-pill.ex-ent { border-radius: var(--r-sm); border-color: var(--c); color: var(--c); background: color-mix(in oklab, var(--ground) 94%, transparent); }
@@ -1611,16 +1622,16 @@ a.o-card:hover{filter:brightness(.98)}
   .ex-row { flex: 1; min-width: 0; display: flex; align-items: center; gap: 9px; min-height: 44px;
             padding: 8px 2px; background: none; border: 0; cursor: pointer; text-align: left;
             color: var(--ink); font-family: var(--type); font-size: 14px; line-height: 1.3; }
-  .ex-row:hover .ex-t { color: var(--accent); }
-  .ex-row:focus-visible, .ex-read:focus-visible, .ex-more:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .ex-row:hover .ex-t { color: var(--accent-deep); }
+  .ex-row:focus-visible, .ex-read:focus-visible, .ex-more:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -2px; }
   .ex-row .ex-t { flex: 1; min-width: 0; overflow-wrap: anywhere; }
   .ex-row .ex-m { flex-shrink: 0; font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); white-space: nowrap; }
   .ex-read { flex-shrink: 0; background: none; border: 0; border-left: 1px solid var(--stone); cursor: pointer;
-             padding: 0 12px; color: var(--accent); font-family: var(--mono); font-size: 10.5px;
+             padding: 0 12px; color: var(--accent-deep); font-family: var(--mono); font-size: 10.5px;
               }
   .ex-more { margin-top: 6px; background: none; border: 0; padding: 8px 0; cursor: pointer; color: var(--ink-2);
              font-family: var(--mono); font-size: 11px;  }
-  .ex-more:hover { color: var(--accent); }
+  .ex-more:hover { color: var(--accent-deep); }
 
   /* Tasks filed from the note being read — the task detail's "Came from"
      button, followed backwards. */
@@ -1630,7 +1641,7 @@ a.o-card:hover{filter:brightness(.98)}
                background: none; border: none; border-bottom: 1px solid var(--stone);
                padding: 7px 0; text-align: left; cursor: pointer; font-family: var(--type); }
   .note-task:last-child { border-bottom: none; }
-  .note-task:hover .note-task-title { color: var(--accent); }
+  .note-task:hover .note-task-title { color: var(--accent-deep); }
   .note-task-title { flex: 1; font-size: 13.5px; color: var(--ink); }
   .note-task.is-closed .note-task-title { color: var(--ink-3); text-decoration: line-through; }
   .note-task-meta { font-family: var(--mono); font-size: 10.5px;  color: var(--ink-3); white-space: nowrap; }
@@ -1654,11 +1665,11 @@ a.o-card:hover{filter:brightness(.98)}
   .node-list button { display: block; width: 100%; text-align: left; background: none; border: none;
                       padding: 10px 18px; cursor: pointer; font-family: var(--type); }
   .node-list button:hover { background: var(--stone); }
-  .node-list button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .node-list button:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -2px; }
   .node-list .nl-t { display: block; font-size: 13.5px; color: var(--ink); }
   .node-list .nl-m { display: block; margin-top: 3px; font-family: var(--mono); font-size: 10.5px;
                       color: var(--ink-3); }
-  .node-list li.self .nl-t { color: var(--accent); }
+  .node-list li.self .nl-t { color: var(--accent-deep); }
 
   .stats-tip { position: fixed; z-index: 90; pointer-events: none; display: none;
                background: var(--stone); border: 1px solid transparent; border-radius: var(--r-sm);
@@ -1688,14 +1699,14 @@ a.o-card:hover{filter:brightness(.98)}
     
     cursor: pointer;
   }
-  .facet-btn:hover { border-color: var(--accent); }
-  .facet-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .facet-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--accent); }
-  .facet-btn.filtering { color: var(--accent); border-color: var(--accent); }
+  .facet-btn:hover { border-color: var(--accent-mark); }
+  .facet-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
+  .facet-btn[aria-expanded="true"] { color: var(--ink); border-color: var(--accent-mark); }
+  .facet-btn.filtering { color: var(--accent-deep); border-color: var(--accent-mark); }
   /* Not a facet — a view mode — so it gets the whole row rather than becoming
      an odd fifth button in a grid built for pairs. */
   .shelf-toggle { flex: 1 1 100%; justify-content: space-between; padding-left: 10px; padding-right: 10px; }
-  .shelf-toggle[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+  .shelf-toggle[aria-pressed="true"] { color: var(--accent-deep); border-color: var(--accent-mark); }
   .shelf-state { color: var(--ink-3); font-size: 10px;  }
   /* Everything / Personal / Work & AI. A view of the whole drawer, so it sits
      above the filters rather than among them. */
@@ -1709,7 +1720,7 @@ a.o-card:hover{filter:brightness(.98)}
   .side-switch button:first-child { border-left: 0; }
   .side-switch button:hover { color: var(--ink); }
   .side-switch button[aria-pressed="true"] { background: var(--accent-tint); color: var(--accent-deep); }
-  .side-switch button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .side-switch button:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -2px; }
   /* Shown only when the shelf is open, so a bookkeeping note is never mistaken
      for something Stewart wrote. */
   .card-row.shelved .card-row-preview { color: var(--ink-2); }
@@ -1755,9 +1766,9 @@ a.o-card:hover{filter:brightness(.98)}
     background: none; border: 0; padding: 2px 0; cursor: pointer;
     font-family: var(--mono); font-size: 10.5px;  color: var(--ink);
   }
-  .heading-btn:hover .heading-name { color: var(--accent); }
-  .heading-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  .heading-btn.on .heading-name { color: var(--accent); }
+  .heading-btn:hover .heading-name { color: var(--accent-deep); }
+  .heading-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
+  .heading-btn.on .heading-name { color: var(--accent-deep); }
   .heading-btn .heading-n { color: var(--ink-3); }
   .heading-btn .heading-note { color: var(--ink-3); text-transform: none; letter-spacing: 0; font-style: italic; }
 
@@ -1770,7 +1781,7 @@ a.o-card:hover{filter:brightness(.98)}
     align-items: center;
     justify-content: center;
     background: color-mix(in oklab, var(--ground) 86%, transparent);
-    border: 2px dashed var(--accent);
+    border: 2px dashed var(--accent-mark);
   }
   .drop-veil.on { display: flex; }
   .drop-veil p {
@@ -1849,7 +1860,7 @@ a.o-card:hover{filter:brightness(.98)}
     resize: vertical;
     outline: none;
   }
-  .import-text:focus { border-color: var(--accent); }
+  .import-text:focus { border-color: var(--accent-mark); }
   .import-panel { overflow-y: auto; }
   .import-fields { padding: 0 0 4px; }
   .import-fields[hidden] { display: none; }
@@ -1873,7 +1884,7 @@ a.o-card:hover{filter:brightness(.98)}
   }
   .import-btn:disabled { opacity: 0.5; cursor: default; }
   .import-status { font-size: 13px; color: var(--ink-2); }
-  .import-status.error { color: var(--fail); }
+  .import-status.error { color: var(--fail-text); }
   .import-picker { display: none; flex-direction: column; gap: 4px; }
 
   /* Tag confirmation. The extractor guesses topics from the text alone, and on
@@ -1894,8 +1905,8 @@ a.o-card:hover{filter:brightness(.98)}
     background: none; border: none; color: var(--ink-2);
     font-size: 14px; line-height: 1; padding: 0; cursor: pointer;
   }
-  .import-tag button:hover { color: var(--fail); }
-  .import-tag.is-new { border-color: var(--accent); color: var(--accent); }
+  .import-tag button:hover { color: var(--fail-text); }
+  .import-tag.is-new { border-color: var(--accent-mark); color: var(--accent-deep); }
   .import-tag-empty { font-size: 12px; color: var(--ink-2); font-style: italic; }
   .import-tag-add { display: flex; gap: 6px; }
   .import-tag-input {
@@ -1903,7 +1914,7 @@ a.o-card:hover{filter:brightness(.98)}
     border: 1px solid var(--ink-2); border-radius: var(--r-sm);
     font-family: var(--mono); font-size: 12px; padding: 7px 8px;
   }
-  .import-tag-input:focus { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .import-tag-input:focus { outline: 2px solid var(--accent-mark); outline-offset: 1px; }
   .edit-tag-suggest-body { flex: 1; display: flex; flex-direction: column; gap: 6px; }
   .import-tag-common { display: flex; flex-wrap: wrap; gap: 5px; }
   .import-tag-common button {
@@ -1911,9 +1922,9 @@ a.o-card:hover{filter:brightness(.98)}
     color: var(--ink-2); font-family: var(--mono); font-size: 10px;
      padding: 4px 7px; cursor: pointer;
   }
-  .import-tag-common button:hover { color: var(--accent); border-color: var(--accent); }
+  .import-tag-common button:hover { color: var(--accent-deep); border-color: var(--accent-mark); }
   .import-picker.on .link-picker-item { border: 1px solid transparent; }
-  .import-picker.on .link-picker-item:hover { border-color: var(--accent); color: var(--accent); }
+  .import-picker.on .link-picker-item:hover { border-color: var(--accent-mark); color: var(--accent-deep); }
   .import-picker.on { display: flex; }
 
   .import-editor { display: flex; flex-direction: column; gap: 12px; min-height: 0; }
@@ -1977,7 +1988,7 @@ a.o-card:hover{filter:brightness(.98)}
     line-height: 1.6;
     color: var(--ink-2);
   }
-  .unlock-copy.error { color: var(--fail); }
+  .unlock-copy.error { color: var(--fail-text); }
   .unlock-input {
     width: 100%;
     min-height: 46px;
@@ -2003,7 +2014,7 @@ a.o-card:hover{filter:brightness(.98)}
     cursor: pointer;
   }
   .unlock-btn:hover { background: color-mix(in oklab, var(--ink), var(--accent) 22%); }
-  .unlock-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .unlock-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
 
   /* ---------- responsive ---------- */
   @media (max-width: 760px) {
@@ -2042,11 +2053,11 @@ a.o-card:hover{filter:brightness(.98)}
       
       cursor: pointer;
     }
-    .facet-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .facet-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--accent); }
+    .facet-toggle:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
+    .facet-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--accent-mark); }
     .facet-toggle-caret { transition: transform 140ms ease; }
     .facet-toggle[aria-expanded="true"] .facet-toggle-caret { transform: rotate(180deg); }
-    .facet-toggle .facet-count { color: var(--accent); }
+    .facet-toggle .facet-count { color: var(--accent-deep); }
 
     /* The field list, links and linked notes push the article text more than
        half a screen down on a phone. Reading comes first; the reference data
@@ -2068,8 +2079,8 @@ a.o-card:hover{filter:brightness(.98)}
       
       cursor: pointer;
     }
-    .card-meta-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-    .card-meta-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--accent); }
+    .card-meta-toggle:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
+    .card-meta-toggle[aria-expanded="true"] { color: var(--ink); border-color: var(--accent-mark); }
     .card-meta-toggle[aria-expanded="true"] .facet-toggle-caret { transform: rotate(180deg); }
     .card-meta { display: none; }
     .card-meta.open { display: block; }
@@ -2190,15 +2201,15 @@ a.o-card:hover{filter:brightness(.98)}
     margin-bottom: -1px;
   }
   .mode-btn:hover { color: var(--ink-2); }
-  .mode-btn[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--accent); }
-  .mode-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .mode-btn[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--accent-mark); }
+  .mode-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -2px; }
 
   /* The count only earns its place when there is something waiting. */
   .mode-n {
     font-size: 10px;
-    color: var(--fail);
+    color: var(--fail-text);
   }
-  .mode-btn[aria-pressed="true"] .mode-n { color: var(--accent); }
+  .mode-btn[aria-pressed="true"] .mode-n { color: var(--accent-deep); }
 
   .task-group {
     font-family: var(--mono);
@@ -2210,7 +2221,7 @@ a.o-card:hover{filter:brightness(.98)}
     justify-content: space-between;
     align-items: baseline;
   }
-  .task-group.overdue { color: var(--fail); }
+  .task-group.overdue { color: var(--fail-text); }
   .task-group:first-child { padding-top: 6px; }
 
   .task-row {
@@ -2242,7 +2253,7 @@ a.o-card:hover{filter:brightness(.98)}
     transition: border-color 120ms, background 120ms;
   }
   .task-tick:hover { border-color: var(--ok); background: color-mix(in oklab, var(--ok) 15%, transparent); }
-  .task-tick:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .task-tick:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .task-tick.done { border-color: var(--ok); background: var(--ok); }
   .task-tick svg { position: absolute; inset: 0; margin: auto; opacity: 0; }
   .task-tick:hover svg, .task-tick.done svg { opacity: 1; }
@@ -2259,7 +2270,7 @@ a.o-card:hover{filter:brightness(.98)}
     cursor: pointer;
     font-family: inherit;
   }
-  .task-open:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .task-open:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
 
   .task-title {
     font-size: 14px;
@@ -2280,11 +2291,11 @@ a.o-card:hover{filter:brightness(.98)}
     
     color: var(--ink-3);
   }
-  .task-sub .due.late { color: var(--fail); }
-  .task-sub .due.soon { color: var(--accent); }
-  .task-sub .proj { color: var(--ok); }
-  .task-sub .note-link { color: var(--sea); }
-  .task-sub .repeat { color: var(--heather); }
+  .task-sub .due.late { color: var(--fail-text); }
+  .task-sub .due.soon { color: var(--accent-deep); }
+  .task-sub .proj { color: var(--ok-text); }
+  .task-sub .note-link { color: color-mix(in oklab, var(--sea), var(--ink) 45%); }
+  .task-sub .repeat { color: color-mix(in oklab, var(--heather), var(--ink) 45%); }
 
   .task-status-tag {
     font-family: var(--mono);
@@ -2329,7 +2340,7 @@ a.o-card:hover{filter:brightness(.98)}
   .task-select { font-family: var(--mono); font-size: 12px; }
   .task-input:focus, .task-textarea:focus, .task-select:focus {
     outline: none;
-    border-color: var(--accent);
+    border-color: var(--accent-mark);
   }
 
   .task-row-fields { display: flex; gap: 14px; flex-wrap: wrap; }
@@ -2351,8 +2362,8 @@ a.o-card:hover{filter:brightness(.98)}
     line-height: 1;
     cursor: pointer;
   }
-  .task-cal-btn:hover { border-color: var(--accent); color: var(--ink); }
-  .task-cal-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .task-cal-btn:hover { border-color: var(--accent-mark); color: var(--ink); }
+  .task-cal-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 1px; }
   /* Hidden, but not display:none — showPicker() throws on an unrendered input.
      color-scheme makes the browser's own popup dark, like everything else. */
   .task-cal-native {
@@ -2370,7 +2381,7 @@ a.o-card:hover{filter:brightness(.98)}
     color: var(--ink-3);
     line-height: 1.5;
   }
-  .task-hint.bad { color: var(--fail); }
+  .task-hint.bad { color: var(--fail-text); }
 
   .task-actions {
     margin-top: 26px;
@@ -2382,7 +2393,7 @@ a.o-card:hover{filter:brightness(.98)}
 
   .task-btn {
     background: var(--ink);
-    border: 1px solid var(--accent);
+    border: 1px solid var(--accent-mark);
     color: var(--on-ink);
     font-family: var(--mono);
     font-size: 11px;
@@ -2393,17 +2404,17 @@ a.o-card:hover{filter:brightness(.98)}
   }
   .task-btn.ghost { background: none; color: var(--ink-2); border-color: var(--stone); }
   .task-btn.ghost:hover { color: var(--ink); border-color: var(--ink-2); }
-  .task-btn.danger { background: none; color: var(--fail); border-color: transparent; }
+  .task-btn.danger { background: none; color: var(--fail-text); border-color: transparent; }
   .task-btn:disabled { opacity: 0.5; cursor: default; }
-  .task-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .task-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
 
   .task-detail-status {
     font-family: var(--mono);
     font-size: 11px;
     color: var(--ink-3);
   }
-  .task-detail-status.bad { color: var(--fail); }
-  .task-detail-status.good { color: var(--ok); }
+  .task-detail-status.bad { color: var(--fail-text); }
+  .task-detail-status.good { color: var(--ok-text); }
 
   @media (max-width: 860px) {
     .task-detail { padding: 28px 22px 70px; }
@@ -2424,7 +2435,7 @@ a.o-card:hover{filter:brightness(.98)}
   .task-input, .task-textarea, .task-select { border-radius: var(--r-md); }
   .search-input:focus, .edit-field-input:focus, .edit-body-textarea:focus, .link-picker-input:focus,
   .import-text:focus, .unlock-input:focus, .task-input:focus, .task-textarea:focus, .task-select:focus {
-    background: var(--paper); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--accent); outline: none; }
+    background: var(--paper); border-color: transparent; box-shadow: inset 0 0 0 1.5px var(--accent-mark); outline: none; }
   .chip { border-radius: var(--r-xs); }
   .chip:hover { border-color: transparent; background: color-mix(in oklab, var(--stone), var(--ink) 8%); }
   .tag { border-radius: var(--r-xs); }
@@ -2453,7 +2464,7 @@ a.o-card:hover{filter:brightness(.98)}
   .index-card-foot { border-top-color: var(--stone); }
   .thought-link { color: var(--accent-deep); border-bottom-color: color-mix(in oklab, var(--accent) 45%, transparent); }
   .body-link { color: var(--accent-deep); border-bottom-color: color-mix(in oklab, var(--accent) 35%, transparent); }
-  .body-link:hover, .thought-link:hover { border-bottom-color: var(--accent); }
+  .body-link:hover, .thought-link:hover { border-bottom-color: var(--accent-mark); }
 
   /* ---------- rail and tab bar (Otter v2.1) ---------- */
   /* The list column was widened from 380px on 16 Nov 2026 (Stewart: the list should be wider). */
@@ -2469,7 +2480,7 @@ a.o-card:hover{filter:brightness(.98)}
   .ob-rail__mark { font-size: 1.6rem; font-weight: 500; padding-bottom: var(--s5); }
   .ob-rail__mark em { font-style: italic; }
   .o-rail__item { width: 100%; text-align: left; font: inherit; font-size: var(--t-sm); background: none; color: var(--ink-2); cursor: pointer; }
-  .o-rail__item.is-on i { color: var(--accent); }
+  .o-rail__item.is-on i { color: var(--accent-mark); }
   .o-rail__item.is-on .ob-rail__label::after { content: ' · on'; color: var(--ink-3); }
   .drawer-title, .header-actions { display: none !important; }
   /* Notes, Journal and Tasks are one place: tabs at the top of the list
@@ -2494,7 +2505,7 @@ a.o-card:hover{filter:brightness(.98)}
   .mode-btn[data-mode="journal"] { --sec: var(--moss); }
   .mode-btn[data-mode="tasks"] { --sec: var(--teal); }
   .mode-btn[data-mode="lists"] { --sec: var(--sea); }
-  .mode-btn[data-mode] { --sec-ink: color-mix(in oklab, var(--sec) 82%, var(--ink)); }
+  .mode-btn[data-mode] { --sec-ink: color-mix(in oklab, var(--sec) 70%, var(--ink)); }
   /* The notes' own buttons, big enough to see at a glance. */
   .notes-row { display: flex; flex-wrap: wrap; gap: var(--s2); margin: 0 0 var(--s4); }
   .notes-row[hidden] { display: none; }
@@ -2519,32 +2530,32 @@ a.o-card:hover{filter:brightness(.98)}
   .nr-btn[hidden] { display: none; }
   .nr-btn i { font-size: 24px; color: var(--ink-2); }
   .nr-btn:hover { background: var(--stone); }
-  .nr-btn:hover i { color: var(--accent); }
-  .nr-new:focus-visible, .nr-btn:focus-visible, .mode-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nr-btn:hover i { color: var(--accent-mark); }
+  .nr-new:focus-visible, .nr-btn:focus-visible, .mode-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   /* New note / New list: one plain button on paper, no longer a black bar (v176). */
   .nr-add { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s5);
     border: 0; border-radius: var(--r-md); background: var(--paper); color: var(--ink); font: inherit; font-size: var(--t-md); cursor: pointer; }
-  .nr-add i { font-size: 20px; color: var(--accent); }
+  .nr-add i { font-size: 20px; color: var(--accent-mark); }
   .nr-add:hover { background: color-mix(in oklab, var(--accent), var(--paper) 86%); }
-  .nr-add:focus-visible, .cap-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .nr-add:focus-visible, .cap-tile:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   @media (max-width: 760px) { .nr-add { flex: 1 1 100%; } }
   /* The ways to start a new note, big enough to see at a glance (v176). */
   .cap-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: var(--s2); padding: var(--s4) 28px var(--s1); }
   @media (max-width: 760px) { .cap-tiles { padding: var(--s3) 16px var(--s1); gap: var(--s1); } }
   .index-card .cap-tile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 72px; padding: var(--s2) var(--s1);
     border: 0; border-radius: var(--r-md); background: var(--stone); color: var(--ink); font: inherit; font-size: var(--t-sm); cursor: pointer; }
-  .index-card .cap-tile i { font-size: 26px; color: var(--accent); vertical-align: 0; }
+  .index-card .cap-tile i { font-size: 26px; color: var(--accent-mark); vertical-align: 0; }
   .index-card .cap-tile .btn-lbl { display: block; }
   .index-card .cap-tile:hover { background: color-mix(in oklab, var(--accent), var(--paper) 82%); }
-  .index-card .cap-tile.is-listening, .index-card .cap-tile[aria-pressed="true"] { background: var(--accent); color: var(--on-ink); padding: var(--s2) var(--s1); border-radius: var(--r-md); }
+  .index-card .cap-tile.is-listening, .index-card .cap-tile[aria-pressed="true"] { background: var(--accent-mark); color: var(--on-ink); padding: var(--s2) var(--s1); border-radius: var(--r-md); }
   .index-card .cap-tile.is-listening i, .index-card .cap-tile[aria-pressed="true"] i { color: var(--on-ink); }
   .index-card .cap-tile .rec-time { font-size: var(--t-xs); }
   /* Just the note (v181): the title, the words and Save; nothing else. */
   .index-card-head .compose-clean-btn { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s1); min-height: 40px; padding: 0 var(--s3);
     border: 0; border-radius: var(--r-md); background: var(--stone); color: var(--ink-2); font: inherit; font-size: var(--t-sm); cursor: pointer; }
-  .index-card-head .compose-clean-btn i { font-size: 18px; color: var(--accent); }
+  .index-card-head .compose-clean-btn i { font-size: 18px; color: var(--accent-mark); }
   .index-card-head .compose-clean-btn:hover { color: var(--ink); }
-  .index-card-head .compose-clean-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .index-card-head .compose-clean-btn:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   @media (max-width: 760px) { .index-card-head .compose-clean-btn { min-height: 44px; } }
   html.compose-clean .ob-rail, html.compose-clean .drawer, html.compose-clean #tabbar, html.compose-clean .ref-panel { display: none !important; }
   html.compose-clean .app, html.compose-clean .app.detail-open, html.compose-clean .app.ref-open { grid-template-columns: minmax(0, 1fr) !important; height: 100dvh; }
@@ -2564,12 +2575,26 @@ a.o-card:hover{filter:brightness(.98)}
   .compose-title-row { padding-bottom: 0; }
   .compose-details { padding-top: var(--s2); padding-bottom: var(--s4); }
   .compose-details__head { display: block; margin-bottom: var(--s1); }
-  /* A thumb-sized Link to a note on a phone (v179). */
+  /* A thumb-sized Link to a note on a phone (v179), and the photo button with
+     it, in a task too (v183). */
   @media (max-width: 760px) {
-    .index-card .edit-body-head .link-add-toggle { min-height: 44px; padding: 0 var(--s4); font-size: var(--t-sm); border-radius: var(--r-md); }
+    .index-card .edit-body-head .link-add-toggle,
+    .task-detail .edit-body-head .link-add-toggle { min-height: 44px; padding: 0 var(--s4); font-size: var(--t-sm); border-radius: var(--r-md); }
+    .edit-body-head .bar-actions { flex-wrap: wrap; justify-content: flex-end; }
   }
+  .photo-add { display: inline-flex; align-items: center; gap: 2px; }
+  .photo-add i { font-size: 1.35em; }
+  /* Photos in a task's notes, and beside a list item (v183). */
+  .task-photos { margin-top: var(--s3); }
+  .task-photos__row { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s1); }
+  .task-photo.md-photo { margin: 0; }
+  .task-photo .md-photo-img { width: 120px; height: 120px; object-fit: cover; max-height: none; }
+  .lst-item__photo.md-photo { flex: none; display: block; margin: 0; padding: 0; border: 0; width: 56px; height: 56px;
+    background: var(--stone); border-radius: var(--r-sm); overflow: hidden; cursor: pointer; }
+  .lst-item__photo .md-photo-img { width: 56px; height: 56px; object-fit: cover; max-height: none; border-radius: 0; }
+  .lst-item__photo.is-missing::before { padding: var(--s1); font-size: var(--t-xs); }
   @media (max-width: 760px) { .compose-title-row, .compose-details { padding-left: 16px; padding-right: 16px; } }
-  .ob-rail__n { margin-left: auto; font-size: var(--t-xs); color: var(--fail); }
+  .ob-rail__n { margin-left: auto; font-size: var(--t-xs); color: var(--fail-text); }
   .ob-rail__n:empty { display: none; }
 
   /* ---------- lists (16 Nov 2026) ---------- */
@@ -2605,8 +2630,8 @@ a.o-card:hover{filter:brightness(.98)}
   .lst-kindpick { display: flex; align-items: flex-start; gap: var(--s3); padding: var(--s3); min-height: 64px; border: 0; border-radius: var(--r-md);
     background: var(--paper); color: var(--ink); font: inherit; text-align: left; cursor: pointer; }
   .lst-kindpick i { font-size: 24px; color: var(--ink-2); }
-  .lst-kindpick[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent); }
-  .lst-kindpick[aria-pressed="true"] i { color: var(--accent); }
+  .lst-kindpick[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent-mark); }
+  .lst-kindpick[aria-pressed="true"] i { color: var(--accent-mark); }
   .lst-kindpick__l { display: block; font-weight: 500; }
   .lst-kindpick__s { display: block; font-size: var(--t-xs); color: var(--ink-3); }
   .lst-form .o-field { width: 100%; max-width: 420px; }
@@ -2622,7 +2647,7 @@ a.o-card:hover{filter:brightness(.98)}
   .inbox-capture { background: var(--paper); align-items: flex-end; }
   .inbox-capture textarea { height: calc(1.5em + 2 * var(--s2)); max-height: 240px; line-height: 1.5; align-self: center; overflow: hidden; }
   .inbox-capture textarea::placeholder { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .inbox-capture .mic-add.is-listening { display: inline-flex; align-items: center; white-space: nowrap; width: auto; padding: 0 var(--s3); gap: var(--s1); font-size: var(--t-sm); background: var(--accent); color: var(--on-ink); }
+  .inbox-capture .mic-add.is-listening { display: inline-flex; align-items: center; white-space: nowrap; width: auto; padding: 0 var(--s3); gap: var(--s1); font-size: var(--t-sm); background: var(--accent-mark); color: var(--on-ink); }
   .inbox-capture .mic-add.is-listening i { font-size: 18px; }
   .inbox-capture .photo-add .btn-lbl, .inbox-capture .mic-add:not(.is-listening) .btn-lbl { display: none; }
   .inbox-send { color: var(--accent-deep); }
@@ -2679,7 +2704,7 @@ a.o-card:hover{filter:brightness(.98)}
   .today-prep__list button:hover .today-prep__title { color: var(--accent-deep, var(--accent)); }
   .today-prep__list .o-meta { flex: none; }
   .o-day__block[data-prep] { cursor: pointer; }
-  .o-day__block[data-prep]:hover, .o-day__block[data-prep]:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .o-day__block[data-prep]:hover, .o-day__block[data-prep]:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: -1px; }
   .section-lead { max-width: 60ch; color: var(--ink-2); line-height: 1.6; margin: 0 0 var(--s5); }
   .section-links { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s5); }
   .section-links a { text-decoration: none; display: inline-flex; align-items: center; gap: 6px; }
@@ -2713,7 +2738,7 @@ a.o-card:hover{filter:brightness(.98)}
   .cal-day__head:hover .cal-day__num { color: var(--accent-deep, var(--accent)); }
   .cal-day__name { font-family: var(--mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); }
   .cal-day__num { font-size: 1.15rem; color: var(--ink); }
-  .cal-day.is-today .cal-day__num { color: var(--paper); background: var(--accent); border-radius: 999px; padding: 0 7px; }
+  .cal-day.is-today .cal-day__num { color: var(--paper); background: var(--accent-mark); border-radius: 999px; padding: 0 7px; }
   .cal-month__dow, .cal-month__grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 3px; }
   .cal-month__dow span { font-family: var(--mono); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .1em; color: var(--ink-3); padding: 0 6px var(--s1); }
   .cal-cell { display: flex; flex-direction: column; align-items: stretch; gap: 3px; min-height: 96px; min-width: 0; padding: 6px; border: 0; border-radius: var(--r-sm); background: var(--paper); font: inherit; color: var(--ink); text-align: left; cursor: pointer; }
@@ -2721,13 +2746,13 @@ a.o-card:hover{filter:brightness(.98)}
   .cal-cell.is-out { background: transparent; color: var(--ink-3); }
   .cal-cell.is-picked { box-shadow: inset 0 0 0 2px var(--ink); }
   .cal-cell__num { font-size: var(--t-sm); }
-  .cal-cell.is-today .cal-cell__num { align-self: flex-start; color: var(--paper); background: var(--accent); border-radius: 999px; padding: 0 6px; }
+  .cal-cell.is-today .cal-cell__num { align-self: flex-start; color: var(--paper); background: var(--accent-mark); border-radius: 999px; padding: 0 6px; }
   .cal-cell__evs { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
   .cal-cell__ev { font-size: 11.5px; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 1px 4px; border-radius: 4px; background: color-mix(in oklab, var(--accent) 12%, var(--paper)); }
   .cal-cell__ev.is-work { background: var(--stone); color: var(--ink-2); }
   .cal-cell__more { font-size: 11px; color: var(--ink-3); padding-left: 4px; }
   .cal-cell__dots { display: none; gap: 3px; }
-  .cal-cell__dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+  .cal-cell__dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent-mark); }
   .cal-picked { margin-top: var(--s4); max-width: 520px; }
   .cal-picked__head { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--s2); }
   @media (max-width: 860px) {
@@ -2758,15 +2783,15 @@ a.o-card:hover{filter:brightness(.98)}
   .cal-tabs .o-tab[data-cal-tab="meetings"] i { color: color-mix(in oklab, var(--teal) 82%, var(--ink)); }
   .cal-tabs .o-tab:hover { color: var(--ink); background: color-mix(in oklab, var(--paper) 50%, transparent); }
   .cal-tabs .o-tab[aria-selected="true"] { color: var(--ink); background: var(--paper); border-bottom-color: transparent; }
-  .cal-tabs .o-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .cal-tabs .o-tab:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .big-add { display: inline-flex; align-items: center; justify-content: center; gap: var(--s2); min-height: 48px; padding: 0 var(--s5);
     border: 0; border-radius: var(--r-md); background: var(--ink); color: var(--on-ink); font: inherit; font-size: var(--t-md); cursor: pointer; }
   .big-add i { font-size: 20px; }
   .big-add:hover { background: color-mix(in oklab, var(--ink) 88%, var(--accent)); }
-  .big-add:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .big-add:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .cal-ev[data-meet-ev] { cursor: pointer; }
   .cal-ev[data-meet-ev]:hover { box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--sec, var(--accent)) 45%, transparent); }
-  .cal-ev[data-meet-ev]:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .cal-ev[data-meet-ev]:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 1px; }
   .meet-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--s3); }
   .meet-head .more-title { margin-bottom: 0; }
   .meet-head + .section-lead { margin-top: var(--s4); }
@@ -2889,7 +2914,7 @@ a.o-card:hover{filter:brightness(.98)}
   .today-cal-note { margin-top: var(--s3); }
   .ob-tab-icon { position: relative; display: inline-flex; }
   .ob-tab-n { position: absolute; top: -4px; left: 16px; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
-    background: var(--accent); color: var(--on-ink); font-size: 10px; line-height: 16px; text-align: center; }
+    background: var(--accent-mark); color: var(--on-ink); font-size: 10px; line-height: 16px; text-align: center; }
   @media (min-width: 761px) {
     .app.notes-cards { grid-template-columns: 216px minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); }
     .app.notes-cards.ref-open { grid-template-columns: 216px minmax(0, 1fr) 320px; }
@@ -2982,7 +3007,7 @@ a.o-card:hover{filter:brightness(.98)}
   .graph-tabs button i { font-size: 18px; }
   .graph-tabs button:hover { color: var(--ink); }
   .graph-tabs button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
-  .graph-tabs button[aria-pressed="true"] i { color: var(--accent); }
+  .graph-tabs button[aria-pressed="true"] i { color: var(--accent-mark); }
   .graph-switch .map-modes { align-items: center; gap: 2px; border-radius: 0; overflow: visible; }
   .graph-switch .map-modes button { min-height: 32px; padding: 0 var(--s3); border-radius: var(--r-sm);
     font-family: var(--type); font-size: var(--t-xs); }
@@ -3003,7 +3028,7 @@ a.o-card:hover{filter:brightness(.98)}
   .board-tile { position: relative; max-height: 220px; overflow: hidden; margin-bottom: 0; cursor: zoom-in; }
   .board-tile::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 56px; pointer-events: none;
     background: linear-gradient(color-mix(in oklab, var(--paper) 0%, transparent), var(--paper)); }
-  .board-tile:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .board-tile:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .board-tile h3 { font-size: 15px; }
   .board-tile .board-close { display: none; }
   .board-tile.is-full { position: fixed; inset: 0; z-index: 86; max-height: none; overflow-y: auto; cursor: auto;
@@ -3025,7 +3050,7 @@ a.o-card:hover{filter:brightness(.98)}
   }
 
   .mic-add i, .rec-add i { font-size: 15px; vertical-align: -2px; }
-  .rec-add.is-listening { background: var(--accent); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
+  .rec-add.is-listening { background: var(--accent-mark); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
   .rec-add.is-listening i { animation: mic-pulse 1.2s ease-in-out infinite; }
   .rec-time { font-size: var(--t-xs); }
   .wv .rec-add { display: inline-flex; align-items: center; gap: 4px; }
@@ -3042,7 +3067,7 @@ a.o-card:hover{filter:brightness(.98)}
     .wv .btn-lbl { display: none; }
     .wv .mic-add i, .wv .rec-add i { font-size: 20px; }
   }
-  .mic-add.is-listening { background: var(--accent); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
+  .mic-add.is-listening { background: var(--accent-mark); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
   .mic-add.is-listening i { animation: mic-pulse 1.2s ease-in-out infinite; }
   @keyframes mic-pulse { 50% { opacity: .4; } }
   @media (prefers-reduced-motion: reduce) { .mic-add.is-listening i { animation: none; } }
@@ -3059,7 +3084,7 @@ a.o-card:hover{filter:brightness(.98)}
   .work-leave__inner { width: 100%; max-width: 520px; box-sizing: border-box; padding: var(--s7) var(--s6) var(--s8); }
   .work-leave__inner h2 { font-family: var(--serif); font-weight: 500; font-size: 2rem; margin: 0 0 var(--s2); }
   .work-leave__inner .o-field { width: 100%; margin-top: var(--s4); }
-  .work-leave__err { min-height: 1.2em; color: var(--fail); font-size: var(--t-sm); margin: var(--s2) 0; }
+  .work-leave__err { min-height: 1.2em; color: var(--fail-text); font-size: var(--t-sm); margin: var(--s2) 0; }
   .work-leave__btns { display: flex; flex-wrap: wrap; gap: var(--s3); }
 
   /* ---------- card view (notes as a grid of soft-coloured cards) ---------- */
@@ -3067,7 +3092,7 @@ a.o-card:hover{filter:brightness(.98)}
   .lh-views + .lh-top { margin-left: 0; }
   .lh-views button { border: 0; background: transparent; color: var(--ink-2); font-family: var(--mono); font-size: 10.5px; padding: 3px 8px; border-radius: 6px; cursor: pointer; }
   .lh-views button[aria-pressed="true"] { background: var(--paper); color: var(--ink); }
-  .lh-views button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .lh-views button:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 1px; }
   .results--cards { max-width: 1080px; }
   .note-cards { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
   button.o-card { border: 0; font: inherit; text-align: left; cursor: pointer; }
@@ -3134,7 +3159,7 @@ a.o-card:hover{filter:brightness(.98)}
   .day-cal-day.lv4.has-entry::after { background: currentColor; }
   .day-cal-day.is-on { outline: 2px solid var(--ink); outline-offset: 1px; }
   .day-cal-day:hover { filter: brightness(.95); }
-  .day-cal-day:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+  .day-cal-day:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 1px; }
 
   .day-view { width: 100%; max-width: 720px; box-sizing: border-box; margin: 0 auto; padding: 0 0 var(--s8); }
   .day-steps { display: flex; gap: var(--s2); margin: 0 0 var(--s3) calc(-1 * var(--s3)); }
@@ -3169,8 +3194,8 @@ a.o-card:hover{filter:brightness(.98)}
   .md-task.is-done .md-li-text { color: var(--ink-3); text-decoration: line-through; text-decoration-color: var(--stone-2); }
   /* Tickable while reading a note (11 Nov 2026): the whole row is the target. */
   .md-task[role="checkbox"] { cursor: pointer; border-radius: var(--r-sm); }
-  .md-task[role="checkbox"]:hover .o-md { color: var(--accent); opacity: 1; }
-  .md-task[role="checkbox"]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .md-task[role="checkbox"]:hover .o-md { color: var(--accent-deep); opacity: 1; }
+  .md-task[role="checkbox"]:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   .md-task[aria-busy="true"] { opacity: .6; }
   .md-quote { padding-left: var(--s4); color: var(--ink-2); font-style: italic; margin-left: 0; margin-right: 0; }
   .md-pre { font-family: var(--mono); font-size: .85em; line-height: 1.6; background: var(--stone); padding: var(--s3) var(--s4);
@@ -3205,7 +3230,7 @@ a.o-card:hover{filter:brightness(.98)}
         -webkit-overflow-scrolling: touch; }
   .wv .o-write__bar { background: var(--ground); border-bottom-color: transparent; }
   .wv .o-write__bar button[aria-pressed="true"] { color: var(--ink); text-decoration: underline;
-        text-decoration-color: var(--accent); text-decoration-thickness: 2px; text-underline-offset: 6px; }
+        text-decoration-color: var(--accent-mark); text-decoration-thickness: 2px; text-underline-offset: 6px; }
   .wv .o-write__bar [data-wv="save"] { color: var(--ink); font-weight: 700; }
   .wv .o-note h1 { margin-top: 0; }
   .wv-read { overflow-wrap: anywhere; }
@@ -3216,7 +3241,7 @@ a.o-card:hover{filter:brightness(.98)}
         padding: 0; margin: 0; border: 0; width: 100%; letter-spacing: 0; }
   .wv-back { position: absolute; inset: 0; color: var(--ink); pointer-events: none; }
   .wv-text { position: relative; display: block; min-height: 50vh; resize: none; overflow: hidden;
-        background: transparent; color: transparent; caret-color: var(--accent); outline: none; }
+        background: transparent; color: transparent; caret-color: var(--accent-mark); outline: none; }
   .wv-text::selection { background: var(--accent-tint); color: transparent; }
   .wv-back .wv-h { color: var(--ink); font-weight: 400; }
   .wv-back .is-dim, .wv-back .is-dim .o-md, .wv-back .is-dim .wv-h { color: var(--ink-dim); }
@@ -3273,7 +3298,7 @@ a.o-card:hover{filter:brightness(.98)}
   [data-view="tasks"], [data-go="modeTasks"], [data-view="meetings"], [data-go="meetings"], [data-section="meetings"] { --sec: var(--teal); }
   [data-view="stays"], [data-go="stays"], [data-section="stays"] { --sec: var(--blossom); }
   #statsBtn { --sec: var(--heather); }
-  :is([data-view], [data-go], [data-section], .today-screen, .plan-screen, .inbox-screen, #statsBtn) { --sec-ink: color-mix(in oklab, var(--sec, var(--accent)) 82%, var(--ink)); --sec-tint: color-mix(in oklab, var(--sec, var(--accent)), var(--paper) 84%); }
+  :is([data-view], [data-go], [data-section], .today-screen, .plan-screen, .inbox-screen, #statsBtn) { --sec-ink: color-mix(in oklab, var(--sec, var(--accent)) 70%, var(--ink)); --sec-tint: color-mix(in oklab, var(--sec, var(--accent)), var(--paper) 84%); }
 
   /* The menu: every icon in its colour; the open one sits on a tint. */
   .o-rail__item:is([data-view], #statsBtn) i { color: var(--sec-ink); }
@@ -6661,7 +6686,7 @@ function showComposer(prefill, parentId, opts) {
         <div class="edit-body-head">
           <label class="edit-body-label" for="composeText">Body</label>
           <div class="bar-actions">
-            ${startWays ? '' : photoButtonHtml()}
+            ${startWays ? photoOnlyButtonHtml() : photoButtonHtml()}
             <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
           </div>
         </div>
@@ -6751,7 +6776,7 @@ function showComposer(prefill, parentId, opts) {
   const COMPOSE_FIELDS = ['composeTitle', 'composeAuthor', 'composePublished', 'composeSource',
                           'composeTags', 'composeUrl', 'composeText'];
   const snapshot = () => COMPOSE_FIELDS.map(id => (field(id) || {}).value || '').join('\u0000');
-  const original = snapshot();
+  let original = snapshot();
   editorIsDirty = (startWays && draftKept) ? null : () => Boolean(field('composeText')) && snapshot() !== original;
   function leave() {
     if (!confirmLeavingEdit()) return false;
@@ -6789,8 +6814,11 @@ function showComposer(prefill, parentId, opts) {
     textEl.focus();
     textEl.setSelectionRange(textEl.value.length, textEl.value.length);
   } else if (opts.focusBody) {
-    // Straight to the first prompt, ready to answer it.
-    const firstPrompt = /:[ \t]*$/m.exec(textEl.value);
+    // Straight to the first prompt, ready to answer it. The morning lines are
+    // filled in by the app, so they are not prompts.
+    const promptRe = /^.*:[ \t]*$/gm;
+    let firstPrompt = null, m;
+    while ((m = promptRe.exec(textEl.value))) { if (!MORNING_PROMPT_RE.test(m[0])) { firstPrompt = m; break; } }
     const at = firstPrompt ? firstPrompt.index + firstPrompt[0].length : textEl.value.length;
     textEl.focus();
     textEl.setSelectionRange(at, at);
@@ -6799,6 +6827,24 @@ function showComposer(prefill, parentId, opts) {
   }
   if (opts.intro) setStatus(opts.intro, 'var(--ink-3)');
   if (restored) setStatus('Your unsaved note is back.', 'var(--ink-3)');
+  // Something to write in once it arrives (the journal's morning): only into
+  // the box still open, and an entry nobody has touched stays untouched.
+  if (opts.fill) Promise.resolve(opts.fill).then(f => {
+    if (!f || !textEl.isConnected) return;
+    const untouched = snapshot() === original;
+    const before = textEl.value, after = f.apply(before);
+    if (after !== before) {
+      const pos = textEl.selectionStart, atEnd = pos === before.length;
+      let diff = 0;
+      while (diff < before.length && before[diff] === after[diff]) diff++;
+      textEl.value = after;
+      const to = atEnd ? after.length : pos >= diff ? pos + after.length - before.length : pos;
+      if (document.activeElement === textEl) textEl.setSelectionRange(to, to);
+      textEl.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    if (untouched) original = snapshot();
+    if (f.note) setStatus(f.note, 'var(--ink-3)');
+  }).catch(() => {});
 
   cancelBtn.addEventListener('click', () => {
     if (startWays && draftKept) {
@@ -7765,7 +7811,8 @@ async function hydratePhotos() {
 new MutationObserver(() => { clearTimeout(photoTimer); photoTimer = setTimeout(() => { hydratePhotos(); hydrateAudio(); }, 30); })
   .observe(document.body, { childList: true, subtree: true });
 
-const photoButtonHtml = () => '<button class="link-add-toggle photo-add" type="button">Add photo</button>' + micButtonHtml() + recordButtonHtml();
+const photoOnlyButtonHtml = () => '<button class="link-add-toggle photo-add" type="button" title="Take a photo or choose one"><i class="ph-light ph-camera" aria-hidden="true"></i><span class="btn-lbl"> Add photo</span></button>';
+const photoButtonHtml = () => photoOnlyButtonHtml() + micButtonHtml() + recordButtonHtml();
 
 // ---------- speaking into a note (4 Nov 2026, Otter v2.1 capture) ----------
 // Tap Speak, talk, tap Stop: the sound goes to Parakeet v3 (POST
@@ -8035,7 +8082,7 @@ function wirePhotoButtons(root, textarea, after) {
       const files = [...(input.files || [])];
       input.value = '';
       if (!files.length) return;
-      const label = btn.textContent;
+      const label = btn.innerHTML;
       btn.disabled = true;
       btn.title = '';
       let at = textarea.selectionStart != null ? textarea.selectionEnd : textarea.value.length;
@@ -8059,7 +8106,7 @@ function wirePhotoButtons(root, textarea, after) {
         alert('Could not add the photo — ' + err.message);
       } finally {
         btn.disabled = false;
-        btn.textContent = label;
+        btn.innerHTML = label;
       }
     });
   });
@@ -10963,7 +11010,7 @@ function selectTask(t) {
         <div class="edit-body-head">
           <label class="task-label" for="tdNotes">Notes</label>
           <div class="bar-actions">
-            ${micButtonHtml()}${recordButtonHtml()}
+            ${photoButtonHtml()}
             <button class="link-add-toggle" id="editLinkToggle" type="button">${LINK_SHORTCUT}Link to a note</button>
           </div>
         </div>
@@ -11168,7 +11215,10 @@ function wireTaskDetail(t) {
         ? '<button class="task-btn ghost" data-id="' + escapeAttr(id) + '" type="button">' + escapeHtml(text) + '</button>'
         : '<span class="thought-link missing" title="This note is no longer in the archive">' + escapeHtml(text) + '</span>');
     const sounds = [...notesEl.value.matchAll(AUDIO_LINK_RE)].map(([, label, path]) => audioPlayerHtml(escapeHtml(label), path));
+    const photos = [...notesEl.value.matchAll(PHOTO_LINK_RE)].map(([, , path]) =>
+      '<span class="md-photo task-photo"><img class="md-photo-img" data-photo="' + escapeAttr(path) + '" alt="Photo" loading="lazy"></span>');
     noteLinksEl.innerHTML = (items.length ? '<span class="task-label">Linked</span>' + items.join('') : '')
+      + (photos.length ? '<div class="task-photos"><span class="task-label">Photos</span><div class="task-photos__row">' + photos.join('') + '</div></div>' : '')
       + (sounds.length ? '<div class="task-sounds"><span class="task-label">Recordings</span>' + sounds.join('') + '</div>' : '');
     noteLinksEl.querySelectorAll('button[data-id]').forEach(btn => btn.addEventListener('click', () => {
       const found = findThought(btn.getAttribute('data-id'));
@@ -11185,8 +11235,7 @@ function wireTaskDetail(t) {
   const notesChanged = () => { growNotes(); renderNoteLinks(); };
   notesEl.addEventListener('input', notesChanged);
   setupBodyLinkPicker(null, notesEl, notesChanged);
-  wireMicButtons(main, notesEl, notesChanged);
-  wireRecordButtons(main, notesEl, notesChanged);
+  wirePhotoButtons(main, notesEl, notesChanged);   // photo, Transcribe and Record
   renderNoteLinks();
   growNotes();
 
@@ -11223,25 +11272,86 @@ function wireTaskDetail(t) {
 const JOURNAL_TOPIC = 'Journal';
 const JOURNAL_TEMPLATE_TITLE = 'Journal template';
 
+// ----- the morning, at the top of each journal entry (17 Nov 2026) -----
+// Stewart swims in the morning, so a new entry starts with the tide nearest
+// 7am, sunrise and sunset, the moon, and the sea and the wind at 7am. Tides and
+// the sun come from the server (today_extras: Jersey Met, Open-Meteo); the sea
+// and the wind from Open-Meteo directly (no key, nothing personal sent); the
+// moon is worked out here. Only template lines still empty ("Wind: ") are
+// filled, and a part that cannot be read stays blank and is named.
+const MORNING_LABELS = ['Tide', 'Sunrise', 'Sunset', 'Moon', 'Sea', 'Wind'];
+const MORNING_HOUR = 7;
+const ST_HELIER_AT = 'latitude=49.19&longitude=-2.11';
+const JERSEY_SEA_AT = 'latitude=49.15&longitude=-2.10';   // open water south of the island; the marine model has nothing inside the harbour
+const MORNING_PROMPT_RE = new RegExp('^(?:' + MORNING_LABELS.join('|') + '):', 'i');
+
+const compassPoint = d => ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'][Math.round((((d % 360) + 360) % 360) / 45) % 8];
+// The shipping forecast's words for the height of the waves (Douglas scale).
+const seaWord = h => h < 0.1 ? 'Calm' : h < 0.5 ? 'Smooth' : h < 1.25 ? 'Slight' : h < 2.5 ? 'Moderate'
+  : h < 4 ? 'Rough' : h < 6 ? 'Very rough' : 'High';
+
+function moonPhase(when) {
+  const SYNODIC = 29.530588853, NEW_MOON = Date.UTC(2000, 0, 6, 18, 14);
+  const age = ((((when - NEW_MOON) / 864e5) % SYNODIC) + SYNODIC) % SYNODIC;
+  const lit = Math.round((1 - Math.cos(2 * Math.PI * age / SYNODIC)) / 2 * 100);
+  const names = ['New moon', 'Waxing crescent', 'First quarter', 'Waxing gibbous',
+    'Full moon', 'Waning gibbous', 'Last quarter', 'Waning crescent'];
+  return names[Math.floor(age / SYNODIC * 8 + 0.5) % 8] + ', ' + lit + '% lit';
+}
+
+async function morningJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+
+// What to write after each label, for one day.
+async function journalMorning(date) {
+  const hour = date + 'T' + String(MORNING_HOUR).padStart(2, '0') + ':00';
+  const day = '&timezone=Europe%2FLondon&start_date=' + date + '&end_date=' + date;
+  const [extras, air, sea] = await Promise.allSettled([
+    callTool('today_extras', { date, format: 'json' }).then(t => JSON.parse(t)),
+    morningJson('https://api.open-meteo.com/v1/forecast?' + ST_HELIER_AT + '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=mph' + day),
+    morningJson('https://marine-api.open-meteo.com/v1/marine?' + JERSEY_SEA_AT + '&hourly=wave_height,wave_direction' + day),
+  ]);
+  const v = {}, missed = [];
+  const x = extras.status === 'fulfilled' ? extras.value : null;
+  if (x && x.sun) { v.Sunrise = x.sun.sunrise; v.Sunset = x.sun.sunset; } else missed.push('sun');
+  const mins = hm => { const [h, m] = String(hm).split(':').map(Number); return h * 60 + m; };
+  const tides = (x && x.tides) || [];
+  if (tides.length) {
+    const t = tides.reduce((a, b) => Math.abs(mins(b.time) - MORNING_HOUR * 60) < Math.abs(mins(a.time) - MORNING_HOUR * 60) ? b : a);
+    v.Tide = (t.type === 'high' ? 'High' : 'Low') + ' ' + t.time + ', ' + Number(t.height_m).toFixed(1) + ' m';
+  } else missed.push('tide');
+  v.Moon = moonPhase(new Date(date + 'T07:00:00'));
+  const at = (res, keys) => {
+    const h = res.status === 'fulfilled' && res.value && res.value.hourly;
+    const i = h && h.time ? h.time.indexOf(hour) : -1;
+    if (i < 0) return null;
+    const out = keys.map(k => (h[k] || [])[i]);
+    return out.every(n => typeof n === 'number') ? out : null;
+  };
+  const w = at(air, ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m']);
+  if (w) v.Wind = compassPoint(w[1]) + ' ' + Math.round(w[0]) + ' mph, gusting ' + Math.round(w[2]);
+  else missed.push('wind');
+  const s = at(sea, ['wave_height', 'wave_direction']);
+  if (s) v.Sea = seaWord(s[0]) + ', ' + s[0].toFixed(1) + ' m waves from the ' + compassPoint(s[1]);
+  else missed.push('sea');
+  return {
+    apply: text => MORNING_LABELS.reduce((acc, k) => v[k] == null ? acc
+      : acc.replace(new RegExp('^(' + k + '):[ \\t]*$', 'im'), (_m, label) => label + ': ' + v[k]), text),
+    note: missed.length ? 'Not read: ' + missed.join(', ') + '.' : '',
+  };
+}
+
 // Used until a "Journal template" note exists. The template lives in the
 // archive rather than this browser so a heading added on the phone is there on
 // the laptop too. The body is plain text — the catalog does not render markdown.
-const DEFAULT_JOURNAL_TEMPLATE = [
-  'Exercise',
-  'What I did: ',
-  'How long: ',
-  'How it felt: ',
-  '',
-  'Meditation',
-  'How long: ',
-  'Notes: ',
-  '',
-  'Emotions',
-  'What came up: ',
-  'The situation: ',
-  'How I handled it: ',
-  'What I’d do differently: ',
-].join('\n');
+// Since 17 Nov 2026 it is just the morning (Stewart: "remove everything else");
+// the app fills these lines in when it starts the day's entry.
+// The Morning heading also lets the Life Engine (Telegram) keep this template:
+// it only counts fill-in lines under a heading (life-engine-tick/journal.ts).
+const DEFAULT_JOURNAL_TEMPLATE = ['Morning', ...MORNING_LABELS.map(k => k + ': ')].join('\n');
 
 let journalLoaded = false;
 let journalReady = Promise.resolve();
@@ -11534,12 +11644,14 @@ async function openTodaysJournal() {
     startEdit(existing, existing.content.length);
     return;
   }
-  showComposer(journalTemplate ? journalTemplate.content : DEFAULT_JOURNAL_TEMPLATE, null, {
+  const template = (journalTemplate ? journalTemplate.content : DEFAULT_JOURNAL_TEMPLATE).replace(/\s*$/, '') + '\n\n';
+  showComposer(template, null, {
     label: 'Journal entry',
     title: 'Journal ' + formatDateInput(today),
     tags: [JOURNAL_TOPIC],
     focusBody: true,
     openAfter: true,
+    fill: journalMorning(today),
   });
 }
 
@@ -11786,8 +11898,18 @@ function showListForm(editId) {
   setTimeout(() => form.querySelector('#lstName').focus(), 0);
 }
 
+// A photo on a list (17 Nov 2026) rides in the item's words as
+// ![Photo](photo:path), as in a note; the words show, the photo beside them.
+const LIST_PHOTO_RE = /\s*!\[[^\]\n]*\]\(photo:(\d{4}\/\d{2}\/[0-9a-f-]{36}\.(?:jpg|webp|png))\)/;
+function listItemParts(text) {
+  const s = String(text || ''), m = LIST_PHOTO_RE.exec(s);
+  if (!m) return { words: s, photo: null, tail: '' };
+  return { words: (s.slice(0, m.index) + s.slice(m.index + m[0].length)).trim(), photo: m[1], tail: ' ![Photo](photo:' + m[1] + ')' };
+}
+
 function listItemHtml(l, it, i, count) {
   const k = l.kind;
+  const p = listItemParts(it.text);
   const lead = listTicks(k)
     ? `<button type="button" class="o-task__tick" data-tick aria-pressed="${it.done}" aria-label="${it.done ? 'Untick' : 'Tick off'}"></button>`
     : k === 'ranked' ? `<span class="lst-item__n">${i + 1}.</span>` : '<span class="lst-item__dot" aria-hidden="true"></span>';
@@ -11795,8 +11917,9 @@ function listItemHtml(l, it, i, count) {
     ? `<button type="button" class="lst-item__btn" data-move="up" aria-label="Move up" ${i === 0 ? 'disabled' : ''}><i class="ph-light ph-arrow-up"></i></button>
        <button type="button" class="lst-item__btn" data-move="down" aria-label="Move down" ${i === count - 1 ? 'disabled' : ''}><i class="ph-light ph-arrow-down"></i></button>` : '';
   return `<li class="o-task lst-item${it.done && listTicks(k) ? ' is-done' : ''}" data-item="${escapeAttr(it.id)}">
-    ${lead}<span class="o-task__title lst-item__text" tabindex="0" title="Click to change the words">${escapeHtml(it.text)}</span>
-    ${moves}<button type="button" class="lst-item__btn" data-remove aria-label="Remove ${escapeAttr(it.text)}"><i class="ph-light ph-x"></i></button></li>`;
+    ${lead}<span class="o-task__title lst-item__text" tabindex="0" title="Click to change the words">${p.words ? escapeHtml(p.words) : '<span class="o-meta">Photo</span>'}</span>
+    ${p.photo ? `<button type="button" class="md-photo lst-item__photo" data-open-photo aria-label="Open the photo"><img class="md-photo-img" data-photo="${escapeAttr(p.photo)}" alt="" loading="lazy"></button>` : ''}
+    ${moves}<button type="button" class="lst-item__btn" data-remove aria-label="Remove ${escapeAttr(p.words || 'the photo')}"><i class="ph-light ph-x"></i></button></li>`;
 }
 
 function drawList(id) {
@@ -11818,6 +11941,8 @@ function drawList(id) {
       <span class="o-chip lst-kind"><i class="ph-light ${icon}" aria-hidden="true"></i>${escapeHtml(label)}</span></div>
     <div class="o-capture lst-add">
       <input id="lstAdd" type="text" maxlength="300" placeholder="Add to ${escapeAttr(l.name)}" aria-label="Add an item" enterkeyhint="done">
+      <button type="button" class="o-capture__btn lst-add-photo" aria-label="Add a photo" title="Add a photo; words typed first go with it"><i class="ph-light ph-camera" aria-hidden="true"></i></button>
+      <input type="file" class="lst-photo-input" accept="image/*" multiple hidden>
       <button type="button" class="o-capture__btn lst-add-go" aria-label="Add" title="Add (Enter)"><i class="ph-light ph-arrow-up" aria-hidden="true"></i></button>
     </div>
     <p class="o-meta lst-status" role="status"></p>
@@ -11849,6 +11974,35 @@ function drawList(id) {
   };
   add.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); doAdd(); } });
   screen.querySelector('.lst-add-go').addEventListener('click', doAdd);
+  const photoIn = screen.querySelector('.lst-photo-input'), photoBtn = screen.querySelector('.lst-add-photo');
+  photoBtn.addEventListener('click', () => photoIn.click());
+  photoIn.addEventListener('change', async () => {
+    const files = [...(photoIn.files || [])];
+    photoIn.value = '';
+    if (!files.length) return;
+    const words = add.value.trim().slice(0, 230);
+    add.value = '';
+    photoBtn.disabled = true;
+    try {
+      for (let i = 0; i < files.length; i++) {
+        status.textContent = files.length > 1 ? 'Adding photo ' + (i + 1) + ' of ' + files.length + '…' : 'Adding the photo…';
+        const path = await uploadNotePhoto(files[i]);
+        const it = await listCall('add_list_item', { list_id: l.id, text: ((i ? '' : words) + ' ![Photo](photo:' + path + ')').trim() });
+        l.items.push(it);
+      }
+      if (openListId === l.id) drawList(l.id);
+    } catch (err) {
+      if (openListId === l.id) drawList(l.id);
+      const st = main.querySelector('.lst-status');
+      if (st) st.textContent = 'Photo not added — ' + err.message;
+      const box = main.querySelector('#lstAdd');
+      if (box && words) box.value = words;
+    }
+  });
+  screen.querySelectorAll('[data-open-photo]').forEach(b => b.addEventListener('click', () => {
+    const img = b.querySelector('img');
+    if (img && img.src) window.open(img.src, '_blank', 'noopener');
+  }));
   if (keepFocus || (!isPhone() && !l.items.length)) add.focus();
 
   screen.querySelectorAll('.lst-item').forEach(row => {
@@ -11878,10 +12032,11 @@ function drawList(id) {
     });
     const text = row.querySelector('.lst-item__text');
     const edit = () => {
+      const parts = listItemParts(it.text);
       const input = document.createElement('input');
       input.className = 'o-field lst-item__edit';
-      input.value = it.text;
-      input.maxLength = 300;
+      input.value = parts.words;
+      input.maxLength = 300 - parts.tail.length;
       text.replaceWith(input);
       input.focus();
       input.select();
@@ -11889,7 +12044,7 @@ function drawList(id) {
       const finish = async save => {
         if (done) return;
         done = true;
-        const v = input.value.trim();
+        const v = (input.value.trim() + parts.tail).trim();
         if (!save || !v || v === it.text) { drawList(l.id); return; }
         const old = it.text;
         it.text = v;
