@@ -2584,12 +2584,12 @@ a.o-card:hover{filter:brightness(.98)}
   }
   .bar-actions .link-add-toggle { display: inline-flex; align-items: center; gap: 2px; }
   .bar-actions .link-add-toggle > i { font-size: 1.35em; }
-  .lbl-short { display: none; }
+  .lbl-short, .lbl-tight { display: none; }
   /* The phone: one row of equal tiles, an icon over a short word (v184). */
   @media (max-width: 760px) {
     .edit-body-head:has(.bar-actions) { display: block; }
     .edit-body-head:has(.bar-actions) .edit-body-label { display: none; }
-    .edit-body-head .bar-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(52px, 1fr)); gap: var(--s1); width: 100%; }
+    .edit-body-head .bar-actions { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 4px; width: 100%; }
     .index-card .edit-body-head .bar-actions .link-add-toggle,
     .task-detail .edit-body-head .bar-actions .link-add-toggle {
       flex-direction: column; justify-content: center; gap: 2px; min-height: 60px; padding: var(--s1) 2px;
@@ -2599,6 +2599,18 @@ a.o-card:hover{filter:brightness(.98)}
     .edit-body-head .bar-actions .lbl-long { display: none; }
     .edit-body-head .bar-actions .lbl-short { display: inline; }
     .edit-body-head .bar-actions .rec-msg, .edit-body-head .bar-actions .rec-time { font-size: 11px; white-space: normal; text-align: center; line-height: 1.2; }
+  }
+  /* Six tiles on a narrow phone (Read text joined them, 18 Nov 2026): a
+     touch smaller so the row stays equal. */
+  @media (max-width: 400px) {
+    .index-card .edit-body-head .bar-actions .link-add-toggle,
+    .task-detail .edit-body-head .bar-actions .link-add-toggle { font-size: 11px; padding: var(--s1) 0; letter-spacing: -0.01em; }
+  }
+  /* A saved note's row has six tiles (Top as well), too tight on a phone for
+     "Transcribe", so there it says Speak (its name before v184). */
+  @media (max-width: 760px) {
+    .edit-body-head .bar-actions:has(> .top-btn) .mic-add .lbl-mic { display: none; }
+    .edit-body-head .bar-actions:has(> .top-btn) .mic-add .lbl-tight { display: inline; }
   }
   /* A journal entry: just the words (v184). */
   .index-card.is-journal .edit-field-list, .index-card.is-journal .edit-actions-bottom { display: none; }
@@ -3606,6 +3618,7 @@ a.o-card:hover{filter:brightness(.98)}
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
           </button>
           <input type="file" id="photoInput" hidden accept="image/*" capture="environment" />
+          <input type="file" id="photoGalleryInput" hidden accept="image/*" />
           <button class="refresh-btn" id="workBtn" type="button" title="Work mode: show only work notes, for screen-sharing" aria-label="Work mode" aria-pressed="false">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"></rect><path d="M9 7V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path><path d="M3 13h18"></path></svg>
           </button>
@@ -7853,7 +7866,12 @@ new MutationObserver(() => { clearTimeout(photoTimer); photoTimer = setTimeout((
 // (v184; they used to wrap into three ragged rows).
 const photoOnlyButtonHtml = () => '<button class="link-add-toggle photo-add" type="button" title="Take a photo or choose one"><i class="ph-light ph-camera" aria-hidden="true"></i><span class="btn-lbl"><span class="lbl-long"> Add photo</span><span class="lbl-short">Photo</span></span></button>';
 const linkButtonHtml = () => '<button class="link-add-toggle link-btn" id="editLinkToggle" type="button" title="Link to another note"><i class="ph-light ph-link" aria-hidden="true"></i><span class="btn-lbl"><span class="lbl-long"> ' + LINK_SHORTCUT + 'Link to a note</span><span class="lbl-short">Link</span></span></button>';
-const photoButtonHtml = () => photoOnlyButtonHtml() + micButtonHtml() + recordButtonHtml();
+// Read text (18 Nov 2026): photograph a page, a sign or a receipt and its words
+// are typed in where the cursor is. The photo itself is not kept. It sits
+// beside Add photo in a saved note, a journal entry and a task; a new note has
+// the big Photograph tile instead, so it is never on the screen twice.
+const readTextButtonHtml = () => '<button class="link-add-toggle photo-read" type="button" title="Photograph a page and its words are typed in where the cursor is"><i class="ph-light ph-scan" aria-hidden="true"></i><span class="btn-lbl"><span class="lbl-long"> Read text</span><span class="lbl-short">Read</span></span></button>';
+const photoButtonHtml = () => photoOnlyButtonHtml() + readTextButtonHtml() + micButtonHtml() + recordButtonHtml();
 
 // ---------- speaking into a note (4 Nov 2026, Otter v2.1 capture) ----------
 // Tap Speak, talk, tap Stop: the sound goes to Parakeet v3 (POST
@@ -7863,7 +7881,7 @@ const photoButtonHtml = () => photoOnlyButtonHtml() + micButtonHtml() + recordBu
 // the button and the next tap tries again, so nothing said is lost.
 const SPEAK_MAX_MS = 15 * 60 * 1000;
 const micButtonHtml = () => (navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder)
-  ? '<button class="link-add-toggle mic-add" type="button" aria-pressed="false" aria-label="Transcribe" title="Transcribe: tap Stop when done and the words type in where the cursor is"><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Transcribe</span></button>'
+  ? '<button class="link-add-toggle mic-add" type="button" aria-pressed="false" aria-label="Transcribe" title="Transcribe: tap Stop when done and the words type in where the cursor is"><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"><span class="lbl-long"> Transcribe</span><span class="lbl-short lbl-mic">Transcribe</span><span class="lbl-tight">Speak</span></span></button>'
   : '';
 let activeMic = null;
 
@@ -8154,6 +8172,62 @@ function wirePhotoButtons(root, textarea, after) {
     input.addEventListener('change', () => onPick(input));
     cam.addEventListener('change', () => onPick(cam));
   });
+  root.querySelectorAll('.photo-read').forEach(btn => {
+    if (btn.dataset.wired) return;
+    btn.dataset.wired = '1';
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.hidden = true;
+    const cam = photoCameraInput();
+    btn.after(input, cam);
+    btn.addEventListener('click', () => pickPhotoSource(input, cam));
+    const onPick = async (inp) => {
+      const file = inp.files && inp.files[0];
+      inp.value = '';
+      if (!file) return;
+      const label = btn.innerHTML;
+      const at = textarea.selectionStart != null ? textarea.selectionEnd : textarea.value.length;
+      btn.disabled = true;
+      btn.title = '';
+      btn.innerHTML = '<span class="rec-msg">Reading…</span>';
+      try {
+        const text = (await readPhotoText(await shrinkPhoto(file))).trim();
+        if (!text) {
+          alert('No readable text in that photo. Try again closer, with the page flat and well lit.');
+          return;
+        }
+        if (!textarea.isConnected) {
+          showStatus('Its note had been closed, so the words were not added: ' + text, true);
+          return;
+        }
+        insertBlockAt(textarea, at, text);
+        if (after) after();
+      } catch (err) {
+        btn.title = 'Could not read that photo — ' + err.message;
+        alert('Could not read that photo — ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = label;
+        btn.title = 'Photograph a page and its words are typed in where the cursor is';
+      }
+    };
+    input.addEventListener('change', () => onPick(input));
+    cam.addEventListener('change', () => onPick(cam));
+  });
+}
+
+// Puts a block of text into a textarea at a position, on lines of its own.
+function insertBlockAt(textarea, at, block) {
+  const v = textarea.value;
+  at = Math.min(Math.max(at, 0), v.length);
+  const before = v.slice(0, at), rest = v.slice(at);
+  const lead = !before ? '' : before.endsWith('\n\n') ? '' : before.endsWith('\n') ? '\n' : '\n\n';
+  const tail = !rest ? '' : rest.startsWith('\n\n') ? '' : rest.startsWith('\n') ? '\n' : '\n\n';
+  textarea.value = before + lead + block + tail + rest;
+  const caret = (before + lead + block).length;
+  try { textarea.setSelectionRange(caret, caret); } catch (_) {}
+  textarea.dispatchEvent(new Event('input', { bubbles: true }));
 }
 
 // Where a photo comes from (18 Nov 2026). On a phone the plain picker can leave
@@ -8223,12 +8297,15 @@ async function importFromPhoto(file) {
 }
 
 const photoInput = document.getElementById('photoInput');
-document.getElementById('photoBtn').addEventListener('click', () => photoInput.click());
-photoInput.addEventListener('change', () => {
-  const file = photoInput.files && photoInput.files[0];
-  photoInput.value = '';
+// A photo already taken (a screenshot, last week's page) can be read too, not
+// only a new one from the camera (18 Nov 2026); a phone asks which.
+const photoGalleryInput = document.getElementById('photoGalleryInput');
+document.getElementById('photoBtn').addEventListener('click', () => pickPhotoSource(photoGalleryInput, photoInput));
+[photoInput, photoGalleryInput].forEach(inp => inp.addEventListener('change', () => {
+  const file = inp.files && inp.files[0];
+  inp.value = '';
   importFromPhoto(file);
-});
+}));
 
 let dragDepth = 0;
 window.addEventListener('dragenter', (e) => {
