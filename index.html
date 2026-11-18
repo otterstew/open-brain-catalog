@@ -2602,6 +2602,20 @@ a.o-card:hover{filter:brightness(.98)}
   }
   /* A journal entry: just the words (v184). */
   .index-card.is-journal .edit-field-list, .index-card.is-journal .edit-actions-bottom { display: none; }
+  /* A phone asks where a photo comes from: the camera or the photos already
+     taken (v185). A sheet from the bottom, in reach of the thumb. */
+  .photo-pick { position: fixed; inset: 0; z-index: 96; display: flex; align-items: flex-end; justify-content: center;
+    padding: var(--s4); padding-bottom: calc(var(--s4) + env(safe-area-inset-bottom));
+    background: color-mix(in oklab, var(--ink) 35%, transparent); }
+  .photo-pick[hidden] { display: none; }
+  .photo-pick__inner { width: 100%; max-width: 480px; display: grid; gap: var(--s3); padding: var(--s4);
+    background: var(--paper); border-radius: var(--r-lg); }
+  .photo-pick__opts { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s2); }
+  .photo-pick__opt { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--s1);
+    min-height: 88px; border: 0; border-radius: var(--r-md); background: var(--stone); color: var(--ink);
+    font: inherit; font-size: var(--t-sm); cursor: pointer; }
+  .photo-pick__opt > i { font-size: 28px; color: var(--ink-2); }
+  .photo-pick__opt:focus-visible { outline: 2px solid var(--accent-mark); outline-offset: 2px; }
   /* Photos in a task's notes, and beside a list item (v183). */
   .task-photos { margin-top: var(--s3); }
   .task-photos__row { display: flex; flex-wrap: wrap; gap: var(--s2); margin-top: var(--s1); }
@@ -8103,11 +8117,12 @@ function wirePhotoButtons(root, textarea, after) {
     input.accept = 'image/*';
     input.multiple = true;
     input.hidden = true;
-    btn.after(input);
-    btn.addEventListener('click', () => input.click());
-    input.addEventListener('change', async () => {
-      const files = [...(input.files || [])];
-      input.value = '';
+    const cam = photoCameraInput();
+    btn.after(input, cam);
+    btn.addEventListener('click', () => pickPhotoSource(input, cam));
+    const onPick = async (inp) => {
+      const files = [...(inp.files || [])];
+      inp.value = '';
       if (!files.length) return;
       const label = btn.innerHTML;
       btn.disabled = true;
@@ -8135,8 +8150,51 @@ function wirePhotoButtons(root, textarea, after) {
         btn.disabled = false;
         btn.innerHTML = label;
       }
-    });
+    };
+    input.addEventListener('change', () => onPick(input));
+    cam.addEventListener('change', () => onPick(cam));
   });
+}
+
+// Where a photo comes from (18 Nov 2026). On a phone the plain picker can leave
+// the camera out (Android's photo picker does), so a phone is asked first:
+// Take photo opens the camera, Choose photos the photos already taken. A
+// computer goes straight to its file picker.
+function photoCameraInput() {
+  const cam = document.createElement('input');
+  cam.type = 'file';
+  cam.accept = 'image/*';
+  cam.setAttribute('capture', 'environment');
+  cam.hidden = true;
+  return cam;
+}
+
+let photoPickEl = null;
+function pickPhotoSource(gallery, camera) {
+  if (!window.matchMedia('(pointer: coarse)').matches) { gallery.click(); return; }
+  if (!photoPickEl) {
+    photoPickEl = document.createElement('div');
+    photoPickEl.className = 'photo-pick';
+    photoPickEl.hidden = true;
+    photoPickEl.innerHTML =
+      '<div class="photo-pick__inner" role="dialog" aria-modal="true" aria-label="Add a photo">' +
+      '<div class="photo-pick__opts">' +
+      '<button type="button" class="photo-pick__opt" data-pick="camera"><i class="ph-light ph-camera" aria-hidden="true"></i>Take photo</button>' +
+      '<button type="button" class="photo-pick__opt" data-pick="gallery"><i class="ph-light ph-images" aria-hidden="true"></i>Choose photos</button>' +
+      '</div><button type="button" class="o-btn o-btn--block" data-pick="cancel">Cancel</button></div>';
+    document.body.append(photoPickEl);
+    photoPickEl.addEventListener('click', e => {
+      const b = e.target.closest('[data-pick]');
+      if (!b && e.target !== photoPickEl) return;
+      photoPickEl.hidden = true;
+      const go = b && photoPickEl._go && photoPickEl._go[b.dataset.pick];
+      if (go) go.click();
+    });
+    photoPickEl.addEventListener('keydown', e => { if (e.key === 'Escape') photoPickEl.hidden = true; });
+  }
+  photoPickEl._go = { camera, gallery };
+  photoPickEl.hidden = false;
+  photoPickEl.querySelector('[data-pick="camera"]').focus();
 }
 
 async function importFromPhoto(file) {
@@ -12026,10 +12084,12 @@ function drawList(id) {
   add.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); doAdd(); } });
   screen.querySelector('.lst-add-go').addEventListener('click', doAdd);
   const photoIn = screen.querySelector('.lst-photo-input'), photoBtn = screen.querySelector('.lst-add-photo');
-  photoBtn.addEventListener('click', () => photoIn.click());
-  photoIn.addEventListener('change', async () => {
-    const files = [...(photoIn.files || [])];
-    photoIn.value = '';
+  const photoCam = photoCameraInput();
+  photoIn.after(photoCam);
+  photoBtn.addEventListener('click', () => pickPhotoSource(photoIn, photoCam));
+  const onListPhoto = async (inp) => {
+    const files = [...(inp.files || [])];
+    inp.value = '';
     if (!files.length) return;
     const words = add.value.trim().slice(0, 230);
     add.value = '';
@@ -12049,7 +12109,9 @@ function drawList(id) {
       const box = main.querySelector('#lstAdd');
       if (box && words) box.value = words;
     }
-  });
+  };
+  photoIn.addEventListener('change', () => onListPhoto(photoIn));
+  photoCam.addEventListener('change', () => onListPhoto(photoCam));
   screen.querySelectorAll('[data-open-photo]').forEach(b => b.addEventListener('click', () => {
     const img = b.querySelector('img');
     if (img && img.src) window.open(img.src, '_blank', 'noopener');
