@@ -2550,7 +2550,11 @@ a.o-card:hover{filter:brightness(.98)}
   .index-card .cap-tile.is-listening, .index-card .cap-tile[aria-pressed="true"] { background: var(--accent-mark); color: var(--on-ink); padding: var(--s2) var(--s1); border-radius: var(--r-md); }
   .index-card .cap-tile.is-listening i, .index-card .cap-tile[aria-pressed="true"] i { color: var(--on-ink); }
   .index-card .cap-tile .rec-time { font-size: var(--t-xs); }
-  /* Just the note (v181): the title, the words and Save; nothing else. */
+  /* Just the note (v181): the title, the words and Save. Since v187 it is how
+     a new note and the journal open, so the ways of writing stay (the start
+     tiles and the Photo, Read, Transcribe, Record, Link row: losing Read text
+     behind this was the 18 Nov complaint), and so do Save and Discard; the
+     app around it and the labels go until Show everything. */
   .index-card-head .compose-clean-btn { margin-left: auto; display: inline-flex; align-items: center; gap: var(--s1); min-height: 40px; padding: 0 var(--s3);
     border: 0; border-radius: var(--r-md); background: var(--stone); color: var(--ink-2); font: inherit; font-size: var(--t-sm); cursor: pointer; }
   .index-card-head .compose-clean-btn i { font-size: 18px; color: var(--accent-mark); }
@@ -2559,8 +2563,8 @@ a.o-card:hover{filter:brightness(.98)}
   @media (max-width: 760px) { .index-card-head .compose-clean-btn { min-height: 44px; } }
   html.compose-clean .ob-rail, html.compose-clean .drawer, html.compose-clean #tabbar, html.compose-clean .ref-panel { display: none !important; }
   html.compose-clean .app, html.compose-clean .app.detail-open, html.compose-clean .app.ref-open { grid-template-columns: minmax(0, 1fr) !important; height: 100dvh; }
-  html.compose-clean .main > .back-btn, html.compose-clean .cap-tiles, html.compose-clean .index-card-type,
-  html.compose-clean .index-card-ribbon, html.compose-clean .edit-body-head, html.compose-clean .compose-cancel,
+  html.compose-clean .main > .back-btn, html.compose-clean .index-card-type, html.compose-clean .edit-body-label,
+  html.compose-clean .index-card-ribbon,
   html.compose-clean .compose-title-row .edit-field-label { display: none !important; }
   html.compose-clean .index-card { max-width: 720px; margin: 0 auto; background: transparent; }
   html.compose-clean .compose-title-row .edit-field-row { display: block; }
@@ -5465,6 +5469,9 @@ function selectThought(t, mark) {
           ${isJournalEntry(t) ? '' : `<button class="icon-btn icon-btn--word" id="toJournalBtn" type="button" title="Add to today's journal" aria-label="Add this note to today's journal">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z"></path><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3"></path><path d="M9 8h7"></path></svg><span class="icon-btn-word">Journal</span>
           </button>`}
+          <button class="icon-btn icon-btn--word" id="detailsBtn" type="button" title="Tags and details: tags, author, date, source and URL" aria-label="Tags and details for this note">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg><span class="icon-btn-word">Details</span>
+          </button>
           <button class="icon-btn" id="exportBtn" title="Export: web page or PDF" aria-label="Export this note as a web page or PDF">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"></path><path d="M7 10l5 5 5-5"></path><path d="M5 21h14"></path></svg>
           </button>
@@ -5551,6 +5558,9 @@ function selectThought(t, mark) {
     }
   }));
   document.getElementById('writeBtn').addEventListener('click', () => openWritingView(t));
+  // Tags and details on request (v187), instead of a step that pops up after
+  // every save.
+  document.getElementById('detailsBtn').addEventListener('click', () => confirmTags(t.id, { details: true }));
   document.getElementById('exportBtn').addEventListener('click', () => {
     cardConfirm.style.display = 'flex';
     cardConfirm.innerHTML = `
@@ -6163,6 +6173,7 @@ function startEdit(t, anchorOffset, opts) {
         <span class="index-card-type" style="color:${style.color}">${journal ? (template ? 'Journal template' : 'Journal') : style.label + ' · editing'}</span>
         <div class="index-card-head-right">
           <span class="index-card-date">${formatDate(t.created_at)}</span>
+          ${journal ? cleanButtonHtml() : ''}
         </div>
       </div>
       <div class="edit-field-list">
@@ -6213,6 +6224,7 @@ function startEdit(t, anchorOffset, opts) {
   });
   main.prepend(back);
   app.classList.add('detail-open');
+  if (journal) wireCleanButton(main.querySelector('.index-card'), document.getElementById('editContent'));
 
   // What the editor looked like when it opened. Compared field by field rather
   // than watching for keystrokes, so typing a character and deleting it again
@@ -6709,7 +6721,30 @@ function showEmptyState() {
 // caret in the text, openAfter to open the note once saved, intro for a line of
 // guidance in the status slot. The journal uses these; a plain new note uses none.
 const NEW_NOTE_DRAFT = 'ob.newNoteDraft';
-const COMPOSE_CLEAN_KEY = 'ob.composeClean';
+
+// Just the note: everything but the words and Save hidden. Since v187 a new
+// note, a new journal entry and a journal entry being edited always open this
+// way (Stewart, 19 Nov 2026: "i want the clean option to open immediately").
+// Show everything brings the rest back for this note only; it is no longer
+// remembered (v181-v186 kept the last choice in ob.composeClean).
+function wireCleanButton(card, focusEl) {
+  const cleanBtn = card.querySelector('[data-compose-clean]');
+  if (!cleanBtn) return;
+  const setClean = on => {
+    document.documentElement.classList.toggle('compose-clean', on);
+    cleanBtn.setAttribute('aria-pressed', String(on));
+    cleanBtn.querySelector('span').textContent = on ? 'Show everything' : 'Just the note';
+    cleanBtn.querySelector('i').className = 'ph-light ' + (on ? 'ph-arrows-in' : 'ph-arrows-out');
+  };
+  try { localStorage.removeItem('ob.composeClean'); } catch (_) { /* storage blocked */ }
+  setClean(true);
+  cleanBtn.addEventListener('click', () => {
+    setClean(!document.documentElement.classList.contains('compose-clean'));
+    if (focusEl) focusEl.focus();
+  });
+}
+const cleanButtonHtml = () => '<button class="compose-clean-btn" type="button" data-compose-clean aria-pressed="false" title="Hide everything but the note and Save"><i class="ph-light ph-arrows-out" aria-hidden="true"></i><span>Just the note</span></button>';
+
 function showComposer(prefill, parentId, opts) {
   opts = opts || {};
   selectedIndex = null;
@@ -6735,7 +6770,7 @@ function showComposer(prefill, parentId, opts) {
       <div class="index-card-ribbon" style="background:var(--accent)"></div>
       <div class="index-card-head">
         <span class="index-card-type" style="color:var(--accent)">${escapeHtml(opts.label || 'New thought')}${parentId ? ' · linked' : ''}</span>
-        <button class="compose-clean-btn" type="button" data-compose-clean aria-pressed="false" title="Hide everything but the title, the note and Save"><i class="ph-light ph-arrows-out" aria-hidden="true"></i><span>Just the note</span></button>
+        ${cleanButtonHtml()}
       </div>${ways}
       <!-- Title, then straight into the note; the rest waits underneath
            (Stewart, 16 Nov 2026, v178: the body was too far down on a phone). -->
@@ -6812,24 +6847,7 @@ function showComposer(prefill, parentId, opts) {
     const tick = setInterval(() => { if (!document.body.contains(textEl)) clearInterval(tick); else keepDraft(); }, 2000);
   }
 
-  // Just the note: everything but the title, the words and Save hidden. The
-  // choice is remembered, so a new note opens the way it was last used.
-  const cleanBtn = card.querySelector('[data-compose-clean]');
-  const setClean = on => {
-    document.documentElement.classList.toggle('compose-clean', on);
-    cleanBtn.setAttribute('aria-pressed', String(on));
-    cleanBtn.querySelector('span').textContent = on ? 'Show everything' : 'Just the note';
-    cleanBtn.querySelector('i').className = 'ph-light ' + (on ? 'ph-arrows-in' : 'ph-arrows-out');
-  };
-  let cleanPref = false;
-  try { cleanPref = localStorage.getItem(COMPOSE_CLEAN_KEY) === '1'; } catch (_) { /* storage blocked */ }
-  setClean(cleanPref);
-  cleanBtn.addEventListener('click', () => {
-    const on = !document.documentElement.classList.contains('compose-clean');
-    setClean(on);
-    try { localStorage.setItem(COMPOSE_CLEAN_KEY, on ? '1' : '0'); } catch (_) { /* storage blocked */ }
-    textEl.focus();
-  });
+  wireCleanButton(card, textEl);
 
   // Anything else that is written in the composer takes part in the same
   // unsaved-changes guard as the editor; a kept draft needs no guard.
@@ -6980,12 +6998,14 @@ function showComposer(prefill, parentId, opts) {
     setTimeout(async () => {
       showEmptyState();
       await loadAll();
-      const open = findThought(extraFailed || opts.openAfter ? savedId : parentId);
+      // The note just saved opens, so its Details button is to hand (v187); a
+      // linked note goes back to the one it was added to.
+      const open = findThought(extraFailed || opts.openAfter || !parentId ? savedId : parentId);
       if (open) selectThought(open);
-      // Tags typed in were a decision already made. The confirmation step is
-      // only for the extractor's guesses — which read the text with no idea
-      // what this archive collects, and once tagged a note on light waves "AI".
-      if (savedId && !tags.length) await confirmTags(savedId, { details: true });
+      // Since v187 the tags and details are not asked for after saving: the
+      // note's Details button opens the same step whenever it is wanted
+      // (Stewart, 19 Nov 2026: "all the metadata additions can be a separate
+      // option or even a button"). The extractor's guessed tags stand until then.
     }, extraFailed ? 2500 : 500);
   }
 
@@ -6997,7 +7017,7 @@ function showComposer(prefill, parentId, opts) {
 
 newBtn.addEventListener('click', () => { if (confirmLeavingEdit()) showComposer(); });
 // Leaving the composer (Save, Discard, or anywhere else) brings the app back.
-new MutationObserver(() => { if (!document.getElementById('composeText')) document.documentElement.classList.remove('compose-clean'); })
+new MutationObserver(() => { if (!document.querySelector('[data-compose-clean]')) document.documentElement.classList.remove('compose-clean'); })
   .observe(main, { childList: true });
 
 function showStatus(msg, isError, retryFn) {
@@ -11439,7 +11459,8 @@ const JOURNAL_TEMPLATE_TITLE = 'Journal template';
 // 7am, sunrise and sunset, the moon, and the sea and the wind at 7am. Tides and
 // the sun come from the server (today_extras: Jersey Met, Open-Meteo); the sea
 // and the wind from Open-Meteo directly (no key, nothing personal sent); the
-// moon is worked out here. Since v184 it is one line, "Morning: Low tide 07:58
+// moon is worked out here. Since v187 the sea's temperature is in it too
+// ("Sea temp 14°C", after the waves). Since v184 it is one line, "Morning: Low tide 07:58
 // (2.1 m) · Sunrise 07:41 · …" (Stewart: "morning should be one line"). The
 // line is filled only while empty, added at the top of today's entry if it has
 // none, and v183's six-line block is folded into it. A part that cannot be read
@@ -11480,7 +11501,7 @@ async function journalMorning(date) {
   const [extras, air, sea] = await Promise.allSettled([
     callTool('today_extras', { date, format: 'json' }).then(t => JSON.parse(t)),
     morningJson('https://api.open-meteo.com/v1/forecast?' + ST_HELIER_AT + '&hourly=wind_speed_10m,wind_direction_10m,wind_gusts_10m&wind_speed_unit=mph' + day),
-    morningJson('https://marine-api.open-meteo.com/v1/marine?' + JERSEY_SEA_AT + '&hourly=wave_height,wave_direction' + day),
+    morningJson('https://marine-api.open-meteo.com/v1/marine?' + JERSEY_SEA_AT + '&hourly=wave_height,wave_direction,sea_surface_temperature' + day),
   ]);
   const parts = [], missed = [];
   const x = extras.status === 'fulfilled' ? extras.value : null;
@@ -11502,6 +11523,10 @@ async function journalMorning(date) {
   const s = at(sea, ['wave_height', 'wave_direction']);
   if (s) parts.push('Sea ' + seaWord(s[0]).toLowerCase() + ', ' + s[0].toFixed(1) + ' m from the ' + compassPoint(s[1]));
   else missed.push('sea');
+  // The water's temperature at 7am, for the swim (Stewart, 19 Nov 2026, v187).
+  const sst = at(sea, ['sea_surface_temperature']);
+  if (sst) parts.push('Sea temp ' + Math.round(sst[0]) + '°C');
+  else missed.push('sea temperature');
   const w = at(air, ['wind_speed_10m', 'wind_direction_10m', 'wind_gusts_10m']);
   if (w) parts.push('Wind ' + compassPoint(w[1]) + ' ' + Math.round(w[0]) + ' mph, gusts ' + Math.round(w[2]));
   else missed.push('wind');
