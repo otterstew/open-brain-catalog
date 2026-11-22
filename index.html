@@ -2585,6 +2585,8 @@ a.o-card:hover{filter:brightness(.98)}
      behind Show everything. The app around it stays, so moving between notes
      is unchanged. */
   .note-clean-title { display: none; }
+  .note-colour-rule { display: inline-flex; align-items: center; gap: var(--s2); font-size: var(--t-sm); color: var(--ink-2); }
+  .note-colour-rule .colour-dot { cursor: default; pointer-events: none; }
   .index-card.is-clean .note-clean-title { display: block; margin: var(--s4) 28px 0; font-family: var(--serif); font-size: 30px; font-weight: 400; line-height: 1.25; color: var(--ink); overflow-wrap: anywhere; }
   .index-card.is-clean .index-card-ribbon, .index-card.is-clean .index-card-type, .index-card.is-clean .index-card-date,
   .index-card.is-clean .note-colour-row, .index-card.is-clean .card-meta-toggle, .index-card.is-clean .card-meta,
@@ -2608,6 +2610,9 @@ a.o-card:hover{filter:brightness(.98)}
   .app:has(#noteCard.is-clean) .back-btn, .app:has(#noteCard.is-clean) .list-return,
   #noteCard.is-clean .index-card-head, #noteCard.is-clean .read-body-bar { display: none !important; }
   html:has(#noteCard.is-clean) .ob-tabbar { display: none !important; }
+  /* Cards view pins the main pane to the second column and row; with the rail
+     and list gone that left the note off to the right (22 Nov). One cell, whole width. */
+  .app:has(#noteCard.is-clean) > .main { grid-column: 1 / -1 !important; grid-row: 1 / -1 !important; }
   #noteCard.is-clean { max-width: 760px; margin: 0 auto; background: transparent; }
   .note-clean-bar { display: none; }
   #noteCard.is-clean .note-clean-bar { display: flex; align-items: center; gap: var(--s2); position: sticky; top: 0; z-index: 3;
@@ -3841,6 +3846,15 @@ function typeStyle(t) {
 // Supernotes). Stored as metadata.color; display only, it means nothing else.
 const NOTE_COLOURS = ['heather', 'sea', 'teal', 'moss', 'ochre', 'blossom'];
 const NOTE_COLOUR_NAMES = { heather: 'Heather', sea: 'Sea', teal: 'Teal', moss: 'Moss', ochre: 'Ochre', blossom: 'Blossom' };
+// Colours set by a tag, whatever the note's own colour says (Stewart, 22 Nov
+// 2026: "a rule for notes tagged 'meditation' - tile colour is always moss").
+// Applied as notes load, so the cards, the rows, the colour chips and their
+// counts all agree; the note's picker shows the rule instead of the dots.
+const COLOUR_RULES = { meditation: 'moss' };
+function ruledColour(topics) {
+  for (const tag of topics || []) { const c = COLOUR_RULES[String(tag).trim().toLowerCase()]; if (c) return { colour: c, tag }; }
+  return null;
+}
 let cardView = (() => { try { return localStorage.getItem('ob.cardView') === '1'; } catch (_) { return false; } })();
 let colourFilter = null;
 let cardLimit = 60;
@@ -4203,7 +4217,7 @@ function normalizeThought(raw) {
     title: m.title || null,
     published_date: m.published_date || null,
     updated_date: m.updated_date || null,
-    color: NOTE_COLOURS.includes(m.color) ? m.color : null,
+    color: (ruledColour(m.topics) || {}).colour || (NOTE_COLOURS.includes(m.color) ? m.color : null),
     shelved: !!raw.shelved,
     extracted_links: Array.isArray(m.extracted_links) ? m.extracted_links : [],
     linked_thought_ids: Array.isArray(m.linked_thought_ids) ? m.linked_thought_ids : [],
@@ -5619,9 +5633,9 @@ function selectThought(t, mark) {
       <h1 class="note-clean-title">${escapeHtml(t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 80) || 'Untitled note')}</h1>
       <div class="note-colour-row">
         <span class="note-colour-label">Card colour</span>
-        <span class="colour-pick" id="colourPick" role="group" aria-label="Card colour">${
+        ${ruledColour(t.topics) ? (r => `<span class="note-colour-rule"><span class="colour-dot" aria-hidden="true" style="--tint:var(--${r.colour})"></span>${NOTE_COLOUR_NAMES[r.colour]}: every note tagged ${escapeHtml(r.tag)} is</span>`)(ruledColour(t.topics)) : `<span class="colour-pick" id="colourPick" role="group" aria-label="Card colour">${
           [''].concat(NOTE_COLOURS).map(c => `<button type="button" class="colour-dot" data-colour="${c}" aria-pressed="${(t.color || '') === c}" title="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" aria-label="${c ? NOTE_COLOUR_NAMES[c] : 'No colour'}" style="--tint:var(--${c || 'paper'})"></button>`).join('')
-        }</span>
+        }</span>`}
       </div>
       <button class="card-meta-toggle" id="cardMetaToggle" type="button" aria-expanded="false" aria-controls="cardMeta">
         <span>Details, links &amp; tags</span>
