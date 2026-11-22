@@ -4770,7 +4770,10 @@ function applyFilters() {
   // (Stewart, 22 Nov 2026: "the notes should present in the numbered order for
   // that author/source"). Notes with a number in the title come first, by that
   // number; the rest follow, newest first as before.
-  if (!searchMode && (activeAuthors.size || activeSources.size)) filtered = numberedOrder(filtered);
+  // Since v192 any filter does it, a tag included (Stewart, 22 Nov 2026: "why is
+  // my own arising and passing talk series not ordering sequentially"; the
+  // series is a tag, and its notes are split across two source names).
+  if (!searchMode && (activeAuthors.size || activeSources.size || activeTopics.size || activePeople.size || activeTypes.size)) filtered = numberedOrder(filtered);
   // A note tagged Pinned heads its list (the System directory, 4 Oct 2026).
   // Search results keep their ranking; pins only reorder a plain list.
   if (!searchMode) filtered = filtered.filter(isPinned).concat(filtered.filter(t => !isPinned(t)));
@@ -4783,18 +4786,53 @@ function applyFilters() {
 // The numbers in a title, in order, years left out: "Part 2: Week 10" → [2, 10],
 // "Lesson 3.4" → [3, 4], "2026 review" → []. Spelled-out and Roman numbers
 // are not read.
+// Dates in a title are not its place in a series: "Journal 20/11/2026" is
+// not number 20, nor "LinkedIn post 2026-11-12" or "Last week in AI — 12
+// October 2026" (22 Nov 2026: the journals were sorting as a series and the
+// Arising and Passing talks fell in among them).
+const MONTH_WORD = '(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*';
+const TITLE_DATES = new RegExp([
+  '\\b\\d{4}-\\d{1,2}-\\d{1,2}\\b',
+  '\\b\\d{1,2}/\\d{1,2}(?:/\\d{2,4})?\\b',
+  '\\b\\d{1,2}-\\d{1,2}-\\d{2,4}\\b',
+  '\\b\\d{1,2}(?:st|nd|rd|th)?\\s+' + MONTH_WORD + '\\b',
+  '\\b' + MONTH_WORD + '\\s+\\d{1,2}(?:st|nd|rd|th)?\\b',
+].join('|'), 'gi');
+function undatedTitle(t) { return (t.title || '').replace(TITLE_DATES, ' '); }
 function titleNumbers(t) {
-  return ((t.title || '').match(/\d+/g) || []).map(Number).filter(n => !(n >= 1900 && n <= 2100) && n < 100000);
+  return (undatedTitle(t).match(/\d+/g) || []).map(Number).filter(n => !(n >= 1900 && n <= 2100) && n < 100000);
 }
 
-// Numbered titles first, by their numbers (then the title, so "Part 1a" sits
-// before "Part 1b"); the rest after, in the order they came. Left alone unless
-// at least two notes are numbered: one number is not a series.
+// Which series a numbered title belongs to: its author, the words before its
+// first number (years skipped) and the mark straight after it. "1: Anxiety"
+// and "6: Who Is Listening?" by one author are a series; "1-2-1 Performance…"
+// by the same author, "Talk 1 of 6" or "1. Open Awareness" by another are not.
+function seriesKey(t) {
+  const title = undatedTitle(t);
+  const re = /\d+/g;
+  let m;
+  while ((m = re.exec(title))) {
+    const n = Number(m[0]);
+    if (n >= 1900 && n <= 2100) continue;
+    return (t.author || '').trim().toLowerCase() + '|' + title.slice(0, m.index).trim().toLowerCase() + '|' + title.charAt(m.index + m[0].length);
+  }
+  return null;
+}
+
+// Each numbered series reads in its order, as one block where its newest note
+// was; everything else keeps its place. Within a series: by the numbers in the
+// title, then the title ("Part 1a" before "Part 1b"). One numbered note on its
+// own is not a series and stays put. (Until v192 every numbered note came first,
+// all series mixed, and the rest after.)
 function numberedOrder(items) {
-  const keyed = items.map((t, i) => ({ t, i, n: titleNumbers(t) }));
-  const numbered = keyed.filter(k => k.n.length);
-  if (numbered.length < 2) return items;
-  numbered.sort((a, b) => {
+  const groups = new Map();
+  items.forEach((t, i) => {
+    const key = titleNumbers(t).length ? seriesKey(t) : null;
+    if (!key) return;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key).push({ t, i, n: titleNumbers(t) });
+  });
+  const byNumber = (a, b) => {
     for (let j = 0; j < Math.max(a.n.length, b.n.length); j++) {
       const x = a.n[j], y = b.n[j];
       if (x === undefined) return -1;
@@ -4802,8 +4840,17 @@ function numberedOrder(items) {
       if (x !== y) return x - y;
     }
     return (a.t.title || '').localeCompare(b.t.title || '', 'en', { numeric: true }) || a.i - b.i;
+  };
+  const out = [], placed = new Set();
+  items.forEach(t => {
+    const key = titleNumbers(t).length ? seriesKey(t) : null;
+    const g = key && groups.get(key);
+    if (!g || g.length < 2) { out.push(t); return; }
+    if (placed.has(key)) return;
+    placed.add(key);
+    g.slice().sort(byNumber).forEach(k => out.push(k.t));
   });
-  return numbered.map(k => k.t).concat(keyed.filter(k => !k.n.length).map(k => k.t));
+  return out;
 }
 
 const RESULTS_SHOWN = 1000;
