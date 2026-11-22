@@ -2599,6 +2599,25 @@ a.o-card:hover{filter:brightness(.98)}
     .index-card-head { gap: var(--s2); } .index-card-head .index-card-type { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .index-card-head .index-card-date { margin-right: 4px; white-space: nowrap; } }
   @media (max-width: 379px) { .index-card-head .index-card-date { display: none; } }
   @media (max-width: 760px) { .index-card.is-clean .note-clean-title { margin: var(--s3) 16px 0; font-size: 26px; } }
+  /* And it fills the screen (Stewart, 22 Nov 2026: "the full clean note by
+     default ... without the index bar etc"). The rail, the list, the tab bar,
+     the card's row of buttons and the Top bar go. A slim strip keeps the way
+     back to the list, Edit and Show everything, which brings it all back. */
+  .app:has(#noteCard.is-clean) { grid-template-columns: minmax(0, 1fr) !important; }
+  .app:has(#noteCard.is-clean) > .ob-rail, .app:has(#noteCard.is-clean) > .drawer,
+  .app:has(#noteCard.is-clean) .back-btn, .app:has(#noteCard.is-clean) .list-return,
+  #noteCard.is-clean .index-card-head, #noteCard.is-clean .read-body-bar { display: none !important; }
+  html:has(#noteCard.is-clean) .ob-tabbar { display: none !important; }
+  #noteCard.is-clean { max-width: 760px; margin: 0 auto; background: transparent; }
+  .note-clean-bar { display: none; }
+  #noteCard.is-clean .note-clean-bar { display: flex; align-items: center; gap: var(--s2); position: sticky; top: 0; z-index: 3;
+    padding: var(--s3) 28px var(--s2); background: color-mix(in srgb, var(--ground) 92%, transparent); backdrop-filter: blur(6px); }
+  .note-clean-bar .note-clean-back { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left;
+    background: none; border: 0; padding: 6px 0; font: inherit; font-size: var(--t-sm); color: var(--ink-2); cursor: pointer; }
+  .note-clean-bar .note-clean-back:hover { color: var(--accent-deep, var(--accent)); }
+  .note-clean-bar .icon-btn { flex-shrink: 0; }
+  .note-clean-bar .icon-btn i { font-size: 15px; vertical-align: -2px; }
+  @media (max-width: 760px) { #noteCard.is-clean .note-clean-bar { padding: var(--s2) 16px; padding-top: max(var(--s2), env(safe-area-inset-top)); } }
   .tag-details { padding: 0; margin: var(--s4) 0 0; }
   .compose-details[hidden], .tag-details[hidden] { display: none; }
   @media (max-width: 760px) { .compose-actions .compose-save, .compose-actions .compose-cancel { min-height: 44px; padding: 0 var(--s4); font-size: var(--t-sm); } }
@@ -5065,14 +5084,16 @@ window.matchMedia('(max-width: 760px)').addEventListener('change', () => { syncN
   const drawer = listScroll.parentElement;
   const listKey = () => viewMode + '|' + describeFilters();
   let kept = 0, keptFor = '', wasOpen = false;
+  // Since v189 the list is hidden behind a clean note on a computer too, so
+  // the place is kept whenever the list is on screen, and given back on both.
   drawer.addEventListener('scroll', () => {
-    if (app.classList.contains('detail-open')) return;
+    if (!drawer.getClientRects().length) return;
     kept = drawer.scrollTop;
     keptFor = listKey();
   }, { passive: true });
   new MutationObserver(() => {
     const open = app.classList.contains('detail-open');
-    if (wasOpen && !open && isPhone() && keptFor === listKey()) {
+    if (wasOpen && !open && keptFor === listKey()) {
       const to = kept;
       requestAnimationFrame(() => { drawer.scrollTop = to; });
     }
@@ -5590,6 +5611,11 @@ function selectThought(t, mark) {
           </button>
         </div>
       </div>
+      <div class="note-clean-bar">
+        <button type="button" class="note-clean-back" id="noteCleanBack">${escapeHtml(backToListLabel())}</button>
+        <button type="button" class="icon-btn" id="noteCleanEdit" title="Edit this note" aria-label="Edit this note"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i></button>
+        <button type="button" class="icon-btn icon-btn--word" id="noteCleanShow" title="Show the buttons, colour, details, links and tags" aria-label="Show everything"><i class="ph-light ph-info" aria-hidden="true"></i><span class="icon-btn-word">Show everything</span></button>
+      </div>
       <h1 class="note-clean-title">${escapeHtml(t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 80) || 'Untitled note')}</h1>
       <div class="note-colour-row">
         <span class="note-colour-label">Card colour</span>
@@ -5640,6 +5666,10 @@ function selectThought(t, mark) {
     noteCleanBtn.querySelector('.icon-btn-word').textContent = on ? 'Show everything' : 'Just the note';
     noteCleanBtn.setAttribute('aria-label', on ? 'Show everything' : 'Just the note');
   });
+  // The strip over the clean note: back to the list, Edit, Show everything.
+  document.getElementById('noteCleanBack').addEventListener('click', returnToList);
+  document.getElementById('noteCleanEdit').addEventListener('click', () => document.getElementById('editBtn').click());
+  document.getElementById('noteCleanShow').addEventListener('click', () => noteCleanBtn.click());
 
   const cardMetaToggle = document.getElementById('cardMetaToggle');
   const cardMeta = document.getElementById('cardMeta');
