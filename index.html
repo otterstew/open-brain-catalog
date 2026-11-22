@@ -687,6 +687,13 @@ a.o-card:hover{filter:brightness(.98)}
   .card-row.selected .card-row-body { background: color-mix(in oklab, var(--accent) 8%, transparent); }
   .card-row.referencing .card-row-body { background: color-mix(in oklab, var(--sea) 10%, transparent); }
 
+  /* Title then author on every row and card (Stewart, 22 Nov 2026). */
+  .card-row-author { margin-top: 3px; font-size: 12.5px; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .result-author { display: block; margin-top: 2px; font-size: 13px; color: var(--ink-2); }
+  .note-card .note-card-author { display: block; margin-top: calc(-1 * var(--s1)); font-size: var(--t-sm); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lh-chip.lh-clear { display: inline-flex; align-items: center; gap: 4px; color: var(--ink); border-color: var(--ink-3); background: transparent; }
+  .lh-chip.lh-clear i { font-size: 14px; }
+  .list-return, .back-btn { max-width: 100%; flex-shrink: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
   /* A note is often remembered by who is in it, and the AI-written title rarely
      names them — so the people ride along under the title. */
   .card-row-people {
@@ -2572,6 +2579,26 @@ a.o-card:hover{filter:brightness(.98)}
   html.compose-clean #composeTitle:focus { outline: none; }
   html.compose-clean .compose-textarea { min-height: 60vh; font-size: 18px; line-height: 1.7; }
   html.compose-clean .index-card-foot { border-top: 0; }
+  /* A saved note opens as just the note too (22 Nov 2026): the title in the
+     serif, the words, and the buttons; the ribbon, kind, date, colour, the
+     details, links and tags, the journal's links and the note's tasks wait
+     behind Show everything. The app around it stays, so moving between notes
+     is unchanged. */
+  .note-clean-title { display: none; }
+  .index-card.is-clean .note-clean-title { display: block; margin: var(--s4) 28px 0; font-family: var(--serif); font-size: 30px; font-weight: 400; line-height: 1.25; color: var(--ink); overflow-wrap: anywhere; }
+  .index-card.is-clean .index-card-ribbon, .index-card.is-clean .index-card-type, .index-card.is-clean .index-card-date,
+  .index-card.is-clean .note-colour-row, .index-card.is-clean .card-meta-toggle, .index-card.is-clean .card-meta,
+  .index-card.is-clean .journal-links, .index-card.is-clean .note-tasks { display: none !important; }
+  .index-card.is-clean .index-card-head-right { margin-left: auto; }
+  /* An info mark, not arrows: on a phone only the icons show, and the writing
+     view's arrows sit beside it. Marked while everything is shown. */
+  .note-clean-btn i { font-size: 15px; vertical-align: -2px; }
+  .note-clean-btn[aria-pressed="false"] { color: var(--accent-deep, var(--accent)); border-color: var(--accent-mark); }
+  /* Eight buttons and the date on one line on a phone, never a ragged second row. */
+  @media (max-width: 480px) { .index-card-head-right { gap: 2px; flex-wrap: nowrap; flex-shrink: 0; }
+    .index-card-head { gap: var(--s2); } .index-card-head .index-card-type { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .index-card-head .index-card-date { margin-right: 4px; white-space: nowrap; } }
+  @media (max-width: 379px) { .index-card-head .index-card-date { display: none; } }
+  @media (max-width: 760px) { .index-card.is-clean .note-clean-title { margin: var(--s3) 16px 0; font-size: 26px; } }
   .tag-details { padding: 0; margin: var(--s4) 0 0; }
   .compose-details[hidden], .tag-details[hidden] { display: none; }
   @media (max-width: 760px) { .compose-actions .compose-save, .compose-actions .compose-cancel { min-height: 44px; padding: 0 var(--s4); font-size: var(--t-sm); } }
@@ -4706,6 +4733,11 @@ function applyFilters() {
   if (activeSources.size > 0) {
     filtered = filtered.filter(t => t.source && activeSources.has(t.source.trim().toLowerCase()));
   }
+  // One author or source picked: a numbered series reads in its order
+  // (Stewart, 22 Nov 2026: "the notes should present in the numbered order for
+  // that author/source"). Notes with a number in the title come first, by that
+  // number; the rest follow, newest first as before.
+  if (!searchMode && (activeAuthors.size || activeSources.size)) filtered = numberedOrder(filtered);
   // A note tagged Pinned heads its list (the System directory, 4 Oct 2026).
   // Search results keep their ranking; pins only reorder a plain list.
   if (!searchMode) filtered = filtered.filter(isPinned).concat(filtered.filter(t => !isPinned(t)));
@@ -4713,6 +4745,32 @@ function applyFilters() {
   renderFacets();
   renderList(filtered, searchMode);
   recordNav();
+}
+
+// The numbers in a title, in order, years left out: "Part 2: Week 10" → [2, 10],
+// "Lesson 3.4" → [3, 4], "2026 review" → []. Spelled-out and Roman numbers
+// are not read.
+function titleNumbers(t) {
+  return ((t.title || '').match(/\d+/g) || []).map(Number).filter(n => !(n >= 1900 && n <= 2100) && n < 100000);
+}
+
+// Numbered titles first, by their numbers (then the title, so "Part 1a" sits
+// before "Part 1b"); the rest after, in the order they came. Left alone unless
+// at least two notes are numbered: one number is not a series.
+function numberedOrder(items) {
+  const keyed = items.map((t, i) => ({ t, i, n: titleNumbers(t) }));
+  const numbered = keyed.filter(k => k.n.length);
+  if (numbered.length < 2) return items;
+  numbered.sort((a, b) => {
+    for (let j = 0; j < Math.max(a.n.length, b.n.length); j++) {
+      const x = a.n[j], y = b.n[j];
+      if (x === undefined) return -1;
+      if (y === undefined) return 1;
+      if (x !== y) return x - y;
+    }
+    return (a.t.title || '').localeCompare(b.t.title || '', 'en', { numeric: true }) || a.i - b.i;
+  });
+  return numbered.map(k => k.t).concat(keyed.filter(k => !k.n.length).map(k => k.t));
 }
 
 const RESULTS_SHOWN = 1000;
@@ -4794,6 +4852,7 @@ function noteCardGrid(items) {
     card.innerHTML = `
       <span class="note-card-type"><span class="note-card-dot" style="background:${style.color}"></span>${escapeHtml(style.label)}${isPinned(t) ? ' · pinned' : ''}</span>
       <span class="o-card__title">${escapeHtml(t.title || snippet.slice(0, 80) || 'Untitled')}</span>
+      ${t.author ? `<span class="note-card-author">${escapeHtml(t.author)}</span>` : ''}
       ${t.title && snippet ? `<span class="o-card__text">${escapeHtml(snippet)}</span>` : ''}
       <span class="o-meta o-num">${escapeHtml(formatDate(t.created_at))}</span>`;
     card.addEventListener('click', () => {
@@ -4856,6 +4915,7 @@ function renderMainList(items, homeF) {
       <span class="result-meta"><span style="color:${style.color}">${style.label}</span>
         <span class="result-date">${formatDate(t.created_at)}</span></span>
       <span class="result-title">${escapeHtml(t.title || (t.content || '').replace(/\s+/g, ' ').slice(0, 140))}</span>
+      ${t.author ? `<span class="result-author">${escapeHtml(t.author)}</span>` : ''}
       ${(t.topics || []).length ? `<span class="result-tags">${escapeHtml(t.topics.slice(0, 6).map(x => '#' + x).join('  '))}</span>` : ''}`;
     row.addEventListener('click', () => selectThought(t));
     rows.appendChild(row);
@@ -4916,6 +4976,9 @@ function filterChipList(acts) {
   // chip too: with the filters folded away there was no other sign.
   if (document.getElementById('shelfToggle').getAttribute('aria-pressed') === 'true')
     chip('System notes', () => document.getElementById('shelfToggle').click());
+  // One button to take them all off, at the end of the chips (22 Nov 2026).
+  if (chips.length) chips.push('<button type="button" class="lh-chip lh-clear" data-lh="' + (acts.push(clearAllFilters) - 1) + '">'
+    + '<i class="ph-light ph-x-circle" aria-hidden="true"></i> Clear all</button>');
   return chips;
 }
 
@@ -4962,7 +5025,7 @@ function setFiltersOpen(open) {
 function renderNotesHead(n) {
   notesHeadActs = [];
   const chips = filterChipList(notesHeadActs);
-  const inForce = chips.length - (searchMode && lastSearchQuery ? 1 : 0);
+  const inForce = Math.max(0, chips.length - 1) - (searchMode && lastSearchQuery ? 1 : 0);
   const open = drawerEl.classList.contains('filters-open');
   notesHeadBox.innerHTML =
     '<span class="nh-count o-num">' + n + ' note' + (n === 1 ? '' : 's') + '</span>' +
@@ -5090,6 +5153,7 @@ function renderList(items, isSearch) {
           ${isPinned(t) ? '<span class="card-row-shelf">pinned</span>' : t.shelved ? '<span class="card-row-shelf">bookkeeping</span>' : ''}
         </div>
         <div class="card-row-preview">${escapeHtml(t.title || t.content)}</div>
+        ${t.author ? `<div class="card-row-author">${escapeHtml(t.author)}</div>` : ''}
         ${(t.people || []).length
           ? `<div class="card-row-people">${escapeHtml((t.people || []).slice(0, 4).join(' · '))}</div>`
           : ''}
@@ -5184,6 +5248,35 @@ function sameList(a, b) {
 // of them before reaching the list. Now they are a real step back: to the list
 // entry underneath when there is one, otherwise by swapping this note's entry
 // for the list, so nothing piles up behind it.
+// The way back from a note names the list it goes to: "← Back to #Bees (3)",
+// or "← Back to all notes (412)" when nothing narrows it (22 Nov 2026; it said
+// "All cards" even when filtered, which read as losing the filters).
+function backToListLabel() {
+  const f = describeFilters();
+  return '← Back to ' + (f ? f : 'all notes') + ' (' + displayed.length + ')';
+}
+
+function anyFilterInForce() {
+  return (searchMode && !!lastSearchQuery) || activeTypes.size + activeTopics.size + activePeople.size
+    + activeAuthors.size + activeSources.size > 0;
+}
+
+// Clear all: every filter and the search off at once, back to every note.
+// System notes and the cards' colour pick go too.
+function clearAllFilters() {
+  [activeTypes, activeTopics, activeAuthors, activeSources, activePeople].forEach(x => x.clear());
+  colourFilter = null;
+  const shelf = document.getElementById('shelfToggle');
+  const hadSearch = searchMode;
+  searchMode = false;
+  lastSearchQuery = '';
+  searchInput.value = '';
+  searchClear.style.display = 'none';
+  if (shelf && shelf.getAttribute('aria-pressed') === 'true') { shelf.click(); return; }
+  if (hadSearch) { loadAll({ reset: true }); return; }
+  applyFilters();
+}
+
 function returnToList() {
   const cur = history.state && history.state.ob ? history.state : null;
   if (cur && cur.note && cur.prevList && !editingId) { history.back(); return; }
@@ -5417,12 +5510,20 @@ function openReference(t) {
 
 // mark: where the reader was when they left the editor, so that saving does not
 // dump them back at the top of a long article.
+let noteShowAllId = null;   // the saved note shown with everything, if any
 function selectThought(t, mark) {
   // Opening a different note starts at its top. The pane kept the old scroll
   // position, so a note opened from far down the list or the graph came up
   // part-way in, its head and buttons hidden above the sticky reading bar.
   // Redrawing the same note (after an unlink, say) stays where it was.
   const sameNote = selectedIndex === t.id;
+  // A saved note opens as just the note (Stewart, 22 Nov 2026: "when I open a
+  // note I would like it to automatically open in the clean view"): its title
+  // and words, the buttons kept, the colour and the details, links and tags
+  // behind Show everything. Show everything lasts while this note is redrawn
+  // (after an unlink, say) and is forgotten when another note opens.
+  if (!sameNote) noteShowAllId = null;
+  const clean = noteShowAllId !== t.id;
   selectedIndex = t.id;
   editingId = null;
   closeReference();
@@ -5457,12 +5558,15 @@ function selectThought(t, mark) {
   const journalLinksHtml = isJournalEntry(t) ? renderJournalLinks(t) : '';
 
   main.innerHTML = `
-    <div class="index-card">
+    <div class="index-card${clean ? ' is-clean' : ''}" id="noteCard">
       <div class="index-card-ribbon" style="background:${style.color}"></div>
       <div class="index-card-head">
         <span class="index-card-type" style="color:${style.color}">${style.label}</span>
         <div class="index-card-head-right">
           <span class="index-card-date" title="Date captured">${formatDate(t.created_at)}</span>
+          <button class="icon-btn icon-btn--word note-clean-btn" id="noteCleanBtn" type="button" aria-pressed="${clean}" aria-label="${clean ? 'Show everything' : 'Just the note'}" title="Show or hide the colour, details, links and tags">
+            <i class="ph-light ph-info" aria-hidden="true"></i><span class="icon-btn-word">${clean ? 'Show everything' : 'Just the note'}</span>
+          </button>
           <button class="icon-btn icon-btn--word" id="toTaskBtn" type="button" title="Make a task from this note, or link one you already have" aria-label="Make or link a task for this note">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"></rect><path d="M8 12.5l2.5 2.5L16 9.5"></path></svg><span class="icon-btn-word">Task</span>
           </button>
@@ -5486,6 +5590,7 @@ function selectThought(t, mark) {
           </button>
         </div>
       </div>
+      <h1 class="note-clean-title">${escapeHtml(t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 80) || 'Untitled note')}</h1>
       <div class="note-colour-row">
         <span class="note-colour-label">Card colour</span>
         <span class="colour-pick" id="colourPick" role="group" aria-label="Card colour">${
@@ -5524,6 +5629,17 @@ function selectThought(t, mark) {
   `;
 
   if (!sameNote) main.scrollTop = 0;
+
+  const noteCleanBtn = document.getElementById('noteCleanBtn');
+  noteCleanBtn.addEventListener('click', () => {
+    const card = document.getElementById('noteCard');
+    const on = !card.classList.contains('is-clean');
+    card.classList.toggle('is-clean', on);
+    noteShowAllId = on ? null : t.id;
+    noteCleanBtn.setAttribute('aria-pressed', String(on));
+    noteCleanBtn.querySelector('.icon-btn-word').textContent = on ? 'Show everything' : 'Just the note';
+    noteCleanBtn.setAttribute('aria-label', on ? 'Show everything' : 'Just the note');
+  });
 
   const cardMetaToggle = document.getElementById('cardMetaToggle');
   const cardMeta = document.getElementById('cardMeta');
@@ -5683,14 +5799,14 @@ function selectThought(t, mark) {
 
   const back = document.createElement('button');
   back.className = 'back-btn';
-  back.textContent = '← Back to drawer';
+  back.textContent = backToListLabel();
   back.addEventListener('click', returnToList);
   main.prepend(back);
 
   const toList = document.createElement('button');
   toList.type = 'button';
   toList.className = 'list-return';
-  toList.textContent = (cardsLayout() ? '← All cards (' : '← Back to the list (') + displayed.length + ')';
+  toList.textContent = backToListLabel();
   toList.addEventListener('click', returnToList);
   main.prepend(toList);
 
@@ -6213,16 +6329,32 @@ function startEdit(t, anchorOffset, opts) {
     </div>
   `;
 
+  // The way back from the editor goes to the same filtered list as from the
+  // note (22 Nov 2026): on a phone, and in cards view on a computer.
+  const leaveEdit = () => {
+    if (!confirmLeavingEdit()) return;
+    editingId = null;
+    editorIsDirty = null;
+    returnToList();
+  };
   const back = document.createElement('button');
   back.className = 'back-btn';
-  back.textContent = '← Back to drawer';
-  back.addEventListener('click', () => {
+  back.textContent = journal ? '← Back to drawer' : backToListLabel();
+  back.addEventListener('click', journal ? () => {
     if (!confirmLeavingEdit()) return;
     editingId = null;
     editorIsDirty = null;
     app.classList.remove('detail-open');
-  });
+  } : leaveEdit);
   main.prepend(back);
+  if (!journal && viewMode === 'notes') {
+    const toList = document.createElement('button');
+    toList.type = 'button';
+    toList.className = 'list-return';
+    toList.textContent = backToListLabel();
+    toList.addEventListener('click', leaveEdit);
+    main.prepend(toList);
+  }
   app.classList.add('detail-open');
   if (journal) wireCleanButton(main.querySelector('.index-card'), document.getElementById('editContent'));
 
@@ -7037,11 +7169,18 @@ function showStatus(msg, isError, retryFn) {
   listScroll.appendChild(el);
 }
 
-async function loadAll() {
-  searchMode = false;
-  lastSearchQuery = '';
-  searchInput.value = '';
-  searchClear.style.display = 'none';
+// Fetches every note again. The filters and the search in force are kept
+// (Stewart, 22 Nov 2026: after editing a note there was "no easy way to return
+// to my selected filters"; saving had wiped them). { reset: true } starts from
+// everything: first opening the app, and clearing the search box.
+async function loadAll(opts) {
+  const reset = !!(opts && opts.reset);
+  if (reset) {
+    searchMode = false;
+    lastSearchQuery = '';
+    searchInput.value = '';
+    searchClear.style.display = 'none';
+  }
   if (viewMode !== 'tasks' && viewMode !== 'lists') showStatus('Opening the drawer…', false);
   try {
     // Every note, not the newest hundred. The 100 dated from a 77-note archive
@@ -7057,11 +7196,18 @@ async function loadAll() {
       return;
     }
     loadTopicHeadings();
-    activeTypes = new Set();
-    activeTopics = new Set();
-    activeAuthors = new Set();
-    activeSources = new Set();
-    activePeople = new Set();
+    if (reset) {
+      activeTypes = new Set();
+      activeTopics = new Set();
+      activeAuthors = new Set();
+      activeSources = new Set();
+      activePeople = new Set();
+    } else if (searchMode && displayed.baseResults) {
+      // A search keeps its results and their order, each note swapped for its
+      // fresh copy so an edit shows; a deleted note drops out.
+      const fresh = new Map(allThoughts.map(x => [x.id, x]));
+      displayed.baseResults = displayed.baseResults.filter(x => fresh.has(x.id) || !allThoughts.length).map(x => fresh.get(x.id) || x);
+    }
     applyFilters();
     // Saving, editing and deleting all end in loadAll; in the journal the entry
     // just changed has to be re-read too, or it reopens with the old text.
@@ -7122,7 +7268,7 @@ function localSearch(query) {
 
 // Instant: match what is already loaded, with no round trip.
 function runLocalSearch(query) {
-  if (!query.trim()) { loadAll(); return; }
+  if (!query.trim()) { loadAll({ reset: true }); return; }
   searchMode = true;
   lastSearchQuery = query;
   searchClear.style.display = 'block';
@@ -7131,7 +7277,7 @@ function runLocalSearch(query) {
 }
 
 async function runSearch(query) {
-  if (!query.trim()) { loadAll(); return; }
+  if (!query.trim()) { loadAll({ reset: true }); return; }
   searchMode = true;
   lastSearchQuery = query;
   searchClear.style.display = 'block';
@@ -7233,7 +7379,7 @@ refreshBtn.addEventListener('click', () => {
   else loadAll();
 });
 
-searchClear.addEventListener('click', () => { loadAll(); });
+searchClear.addEventListener('click', () => { loadAll({ reset: true }); });
 
 let searchTimer = null;
 searchInput.addEventListener('keydown', (e) => {
@@ -7279,7 +7425,7 @@ unlockForm.addEventListener('submit', (e) => {
   if (!key) { showUnlock('Enter the key to continue.'); return; }
   setAccessKey(key);
   hideUnlock();
-  loadAll().then(openFromLink);
+  loadAll({ reset: true }).then(openFromLink);
 });
 
 // Forget the key on this device — useful on a shared or borrowed phone.
@@ -14809,7 +14955,7 @@ syncNav();
   });
 })();
 
-if (mcpAccessKey) loadAll().then(openFromLink);
+if (mcpAccessKey) loadAll({ reset: true }).then(openFromLink);
 
 else showUnlock();
 
