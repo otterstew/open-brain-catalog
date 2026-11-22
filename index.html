@@ -5627,7 +5627,7 @@ function selectThought(t, mark) {
       </div>
       <div class="note-clean-bar">
         <button type="button" class="note-clean-back" id="noteCleanBack">${escapeHtml(backToListLabel())}</button>
-        <button type="button" class="icon-btn" id="noteCleanEdit" title="Edit this note" aria-label="Edit this note"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i></button>
+        <button type="button" class="icon-btn icon-btn--word" id="noteCleanEdit" title="Edit in the writing view: Focus, Add photo, Transcribe, Record" aria-label="Edit this note"><i class="ph-light ph-pencil-simple" aria-hidden="true"></i><span class="icon-btn-word">Edit</span></button>
         <button type="button" class="icon-btn icon-btn--word" id="noteCleanShow" title="Show the buttons, colour, details, links and tags" aria-label="Show everything"><i class="ph-light ph-info" aria-hidden="true"></i><span class="icon-btn-word">Show everything</span></button>
       </div>
       <h1 class="note-clean-title">${escapeHtml(t.title || t.content.replace(/\s+/g, ' ').trim().slice(0, 80) || 'Untitled note')}</h1>
@@ -5682,7 +5682,11 @@ function selectThought(t, mark) {
   });
   // The strip over the clean note: back to the list, Edit, Show everything.
   document.getElementById('noteCleanBack').addEventListener('click', returnToList);
-  document.getElementById('noteCleanEdit').addEventListener('click', () => document.getElementById('editBtn').click());
+  // Edit from the clean note opens the writing view, already writing: it is
+  // clean too, and it has Focus, Add photo, Transcribe and Record (Stewart,
+  // 22 Nov 2026: "i no longer have the option to edit, and the focus option,
+  // photo etc in clean mode"). The full editor is still under Show everything.
+  document.getElementById('noteCleanEdit').addEventListener('click', () => openWritingView(t, true));
   document.getElementById('noteCleanShow').addEventListener('click', () => noteCleanBtn.click());
 
   const cardMetaToggle = document.getElementById('cardMetaToggle');
