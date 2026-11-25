@@ -3643,7 +3643,7 @@ a.o-card:hover{filter:brightness(.98)}
     <button type="button" class="o-rail__item" data-go="modeLists" data-view="lists" title="Lists: shopping, packing, things to watch"><i class="ph-light ph-list-bullets"></i><span class="ob-rail__label">Lists</span></button>
     <button type="button" class="o-rail__item" data-go="calendar" data-view="calendar" data-also="meetings" title="Calendar and meetings"><i class="ph-light ph-calendar-blank"></i><span class="ob-rail__label">Calendar</span></button>
     <button type="button" class="o-rail__item" data-go="stays" data-view="stays" title="Stays: messages to send for the gîtes"><i class="ph-light ph-house-line"></i><span class="ob-rail__label">Stays</span></button>
-    <button type="button" class="o-rail__item" data-go="money" data-view="money" title="Money (coming later)"><i class="ph-light ph-coins"></i><span class="ob-rail__label">Money</span></button>
+    <button type="button" class="o-rail__item" data-go="money" data-view="money" title="Money"><i class="ph-light ph-coins"></i><span class="ob-rail__label">Money</span></button>
     <div class="o-rail__group">Look</div>
     <button type="button" class="o-rail__item" data-go="statsBtn" title="The shape of the archive"><i class="ph-light ph-chart-bar"></i><span class="ob-rail__label">Statistics</span></button>
     <div class="o-rail__group">This device</div>
@@ -12640,7 +12640,7 @@ const MORE_ITEMS = [
   // rest is here, and nothing is in both places.
   ['modeLists', 'ph-list-bullets', 'Lists', 'Shopping, packing, things to watch'],
   ['stays', 'ph-house-line', 'Stays', 'Messages to send for the gîtes'],
-  ['money', 'ph-coins', 'Money', 'Coming later'],
+  ['money', 'ph-coins', 'Money', 'Our accounts and what is left to review'],
   ['statsBtn', 'ph-chart-bar', 'Statistics', 'The shape of the archive'],
   ['themeBtn', 'ph-circle-half', 'Colours', 'Follow the device, or always light or dark'],
   ['refreshBtn', 'ph-arrows-clockwise', 'Refresh', 'Fetch the archive again'],
@@ -13385,8 +13385,8 @@ async function showMeetingPrep(e) {
 }
 
 // ---------- Calendar, Meetings, Stays and Money in the menu (5 Nov 2026) ----------
-// From the joined-up-app plan. Stays works now; the others say what is coming
-// and link to what does the job today. Personal, so hidden in work mode.
+// From the joined-up-app plan. Stays works here; Money links to its own app;
+// the others say what is coming and link to what does the job today. Personal, so hidden in work mode.
 const SECTION_SCREENS = {
   calendar: {
     title: 'Calendar', icon: 'ph-calendar-blank',
@@ -13405,8 +13405,11 @@ const SECTION_SCREENS = {
   },
   money: {
     title: 'Money', icon: 'ph-coins',
-    lead: 'Coming last: a UK and Jersey ledger with a dashboard, and receipts from the Scanner as expense lines. The gîte’s money stays on the owner page.',
-    links: [],
+    // Money is its own app (money.thewishingstream.com) with its own key, kept
+    // only on each device that has connected to it: these links carry no key,
+    // so this public page and the archive never hold it (25 Nov 2026).
+    lead: 'Our NatWest and CMB accounts, with the year’s spending sorted into buckets, and the Kitchen, Laundry and Dining room projects. Money is a separate app with its own key: each device connects to it once, and the archive never holds that key.',
+    links: [['https://money.thewishingstream.com/#review', 'Review what’s left'], ['https://money.thewishingstream.com/#overview', 'Open Money']],
   },
 };
 
