@@ -61,6 +61,9 @@ jobs:
       - name: Test Today's extras (tides, sun, what crosses from the bookings system)
         run: deno run --no-config supabase/functions/open-brain-mcp/tests/briefing_test.ts
 
+      - name: Test the Telegram message checks
+        run: deno run --no-config supabase/functions/open-brain-mcp/tests/telegram_test.ts
+
       - uses: supabase/setup-cli@v1
         with:
           # Pinned on 16 Nov 2026: "latest" asks GitHub's API which release that
