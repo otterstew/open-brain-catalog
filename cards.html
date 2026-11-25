@@ -9,7 +9,7 @@ if (location.hostname === 'openbrain.thewishingstream.com') location.replace('ht
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Two Sides</title>
-<meta name="description" content="Flashcards: question on one side, answer on the other.">
+<meta name="description" content="Flashcards that come back when you are about to forget them: books you have read, and revision.">
 <link rel="manifest" href="./cards.webmanifest">
 <meta name="theme-color" content="#EDEBE7" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#1C1B19" media="(prefers-color-scheme: dark)">
@@ -390,241 +390,274 @@ a.o-card:hover{filter:brightness(.98)}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important; animation:none!important}}
 /* otter:end */
 
-  /* Two Sides in Otter (sea), 5 Nov 2026. The question face carries a soft sea
-     tint, the answer face is plain paper, so you can tell which side is up
-     without reading it. Everything else stays quiet. Class names and ids are
-     unchanged from the earlier look. */
+  /* Two Sides in Otter (sea). Since 6 Nov 2026 it also schedules: book decks come
+     from Open Brain notes tagged "Fact cards", and each card comes back after a
+     growing gap once you get it right. The question face carries a soft sea tint,
+     the answer face is plain paper, so you can tell which side is up. */
   :root, [data-hue] {
-    --ground-2:    var(--paper);
-    --front:       var(--accent-tint);
-    --front-ink:   var(--ink);
-    --front-faint: var(--ink-2);
-    --back:        var(--paper);
-    --back-ink:    var(--ink);
-    --back-faint:  var(--ink-3);
-    --hairline:    var(--stone-2);
-    --good:        var(--ok);
-    --good-soft:   var(--ok-tint);
-    --again:       var(--fail);
-    --again-soft:  var(--fail-tint);
+    --front: var(--accent-tint);
+    --back:  var(--paper);
   }
 
   body { min-height: 100vh; }
   button { font-family: inherit; cursor: pointer; }
+  [hidden] { display: none !important; }
 
   .wrap {
-    max-width: 620px;
-    margin: 0 auto;
-    padding: var(--s4) var(--s4) var(--s6);
-    display: flex;
-    flex-direction: column;
-    gap: var(--s4);
-    min-height: 100vh;
+    max-width: 620px; margin: 0 auto;
+    padding: 0 var(--s4) var(--s6);
+    display: flex; flex-direction: column; gap: var(--s4); min-height: 100vh;
   }
+  .wrap > .o-bar { padding-left: 0; padding-right: 0; }
+  .o-bar .o-wordmark { font-size: 1.5rem; }
 
-  /* ---------- header ---------- */
-  .top { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); flex-wrap: wrap; }
-  .deck-name {
-    font-family: var(--serif);
-    font-size: var(--t-xl); font-weight: 500; margin: 0; line-height: 1.1;
+  /* ---------- home ---------- */
+  .home { display: flex; flex-direction: column; gap: var(--s4); flex: 1; }
+  .home h1 { font-size: var(--t-2xl); margin: var(--s2) 0 0; }
+  .due-line { margin: 0; }
+  .o-tabs { margin-top: var(--s2); }
+  .deck-list { margin-top: var(--s1); }
+  .deck-list .o-stone { min-height: 64px; }
+  .deck-list .o-stone[aria-pressed="false"] .o-stone__title { color: var(--ink-2); }
+  .deck-list .o-stone:disabled { cursor: default; }
+  .deck-list .o-stone:disabled:hover { background: var(--paper); }
+  .tick {
+    flex: none; width: 22px; height: 22px; border-radius: 50%;
+    box-shadow: inset 0 0 0 1.5px var(--ink-3);
+    display: grid; place-items: center; color: transparent; font-size: 14px;
   }
-  .deck-sub {
-    display: block;
-    font-family: var(--type); font-size: var(--t-sm); font-weight: 400;
-    color: var(--ink-3); margin-top: var(--s1); letter-spacing: 0;
-  }
-  .top-actions { display: flex; gap: var(--s1); flex-shrink: 0; flex-wrap: wrap; }
-  .icon-btn {
-    background: none; border: 0; color: var(--ink-2);
-    border-radius: var(--r-sm); padding: 0 var(--s3); min-height: 44px; font-size: var(--t-sm); line-height: 1;
-    display: inline-flex; align-items: center; gap: var(--s2);
-  }
-  .icon-btn:hover { color: var(--ink); background: var(--stone); }
-  .icon-btn .ph-light { font-size: 20px; }
+  [aria-pressed="true"] > .tick { background: var(--accent-mark); box-shadow: none; color: var(--on-ink); }
+  .deck-due { flex: none; font-family: var(--mono); font-size: var(--t-xs); color: var(--accent-deep); }
+  .unlock { display: flex; flex-direction: column; gap: var(--s3); }
+  .unlock p { margin: 0; }
+  .unlock-row { display: flex; gap: var(--s2); }
+  .unlock-row .o-field { flex: 1; min-width: 0; }
+  .sync-line { margin: 0; }
+  .home .o-actionbar { margin: auto calc(-1 * var(--s4)) 0; }
 
-  /* ---------- progress ---------- */
+  /* ---------- session ---------- */
+  .session { display: flex; flex-direction: column; gap: var(--s4); flex: 1; }
   .progress { display: flex; align-items: center; gap: var(--s3); }
   .track { flex: 1; height: 4px; background: var(--stone); border-radius: var(--r-xs); overflow: hidden; }
   .fill { display: block; height: 100%; background: var(--accent-mark); border-radius: var(--r-xs); transition: width .28s var(--ease); }
   .count { font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-  /* ---------- the card ---------- */
-  /* The stage hugs the card so the grading buttons stay directly beneath it;
-     the nav takes the slack instead and sits at the foot of the screen. */
   .stage { perspective: 1600px; display: flex; align-items: stretch; flex: 0 0 auto; }
   .card {
-    position: relative; width: 100%; height: 56vh; min-height: 300px; max-height: 460px;
+    position: relative; width: 100%; height: 54vh; min-height: 320px; max-height: 480px;
     border: none; padding: 0; background: none;
     transform-style: preserve-3d; transition: transform .5s var(--ease);
-    text-align: left; display: block;
+    text-align: left; display: block; color: inherit;
   }
   .card.flipped { transform: rotateY(180deg); }
-  @media (prefers-reduced-motion: reduce) { .card { transition: none; } }
-
   .face {
     position: absolute; inset: 0;
     backface-visibility: hidden; -webkit-backface-visibility: hidden;
-    background: var(--front); color: var(--front-ink); border: none;
+    background: var(--front); color: var(--ink);
     border-radius: var(--r-lg);
-    padding: var(--s6) var(--s5) var(--s7);
-    display: flex; flex-direction: column; justify-content: center;
+    padding: var(--s7) var(--s5) var(--s7);
+    display: flex; flex-direction: column; justify-content: center; gap: var(--s3);
     overflow-y: auto;
   }
-  .face.back { transform: rotateY(180deg); background: var(--back); color: var(--back-ink); }
-
+  .face.back { transform: rotateY(180deg); background: var(--back); justify-content: flex-start; padding-top: var(--s7); }
   .side-label {
-    position: absolute; top: var(--s4); left: var(--s5);
-    font-family: var(--type); font-size: var(--t-sm);
-    color: var(--front-faint);
+    position: absolute; top: var(--s4); left: var(--s5); right: var(--s5);
+    font-size: var(--t-sm); color: var(--ink-2);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
-  .face.back .side-label, .face.back .hint { color: var(--back-faint); }
-  .q {
-    font-family: var(--serif); font-size: clamp(1.5rem, 6vw, 2rem);
-    font-weight: 500; line-height: 1.2;
-    margin: 0; text-wrap: balance; color: var(--front-ink);
-  }
-  .a { font-size: var(--t-lg); line-height: 1.65; margin: 0; color: var(--back-ink); }
-  .hint {
-    position: absolute; bottom: var(--s4); left: var(--s5); right: var(--s5);
-    font-family: var(--type); font-size: var(--t-sm);
-    color: var(--front-faint); text-align: center;
-  }
+  .face.back .side-label, .face.back .hint { color: var(--ink-3); }
+  .q { font-family: var(--serif); font-size: clamp(1.5rem, 6vw, 2rem); font-weight: 500; line-height: 1.2; margin: 0; text-wrap: balance; }
+  .q-small { font-family: var(--serif); font-size: 1.2rem; line-height: 1.25; color: var(--ink-2); margin: 0; }
+  .a { font-size: var(--t-lg); line-height: 1.65; margin: 0; white-space: pre-line; }
+  .verdict { display: flex; flex-direction: column; gap: var(--s1); align-items: flex-start; margin-top: var(--s2); }
+  .verdict .o-meta { font-family: var(--type); font-size: var(--t-sm); color: var(--ink-2); }
+  .hint { position: absolute; bottom: var(--s4); left: var(--s5); right: var(--s5); font-size: var(--t-sm); color: var(--ink-2); text-align: center; }
 
-  /* ---------- grading ---------- */
   .grade { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s3); }
-  .grade[hidden] { display: none; }
   .g-btn {
-    border-radius: var(--r-md); min-height: 52px; padding: 0 var(--s3); font-size: .9375rem; font-weight: 700;
-    border: 0; color: var(--ink);
+    border-radius: var(--r-md); min-height: 56px; padding: var(--s2) var(--s3); font-size: .9375rem; font-weight: 700;
+    border: 0; color: var(--ink); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
   }
-  .g-again { background: var(--again-soft); }
-  .g-good  { background: var(--good-soft); }
+  .g-btn small { font-family: var(--mono); font-weight: 400; font-size: var(--t-xs); color: var(--ink-2); }
+  .g-again { background: var(--fail-tint); }
+  .g-good  { background: var(--ok-tint); }
   .g-btn:hover { filter: brightness(.97); }
+  .tweak { display: flex; flex-wrap: wrap; gap: var(--s2); }
 
   .nav { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); margin-top: auto; padding-top: var(--s2); }
-  .nav-btn {
-    background: none; border: 0; box-shadow: inset 0 0 0 1px var(--ink-3); color: var(--ink);
-    border-radius: var(--r-sm); min-height: 44px; padding: 0 var(--s4); font-size: var(--t-sm);
-  }
-  .nav-btn:hover:not(:disabled) { box-shadow: inset 0 0 0 1px var(--ink); }
-  .nav-btn:disabled { opacity: .4; cursor: default; }
 
-  /* ---------- round summary ---------- */
-  .done { text-align: center; padding: var(--s6) var(--s5); }
-  .done h2 { font-size: var(--t-2xl); margin: 0 0 var(--s2); }
-  .done p { color: var(--ink-2); margin: 0 0 var(--s5); }
-  .primary {
-    background: var(--ink); color: var(--on-ink); border: none;
-    border-radius: var(--r-sm); min-height: 44px; padding: 0 var(--s5); font-size: .9375rem;
-  }
-  .primary:hover { background: color-mix(in oklab, var(--ink), var(--accent) 22%); }
+  /* ---------- finished ---------- */
+  .done { display: flex; flex-direction: column; gap: var(--s4); padding-top: var(--s6); }
+  .done h2 { font-size: var(--t-2xl); margin: 0; }
+  .done p { color: var(--ink-2); margin: 0; }
+  .done-acts { display: flex; gap: var(--s3); flex-wrap: wrap; }
 
-  /* ---------- editor sheet ---------- */
-  .sheet {
-    position: fixed; inset: 0; background: var(--ground); z-index: 20;
-    overflow-y: auto; padding: var(--s4) var(--s4) var(--s7);
-  }
-  .sheet[hidden] { display: none; }
-  .sheet-inner { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s3); }
+  /* ---------- sheets: the card list, fixing a card ---------- */
+  .sheet { position: fixed; inset: 0; background: var(--ground); z-index: 20; overflow-y: auto; padding: var(--s4) var(--s4) var(--s7); }
+  .sheet-inner { max-width: 620px; margin: 0 auto; display: flex; flex-direction: column; gap: var(--s4); }
+  .sheet-head { display: flex; align-items: baseline; justify-content: space-between; gap: var(--s3); }
   .sheet h2 { font-size: var(--t-xl); margin: 0; }
-  .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s3); }
-  #rows { display: flex; flex-direction: column; gap: 3px; }
+  .list-deck { margin-top: var(--s4); }
+  .list-deck h3 { font-size: 1.3rem; margin: 0 0 var(--s2); }
+  .list-card { display: flex; flex-direction: column; gap: var(--s1); padding: var(--s3) var(--s4); background: var(--paper); border-radius: var(--r-xs); }
+  .list-card .lq { font-family: var(--serif); font-size: 1.15rem; line-height: 1.25; }
+  .list-card .lrow { display: flex; align-items: center; gap: var(--s3); flex-wrap: wrap; }
+  .fix-form { display: flex; flex-direction: column; gap: var(--s3); }
+  .fix-form textarea.o-field { min-height: 90px; }
+  .fix-form textarea.fq { font-family: var(--serif); font-size: 1.2rem; min-height: 70px; }
+  .fix-acts { display: flex; gap: var(--s3); align-items: center; flex-wrap: wrap; }
 
-  .row {
-    background: var(--paper); border: 0;
-    border-radius: var(--r-md); padding: var(--s3) var(--s4); display: flex; flex-direction: column; gap: var(--s2);
+  .toast {
+    position: fixed; left: 50%; bottom: calc(var(--s5) + env(safe-area-inset-bottom)); transform: translateX(-50%);
+    background: var(--ink); color: var(--on-ink); border-radius: var(--r-md); padding: var(--s3) var(--s4);
+    display: flex; gap: var(--s4); align-items: center; font-size: var(--t-sm); z-index: 30; max-width: calc(100% - 2 * var(--s4));
   }
-  .row textarea {
-    width: 100%; background: var(--stone); color: var(--ink);
-    border: 0; border-radius: var(--r-sm);
-    padding: var(--s2) var(--s3); font-family: var(--type); font-size: var(--t-sm); line-height: 1.5;
-    resize: vertical; min-height: 46px;
-  }
-  .row textarea:focus { outline: none; background: var(--ground); box-shadow: inset 0 0 0 1.5px var(--accent-mark); }
-  .row textarea.q-in { font-family: var(--serif); font-size: 1.125rem; font-weight: 500; }
-  .row-head {
-    display: flex; justify-content: space-between; align-items: center;
-    font-family: var(--type); font-size: var(--t-sm); font-weight: 700;
-    color: var(--ink-2);
-  }
-  .del { background: none; border: none; color: var(--ink-3); font-size: var(--t-sm); padding: var(--s1) var(--s2); min-height: 32px; }
-  .del:hover { color: var(--fail-text); }
+  .toast button { background: none; border: 0; color: var(--on-ink); text-decoration: underline; text-underline-offset: 3px; font-size: var(--t-sm); padding: var(--s1); }
 
-  .save-bar {
-    position: sticky; bottom: 0; background: var(--ground);
-    padding: var(--s3) 0 var(--s1); display: flex; gap: var(--s3); align-items: center;
-  }
-  .sync-note { font-family: var(--mono); font-size: var(--t-xs); color: var(--ink-3); }
-
-  .empty { color: var(--ink-2); font-size: var(--t-sm); text-align: center; padding: var(--s5) 0; }
-
-  /* ---------- full screen: a bigger card for the desktop ---------- */
   body.fs .wrap, body.fs .sheet-inner { max-width: 900px; }
-  body.fs .card { height: 72vh; max-height: none; }
-
-  input[type=checkbox], input[type=radio], progress { accent-color: var(--accent); }
+  body.fs .card { height: 70vh; max-height: none; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="top">
-    <h1 class="deck-name" id="deckName">Azure AI Fundamentals
-      <span class="deck-sub" id="deckSub">AI-901 revision</span>
-    </h1>
-    <div class="top-actions">
-      <button class="icon-btn" id="shuffleBtn" type="button" title="Shuffle and start again">Shuffle</button>
-      <button class="icon-btn" id="fsBtn" type="button" title="Full screen (F)" hidden>Full screen</button>
-      <button class="icon-btn" id="editBtn" type="button">Cards</button>
-      <a class="icon-btn" href="./prep.html" style="text-decoration:none">Prep</a>
+  <header class="o-bar">
+    <span class="o-wordmark">Two Sides</span>
+    <span class="o-bar__spacer"></span>
+    <button class="o-bar__link" id="listBtn" type="button">Cards</button>
+    <a href="./prep.html">Prep</a>
+    <button class="o-bar__link" id="fsBtn" type="button" title="Full screen (F)" hidden>Full screen</button>
+  </header>
+
+  <!-- ===== home: choose what to practise ===== -->
+  <section class="home" id="home">
+    <div>
+      <h1>What to <em>practise</em></h1>
+      <p class="o-meta due-line" id="dueLine"></p>
     </div>
-  </div>
 
-  <div class="progress">
-    <span class="track"><span class="fill" id="fill" style="width:0%"></span></span>
-    <span class="count" id="count">0 / 0</span>
-  </div>
+    <div class="o-tabs" role="tablist" aria-label="Which cards">
+      <button class="o-tab" role="tab" data-mode="choose" type="button">Choose</button>
+      <button class="o-tab" role="tab" data-mode="recent" type="button">Recent books</button>
+      <button class="o-tab" role="tab" data-mode="all" type="button">Everything</button>
+    </div>
+    <p class="o-meta" id="modeNote"></p>
 
-  <div class="stage" id="stage">
-    <button class="card" id="card" type="button" aria-live="polite">
-      <div class="face front">
-        <span class="side-label">Question</span>
-        <p class="q" id="qText"></p>
-        <span class="hint">Tap, or press space, to turn over</span>
+    <div class="o-stones deck-list" id="deckList"></div>
+
+    <div class="o-panel unlock" id="unlock" hidden>
+      <p><strong>Your book decks are in Open Brain.</strong> Enter the access key once on this device to load them. After that they work offline.</p>
+      <div class="unlock-row">
+        <input class="o-field" id="keyField" type="password" autocomplete="current-password" placeholder="Access key" aria-label="Open Brain access key">
+        <button class="o-btn" id="keyBtn" type="button">Load decks</button>
       </div>
-      <div class="face back">
-        <span class="side-label">Answer</span>
-        <p class="a" id="aText"></p>
-        <span class="hint">How did you do?</span>
-      </div>
-    </button>
-  </div>
+      <p class="o-meta" id="keyNote"></p>
+    </div>
 
-  <div class="grade" id="grade" hidden>
-    <button class="g-btn g-again" id="againBtn" type="button">Again</button>
-    <button class="g-btn g-good" id="goodBtn" type="button">Got it</button>
-  </div>
+    <p class="o-meta sync-line" id="syncLine"></p>
 
-  <div class="nav">
-    <button class="nav-btn" id="prevBtn" type="button">&larr; Back</button>
-    <span class="count" id="roundNote"></span>
-    <button class="nav-btn" id="skipBtn" type="button">Skip &rarr;</button>
-  </div>
+    <div class="o-actionbar">
+      <button class="o-btn o-btn--primary" id="startBtn" type="button">Start</button>
+    </div>
+  </section>
+
+  <!-- ===== a session ===== -->
+  <section class="session" id="session" hidden>
+    <div class="progress">
+      <span class="track"><span class="fill" id="fill" style="width:0%"></span></span>
+      <span class="count" id="count">0 / 0</span>
+    </div>
+
+    <div class="stage" id="stage">
+      <button class="card" id="card" type="button" aria-live="polite">
+        <div class="face front">
+          <span class="side-label" id="frontLabel">Question</span>
+          <p class="q" id="qText"></p>
+          <span class="hint">Answer it in your head, then tap to turn over</span>
+        </div>
+        <div class="face back">
+          <span class="side-label" id="backLabel">Answer</span>
+          <p class="q-small" id="qEcho"></p>
+          <p class="a" id="aText"></p>
+          <div class="verdict" id="verdict" hidden>
+            <span class="o-chip" id="verdictChip"></span>
+            <span class="o-meta" id="verdictWhy"></span>
+          </div>
+        </div>
+      </button>
+    </div>
+
+    <div class="grade" id="grade" hidden>
+      <button class="g-btn g-again" id="againBtn" type="button">Again<small>comes back soon</small></button>
+      <button class="g-btn g-good" id="goodBtn" type="button">Got it<small id="goodWhen"></small></button>
+    </div>
+
+    <div class="tweak" id="tweak" hidden>
+      <button class="o-chip" id="moreBtn" type="button" aria-pressed="false">More often</button>
+      <button class="o-chip" id="lessBtn" type="button" aria-pressed="false">Less often</button>
+      <button class="o-chip" id="retireBtn" type="button">Retire card</button>
+      <button class="o-chip" id="fixBtn" type="button">Fix card</button>
+    </div>
+
+    <div class="nav">
+      <button class="o-btn o-btn--sm" id="homeBtn" type="button">&larr; Stop</button>
+      <button class="o-btn o-btn--sm" id="undoBtn" type="button" disabled>Undo</button>
+      <button class="o-btn o-btn--sm" id="skipBtn" type="button">Skip &rarr;</button>
+    </div>
+  </section>
+
+  <!-- ===== finished ===== -->
+  <section class="done" id="done" hidden>
+    <h2 id="doneTitle">Done</h2>
+    <p id="doneNote"></p>
+    <p class="o-meta" id="doneNext"></p>
+    <div class="done-acts">
+      <button class="o-btn o-btn--primary" id="moreRound" type="button">Ten more</button>
+      <button class="o-btn" id="doneHome" type="button">Back to decks</button>
+    </div>
+  </section>
 </div>
 
-<div class="sheet" id="sheet" hidden>
+<!-- the card list -->
+<div class="sheet" id="listSheet" hidden>
   <div class="sheet-inner">
     <div class="sheet-head">
       <h2>Your cards</h2>
-      <button class="icon-btn" id="closeSheet" type="button">Done</button>
+      <button class="o-btn o-btn--sm" id="closeList" type="button">Done</button>
     </div>
-    <div id="rows"></div>
-    <button class="icon-btn" id="addBtn" type="button">+ Add a card</button>
-    <div class="save-bar">
-      <button class="primary" id="saveBtn" type="button">Save</button>
-      <span class="sync-note" id="syncNote"></span>
+    <p class="o-meta">The decks ticked on the first screen. Retired cards can be brought back here. To add cards, ask Claude, or edit the deck's note in Open Brain.</p>
+    <div id="listBody"></div>
+  </div>
+</div>
+
+<!-- fixing one card -->
+<div class="sheet" id="fixSheet" hidden>
+  <div class="sheet-inner">
+    <div class="sheet-head">
+      <h2>Fix this card</h2>
+      <button class="o-btn o-btn--sm" id="closeFix" type="button">Cancel</button>
+    </div>
+    <div class="fix-form">
+      <label class="o-label" for="fixQ">Question</label>
+      <textarea class="o-field fq" id="fixQ"></textarea>
+      <label class="o-label" for="fixA">Answer</label>
+      <textarea class="o-field" id="fixA"></textarea>
+      <label class="o-label" for="fixS">How solid is it?</label>
+      <select class="o-field" id="fixS">
+        <option value="">Not marked</option>
+        <option value="supported">Supported</option>
+        <option value="contested">Contested</option>
+        <option value="myth">Myth</option>
+      </select>
+      <textarea class="o-field" id="fixWhy" placeholder="Why, in a line (optional)" style="min-height:60px"></textarea>
+      <div class="fix-acts">
+        <button class="o-btn o-btn--primary" id="saveFix" type="button">Save to Open Brain</button>
+        <span class="o-meta" id="fixNote"></span>
+      </div>
     </div>
   </div>
 </div>
+
+<div class="toast" id="toast" hidden><span id="toastText"></span><button id="toastUndo" type="button">Undo</button></div>
 
 <script type="application/json" id="deck">
 [
@@ -660,233 +693,557 @@ a.o-card:hover{filter:brightness(.98)}
 (() => {
   "use strict";
 
-  const LS_DECK = "twosides.deck.v1";
+  // ---------- where things live ----------
+  // Book decks are Open Brain notes tagged "Fact cards": each "## " heading is a
+  // question, the text under it the answer, and an optional "Status:" line says
+  // whether the claim is supported, contested or a myth. They are fetched with
+  // the access key and kept in this browser, so the app works offline.
+  // The Azure deck is built into the page, as before.
+  // What you have learned (when each card is next due) is kept in this browser.
+  const MCP_URL = "https://uftlxeahciewiitclkbu.supabase.co/functions/v1/open-brain-mcp";
+  const TAG = "Fact cards";
+  const KEY_STORAGE = "openbrain.accessKey";
+  const LS_DECKS = "twosides.decks.v2";     // cached book decks
+  const LS_SRS = "twosides.srs.v1";         // per-card schedule
+  const LS_PREFS = "twosides.prefs.v1";     // mode and chosen decks
+  const LS_OLD = "twosides.deck.v1";        // edits to the built-in deck from the old editor
+  const ROUND = 10;
+  const RECENT_DAYS = 60;
+  const DAY = 86400000;
+
   const $ = (id) => document.getElementById(id);
-
-  // ---------- deck: the published copy, plus any unsaved local edits ----------
-  const embedded = JSON.parse($("deck").textContent);
-
-  // Cheap fingerprint of the published deck. If it changes, a save has landed
-  // from somewhere else and the local draft it was based on is stale.
-  const stamp = (cards) => cards.length + ":" +
-    cards.map(c => c.id + c.q.length + c.a.length).join("|").length;
-
-  let deck = embedded;
-  let dirty = false;
-  try {
-    const saved = JSON.parse(localStorage.getItem(LS_DECK) || "null");
-    if (saved && saved.base === stamp(embedded) && Array.isArray(saved.cards)) {
-      deck = saved.cards;
-      dirty = true;
-    } else if (saved) {
-      localStorage.removeItem(LS_DECK);
-    }
-  } catch (_) { /* private mode, or blocked site data -- carry on with the published deck */ }
-
-  const stash = () => {
-    dirty = true;
-    try { localStorage.setItem(LS_DECK, JSON.stringify({ base: stamp(embedded), cards: deck })); }
-    catch (_) { /* nothing to do: the deck still works for this session */ }
+  const store = {
+    get(k, fb) { try { const v = localStorage.getItem(k); return v === null ? fb : JSON.parse(v); } catch (_) { return fb; } },
+    raw(k) { try { return localStorage.getItem(k); } catch (_) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, typeof v === "string" ? v : JSON.stringify(v)); } catch (_) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (_) {} },
   };
 
-  // ---------- the round ----------
-  let queue = [], current = null, flipped = false, seen = 0, stumbles = 0;
-  let history = [];   // so a mis-tap can be undone
-  const missed = new Set();   // cards marked Again this round
-
+  // ---------- small helpers ----------
+  const hash = (s) => {   // FNV-1a, enough to give each card a steady id
+    let h = 0x811c9dc5;
+    for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+    return (h >>> 0).toString(36);
+  };
+  const norm = (s) => s.toLowerCase().replace(/\s+/g, " ").trim();
   const shuffled = (a) => {
     const out = a.slice();
-    for (let i = out.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [out[i], out[j]] = [out[j], out[i]];
-    }
+    for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
     return out;
   };
+  const midnightIn = (days) => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() + days); return d.getTime(); };
+  const isoDay = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  const shortDate = (ms) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const gap = (days) => days <= 1 ? "tomorrow" : days < 14 ? "in " + days + " days"
+    : days < 60 ? "in " + Math.round(days / 7) + " weeks" : "in " + Math.round(days / 30) + " months";
+  const plural = (n, one, many) => n + " " + (n === 1 ? one : (many || one + "s"));
+  const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
-  function startRound() {
-    queue = shuffled(deck);
-    seen = 0; stumbles = 0; missed.clear();
-    history = [];
+  // ---------- decks ----------
+  function parseDeck(t) {
+    const md = t.metadata || {};
+    const title = md.title || "";
+    const name = title.replace(/^\s*fact cards\s*[—–:-]\s*/i, "").trim() || "Untitled deck";
+    const cards = [];
+    let cur = null;
+    for (const line of String(t.content || "").split(/\r?\n/)) {
+      const h = /^##\s+(.+?)\s*$/.exec(line);
+      if (h) { if (cur) cards.push(cur); cur = { q: h[1], a: [], status: "", why: "" }; continue; }
+      if (!cur) continue;
+      const s = /^\s*status\s*:\s*(supported|contested|myth)\b\s*(?:[—–-]\s*)?(.*)$/i.exec(line);
+      if (s) { cur.status = s[1].toLowerCase(); cur.why = s[2].trim(); continue; }
+      cur.a.push(line);
+    }
+    if (cur) cards.push(cur);
+    return {
+      id: "note:" + t.id, noteId: t.id, name, created: Date.parse(t.created_at) || 0,
+      cards: cards.map((c) => ({ id: "n" + hash(t.id + "|" + norm(c.q)), q: c.q, a: c.a.join("\n").trim(), status: c.status, why: c.why }))
+                  .filter((c) => c.q && c.a),
+    };
+  }
+
+  const builtin = (() => {
+    const embedded = JSON.parse($("deck").textContent);
+    const stamp = (cards) => cards.length + ":" + cards.map((c) => c.id + c.q.length + c.a.length).join("|").length;
+    let cards = embedded;
+    const old = store.get(LS_OLD, null);
+    if (old && old.base === stamp(embedded) && Array.isArray(old.cards)) cards = old.cards;
+    return { id: "builtin:azure", name: "Azure AI Fundamentals", builtin: true, created: 0,
+             cards: cards.filter((c) => c.q && c.a).map((c) => ({ id: "az:" + c.id, q: c.q, a: c.a, status: "", why: "" })) };
+  })();
+
+  let cached = store.get(LS_DECKS, null);        // { at, decks: [...] }
+  let bookDecks = (cached && Array.isArray(cached.decks)) ? cached.decks : [];
+  const allDecks = () => bookDecks.slice().sort((a, b) => b.created - a.created).concat([builtin]);
+  const deckById = (id) => allDecks().find((d) => d.id === id);
+
+  // ---------- schedule ----------
+  // Two buttons, Anki-style gaps: right first time goes 1 day, then 3, then
+  // the last gap times the card's ease (2.5 to start, lower each time you
+  // forget it). "More often" and "Less often" scale the gap, as Readwise does.
+  let srs = store.get(LS_SRS, {});
+  const saveSrs = () => store.set(LS_SRS, srs);
+  const st = (id) => srs[id] || null;
+
+  function nextGap(s, missed) {
+    if (missed) return 1;
+    const prev = (s && s.ivl) || 0;
+    const ease = (s && s.ease) || 2.5;
+    const pace = (s && s.pace) || 1;
+    let ivl = prev === 0 ? 1 : prev === 1 ? 3 : Math.round(prev * ease);
+    ivl = Math.round(ivl * pace);
+    return Math.min(365, Math.max(prev === 0 ? 1 : prev + 1, ivl));
+  }
+
+  const isRetired = (c) => !!(st(c.id) && st(c.id).retired);
+  const isNew = (c) => !st(c.id) || !st(c.id).reps;
+  const isDue = (c, now = Date.now()) => { const s = st(c.id); return !!(s && s.reps && !s.retired && s.due <= now); };
+
+  // ---------- preferences ----------
+  let prefs = Object.assign({ mode: "choose", chosen: null }, store.get(LS_PREFS, {}));
+  const savePrefs = () => store.set(LS_PREFS, prefs);
+
+  function activeDecks() {
+    const decks = allDecks();
+    if (prefs.mode === "all") return decks;
+    if (prefs.mode === "recent") {
+      const cut = Date.now() - RECENT_DAYS * DAY;
+      const recent = bookDecks.filter((d) => d.created >= cut);
+      return recent.length ? recent : bookDecks.slice().sort((a, b) => b.created - a.created).slice(0, 3);
+    }
+    const chosen = prefs.chosen || decks.filter((d) => !d.builtin).map((d) => d.id);
+    return decks.filter((d) => chosen.includes(d.id));
+  }
+
+  // ---------- the server ----------
+  let accessKey = store.raw(KEY_STORAGE) || "";
+  async function callTool(name, args) {
+    let res;
+    try {
+      res = await fetch(MCP_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json, text/event-stream", "x-brain-key": accessKey },
+        body: JSON.stringify({ jsonrpc: "2.0", id: Date.now(), method: "tools/call", params: { name, arguments: args } }),
+      });
+    } catch (_) { throw new Error("offline"); }
+    const raw = await res.text();
+    let payload = {};
+    try {
+      if ((res.headers.get("Content-Type") || "").includes("text/event-stream")) {
+        const line = raw.split("\n").filter((l) => l.startsWith("data:")).map((l) => l.slice(5).trim()).reverse().find((l) => l.startsWith("{"));
+        payload = line ? JSON.parse(line) : {};
+      } else payload = raw.trim() ? JSON.parse(raw) : {};
+    } catch (_) { throw new Error("Open Brain sent back something unreadable (HTTP " + res.status + ")."); }
+    // An invalid key comes back as HTTP 200 with JSON-RPC error -32001.
+    if (!res.ok || payload.error) {
+      const msg = (payload.error && payload.error.message) || ("HTTP " + res.status);
+      if (res.status === 401 || res.status === 403 || (payload.error && (payload.error.code === -32001 || /unauthor/i.test(msg)))) {
+        const e = new Error("That key was rejected."); e.auth = true; throw e;
+      }
+      throw new Error(msg);
+    }
+    const result = payload.result || {};
+    const block = (result.content || []).find((b) => b.type === "text");
+    const text = block ? block.text : "";
+    if (result.isError) throw new Error(text || "Open Brain refused that.");
+    return text;
+  }
+
+  let syncMsg = "";
+  async function refresh() {
+    if (!accessKey) { renderHome(); return; }
+    syncMsg = "Checking Open Brain for decks…"; renderSync();
+    try {
+      const text = await callTool("list_thoughts", { topic: TAG, limit: 200, format: "json", include_shelved: true });
+      let arr = [];
+      try { arr = JSON.parse(text); } catch (_) {}
+      bookDecks = (Array.isArray(arr) ? arr : []).map(parseDeck).filter((d) => d.cards.length);
+      cached = { at: Date.now(), decks: bookDecks };
+      store.set(LS_DECKS, cached);
+      syncMsg = "";
+    } catch (err) {
+      if (err.auth) { accessKey = ""; store.del(KEY_STORAGE); $("keyNote").textContent = err.message; }
+      syncMsg = err.message === "offline" ? "No connection, so these are the decks saved on this device." : "Could not load decks: " + err.message;
+    }
+    renderHome();
+  }
+
+  // ---------- home ----------
+  function counts(decks) {
+    const now = Date.now();
+    let due = 0, fresh = 0, total = 0;
+    decks.forEach((d) => d.cards.forEach((c) => {
+      if (isRetired(c)) return;
+      total++;
+      if (isDue(c, now)) due++; else if (isNew(c)) fresh++;
+    }));
+    return { due, fresh, total };
+  }
+
+  function renderSync() {
+    let line = syncMsg;
+    if (!line && cached && cached.at) line = "Decks updated " + new Date(cached.at).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) +
+      (isoDay(new Date(cached.at)) === isoDay(new Date()) ? "" : " on " + shortDate(cached.at)) + ".";
+    $("syncLine").textContent = line;
+  }
+
+  function renderHome() {
+    document.querySelectorAll(".o-tab").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.mode === prefs.mode)));
+    $("modeNote").textContent = prefs.mode === "choose" ? "Tick the books you want." :
+      prefs.mode === "recent" ? "Books added in the last two months." : "Every deck, mixed together.";
+
+    const active = new Set(activeDecks().map((d) => d.id));
+    const box = $("deckList");
+    box.innerHTML = "";
+    allDecks().forEach((d) => {
+      const on = active.has(d.id);
+      const c = counts([d]);
+      const b = el("button", "o-stone");
+      b.type = "button";
+      b.setAttribute("aria-pressed", String(on));
+      b.disabled = prefs.mode !== "choose";
+      const tick = el("span", "tick"); tick.innerHTML = '<i class="ph-light ph-check"></i>';
+      const main = el("span", "o-stone__main");
+      main.append(el("span", "o-stone__title", d.name));
+      const sub = [plural(c.total, "card")];
+      if (c.fresh) sub.push(c.fresh + " new");
+      if (d.builtin) sub.push("built in");
+      main.append(el("span", "o-stone__sub", sub.join(" · ")));
+      b.append(tick, main);
+      if (c.due) b.append(el("span", "deck-due", c.due + " due"));
+      b.addEventListener("click", () => {
+        const chosen = new Set(prefs.chosen || allDecks().filter((x) => !x.builtin).map((x) => x.id));
+        chosen.has(d.id) ? chosen.delete(d.id) : chosen.add(d.id);
+        prefs.chosen = [...chosen]; savePrefs(); renderHome();
+      });
+      box.appendChild(b);
+    });
+
+    $("unlock").hidden = !!accessKey;
+    const c = counts(activeDecks());
+    $("dueLine").textContent = c.total
+      ? (c.due ? plural(c.due, "card") + " due today" : "Nothing due today") + (c.fresh ? " · " + c.fresh + " not yet seen" : "")
+      : "No decks ticked yet.";
+    const plan = buildRound(false, true);
+    $("startBtn").disabled = !plan.length;
+    $("startBtn").textContent = !plan.length ? "Nothing to practise"
+      : (c.due || c.fresh ? "Start · " : "Practise ahead · ") + plural(plan.length, "card");
+    renderSync();
+  }
+
+  document.querySelectorAll(".o-tab").forEach((t) => t.addEventListener("click", () => {
+    prefs.mode = t.dataset.mode; savePrefs(); renderHome();
+  }));
+
+  $("keyBtn").addEventListener("click", async () => {
+    const k = $("keyField").value.trim();
+    if (!k) { $("keyField").focus(); return; }
+    accessKey = k; store.set(KEY_STORAGE, k);
+    $("keyField").value = ""; $("keyNote").textContent = "";
+    await refresh();
+  });
+  $("keyField").addEventListener("keydown", (e) => { if (e.key === "Enter") $("keyBtn").click(); });
+
+  // ---------- a round ----------
+  // Due cards first (oldest first), then cards not yet seen, up to ten, with
+  // the decks mixed. If nothing is due or new, practise the soonest-due ahead.
+  function buildRound(ahead, peek) {
+    const now = Date.now();
+    const pool = [];
+    activeDecks().forEach((d) => d.cards.forEach((c) => { if (!isRetired(c)) pool.push({ c, d }); }));
+    const due = shuffled(pool.filter((x) => isDue(x.c, now))).sort((a, b) => st(a.c.id).due - st(b.c.id).due);
+    const fresh = shuffled(pool.filter((x) => isNew(x.c)));
+    let pick = due.slice(0, ROUND);
+    if (pick.length < ROUND) pick = pick.concat(fresh.slice(0, ROUND - pick.length));
+    if (!pick.length || ahead) {
+      const taken = new Set(pick.map((x) => x.c.id));
+      const later = pool.filter((x) => !taken.has(x.c.id) && !isNew(x.c)).sort((a, b) => st(a.c.id).due - st(b.c.id).due);
+      pick = pick.concat(later.slice(0, ROUND - pick.length));
+    }
+    return peek ? pick : shuffled(pick.slice(0, Math.min(3, pick.length))).concat(pick.slice(3));
+  }
+
+  let queue = [], current = null, flipped = false, total = 0, finished = 0;
+  let missed = new Set(), stumbles = 0, history = [];
+
+  function show(which) {
+    ["home", "session", "done"].forEach((id) => { $(id).hidden = id !== which; });
+    window.scrollTo(0, 0);
+  }
+
+  function startRound(ahead) {
+    queue = buildRound(ahead);
+    if (!queue.length) { renderHome(); return; }
+    total = queue.length; finished = 0; missed = new Set(); stumbles = 0; history = [];
+    show("session");
     next();
   }
 
   function next() {
     flipped = false;
-    if (current) history.push(current);
     current = queue.shift() || null;
-    render();
-  }
-
-  function back() {
-    if (!history.length) return;
-    if (current) queue.unshift(current);
-    current = history.pop();
-    flipped = false;
-    if (seen > 0) seen--;
+    if (!current) return finish();
     render();
   }
 
   function render() {
-    const card = $("card"), grade = $("grade");
-    const total = deck.length;
-
-    if (!total) {
-      $("stage").innerHTML = '<p class="empty">No cards yet. Tap <strong>Cards</strong> to write your first one.</p>';
-      grade.hidden = true;
-      $("count").textContent = "0 / 0";
-      $("fill").style.width = "0%";
-      return;
+    const { c, d } = current;
+    $("card").classList.toggle("flipped", flipped);
+    $("qText").textContent = c.q;
+    $("qEcho").textContent = c.q;
+    $("aText").textContent = c.a;
+    $("frontLabel").textContent = d.name;
+    $("backLabel").textContent = d.name;
+    const v = $("verdict");
+    v.hidden = !c.status;
+    if (c.status) {
+      const chip = $("verdictChip");
+      chip.className = "o-chip " + (c.status === "supported" ? "o-chip--ok" : c.status === "myth" ? "o-chip--fail" : "o-chip--warn");
+      chip.textContent = c.status === "supported" ? "Supported" : c.status === "myth" ? "Myth" : "Contested";
+      $("verdictWhy").textContent = c.why ? c.why.charAt(0).toUpperCase() + c.why.slice(1) : "";
     }
+    $("grade").hidden = !flipped;
+    $("tweak").hidden = !flipped;
+    const s = st(c.id);
+    $("goodWhen").textContent = missed.has(c.id) ? "back tomorrow" : "back " + gap(nextGap(s, false));
+    $("moreBtn").setAttribute("aria-pressed", String(!!(s && s.pace < 1)));
+    $("lessBtn").setAttribute("aria-pressed", String(!!(s && s.pace > 1)));
+    $("fixBtn").hidden = !!d.builtin;
+    $("count").textContent = finished + " / " + total;
+    $("fill").style.width = (total ? (finished / total) * 100 : 0) + "%";
+    $("undoBtn").disabled = !history.length;
+  }
 
-    if (!current) return finish();
+  function snapshot() {
+    history.push({ current, queue: queue.slice(), finished, total, stumbles, missed: new Set(missed),
+                   id: current.c.id, prev: srs[current.c.id] ? Object.assign({}, srs[current.c.id]) : undefined });
+    if (history.length > 30) history.shift();
+  }
 
-    card.classList.toggle("flipped", flipped);
-    $("qText").textContent = current.q;
-    $("aText").textContent = current.a;
-    grade.hidden = !flipped;
+  function undo() {
+    const h = history.pop();
+    if (!h) return;
+    if (h.prev === undefined) delete srs[h.id]; else srs[h.id] = h.prev;
+    saveSrs();
+    current = h.current; queue = h.queue; finished = h.finished; total = h.total; stumbles = h.stumbles; missed = h.missed;
+    flipped = false;
+    show("session");
+    render();
+  }
 
-    const done = total - queue.length - 1;
-    $("count").textContent = done + " / " + total;
-    $("fill").style.width = (total ? (done / total) * 100 : 0) + "%";
-    $("roundNote").textContent = queue.length + " left in this round";
-    $("prevBtn").disabled = history.length === 0;
+  function gotIt() {
+    if (!current) return;
+    snapshot();
+    const id = current.c.id;
+    const s = Object.assign({ ivl: 0, ease: 2.5, reps: 0, lapses: 0, pace: 1 }, st(id));
+    const ivl = nextGap(s, missed.has(id));
+    s.ivl = ivl; s.reps++; s.due = midnightIn(ivl); s.last = Date.now();
+    srs[id] = s; saveSrs();
+    finished++;
+    next();
+  }
+
+  function again() {
+    if (!current) return;
+    snapshot();
+    const id = current.c.id;
+    if (!missed.has(id)) {
+      missed.add(id); stumbles++;
+      const s = st(id);
+      if (s && s.reps) { s.lapses = (s.lapses || 0) + 1; s.ease = Math.max(1.3, (s.ease || 2.5) - 0.2); saveSrs(); }
+    }
+    // Back in three cards' time, not straight away, so it is a real recall.
+    queue.splice(Math.min(3, queue.length), 0, current);
+    next();
+  }
+
+  function skip() {
+    if (!current) return;
+    snapshot();
+    queue.push(current);
+    next();
+  }
+
+  function setPace(p) {
+    if (!current) return;
+    const id = current.c.id;
+    const s = Object.assign({ ivl: 0, ease: 2.5, reps: 0, lapses: 0, pace: 1, due: 0 }, st(id));
+    s.pace = s.pace === p ? 1 : p;
+    srs[id] = s; saveSrs();
+    render();
+  }
+
+  function retire() {
+    if (!current) return;
+    snapshot();
+    const id = current.c.id;
+    srs[id] = Object.assign({ ivl: 0, ease: 2.5, reps: 0, lapses: 0, pace: 1, due: 0 }, st(id), { retired: true });
+    saveSrs();
+    total = Math.max(finished, total - 1);
+    toast("Card retired. Bring it back from Cards.", () => undo());
+    next();
   }
 
   function finish() {
-    $("stage").innerHTML =
-      '<div class="done"><h2>Round finished</h2><p id="doneNote"></p>' +
-      '<button class="primary" id="againRound" type="button">Go again</button></div>';
+    current = null;
+    const now = Date.now();
+    const pool = [];
+    activeDecks().forEach((d) => d.cards.forEach((c) => { if (!isRetired(c) && !isNew(c)) pool.push(st(c.id).due); }));
+    const tomorrow = pool.filter((t) => t <= midnightIn(1)).length;
+    const soonest = pool.filter((t) => t > now).sort((a, b) => a - b)[0];
+    $("doneTitle").textContent = "Round done";
     $("doneNote").textContent = stumbles
-      ? seen + " cards, and " + stumbles + " needed a second look."
-      : "All " + seen + " right first time.";
-    $("grade").hidden = true;
-    $("roundNote").textContent = "";
-    $("fill").style.width = "100%";
-    $("againRound").addEventListener("click", () => { rebuildStage(); startRound(); });
-  }
-
-  // finish() replaces the stage markup, so put the card back before a new round
-  function rebuildStage() {
-    $("stage").innerHTML =
-      '<button class="card" id="card" type="button" aria-live="polite">' +
-        '<div class="face front"><span class="side-label">Question</span>' +
-        '<p class="q" id="qText"></p><span class="hint">Tap, or press space, to turn over</span></div>' +
-        '<div class="face back"><span class="side-label">Answer</span>' +
-        '<p class="a" id="aText"></p><span class="hint">How did you do?</span></div>' +
-      '</button>';
-    wireCard();
-  }
-
-  function wireCard() {
-    const card = $("card");
-    if (!card) return;
-    card.addEventListener("click", () => { if (current) { flipped = !flipped; render(); } });
-    let x0 = null;
-    card.addEventListener("touchstart", (e) => { x0 = e.changedTouches[0].clientX; }, { passive: true });
-    card.addEventListener("touchend", (e) => {
-      if (x0 === null) return;
-      const dx = e.changedTouches[0].clientX - x0;
-      x0 = null;
-      if (Math.abs(dx) > 60) { seen++; next(); }
-    }, { passive: true });
+      ? plural(finished, "card") + ", and " + stumbles + " needed another go."
+      : "All " + plural(finished, "card") + " right first time.";
+    $("doneNext").textContent = tomorrow ? plural(tomorrow, "card") + " due tomorrow."
+      : soonest ? "Next card due " + shortDate(soonest) + "." : "";
+    const left = buildRound(false, true).length;
+    $("moreRound").textContent = left ? "Ten more" : "Practise ahead";
+    show("done");
   }
 
   // ---------- controls ----------
-  $("goodBtn").addEventListener("click", () => { seen++; next(); });
-  $("againBtn").addEventListener("click", () => {
-    // Stay on this card: turn it back to the question for another go.
-    if (!current) return;
-    if (!missed.has(current.id)) { missed.add(current.id); stumbles++; }
-    flipped = false;
-    render();
-  });
-  $("skipBtn").addEventListener("click", () => { if (current) queue.push(current); next(); });
-  $("prevBtn").addEventListener("click", back);
-  $("shuffleBtn").addEventListener("click", () => { rebuildStage(); startRound(); });
+  $("card").addEventListener("click", () => { if (current) { flipped = !flipped; render(); } });
+  $("goodBtn").addEventListener("click", gotIt);
+  $("againBtn").addEventListener("click", again);
+  $("skipBtn").addEventListener("click", skip);
+  $("undoBtn").addEventListener("click", undo);
+  $("moreBtn").addEventListener("click", () => setPace(0.6));
+  $("lessBtn").addEventListener("click", () => setPace(1.7));
+  $("retireBtn").addEventListener("click", retire);
+  $("homeBtn").addEventListener("click", () => { current = null; show("home"); renderHome(); });
+  $("doneHome").addEventListener("click", () => { show("home"); renderHome(); });
+  $("moreRound").addEventListener("click", () => startRound(!buildRound(false, true).length));
+  $("startBtn").addEventListener("click", () => startRound(false));
 
   document.addEventListener("keydown", (e) => {
-    if (!$("sheet").hidden) return;
-    if (e.target.tagName === "TEXTAREA") return;
-    if (e.code === "Space" || e.code === "Enter") {
-      e.preventDefault();
-      if (current) { flipped = !flipped; render(); }
-    } else if (e.code === "ArrowRight") { seen++; next(); }
-    else if (e.code === "ArrowLeft") { back(); }
-    else if (flipped && e.key === "1") { $("againBtn").click(); }
-    else if (flipped && e.key === "2") { $("goodBtn").click(); }
+    if (!$("listSheet").hidden || !$("fixSheet").hidden) { if (e.key === "Escape") { $("listSheet").hidden = true; $("fixSheet").hidden = true; } return; }
+    const t = e.target.tagName;
+    if (t === "TEXTAREA" || t === "INPUT" || t === "SELECT") return;
+    if ($("session").hidden) return;
+    if (e.code === "Space" || e.code === "Enter") { e.preventDefault(); if (current) { flipped = !flipped; render(); } }
+    else if (flipped && e.key === "1") again();
+    else if (flipped && e.key === "2") gotIt();
+    else if (e.key === "Escape") $("homeBtn").click();
   });
 
-  // ---------- editing ----------
-  const sheet = $("sheet");
+  // ---------- toast ----------
+  let toastTimer = null, toastUndo = null;
+  function toast(text, onUndo) {
+    $("toastText").textContent = text;
+    toastUndo = onUndo || null;
+    $("toastUndo").hidden = !onUndo;
+    $("toast").hidden = false;
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { $("toast").hidden = true; }, 5000);
+  }
+  $("toastUndo").addEventListener("click", () => { $("toast").hidden = true; if (toastUndo) toastUndo(); });
 
-  function drawRows() {
-    const box = $("rows");
-    box.innerHTML = "";
-    if (!deck.length) {
-      box.innerHTML = '<p class="empty">Nothing here yet.</p>';
-      return;
-    }
-    deck.forEach((c, i) => {
-      const row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML =
-        '<div class="row-head"><span>Card ' + (i + 1) + '</span>' +
-        '<button class="del" type="button">Delete</button></div>';
-      const q = document.createElement("textarea");
-      q.className = "q-in"; q.value = c.q; q.rows = 2;
-      q.setAttribute("aria-label", "Question for card " + (i + 1));
-      const a = document.createElement("textarea");
-      a.value = c.a; a.rows = 3;
-      a.setAttribute("aria-label", "Answer for card " + (i + 1));
-      q.addEventListener("input", () => { c.q = q.value; stash(); });
-      a.addEventListener("input", () => { c.a = a.value; stash(); });
-      row.querySelector(".del").addEventListener("click", () => {
-        deck.splice(i, 1); stash(); drawRows();
+  // ---------- the card list ----------
+  function drawList() {
+    const body = $("listBody");
+    body.innerHTML = "";
+    const decks = activeDecks();
+    if (!decks.length) { body.append(el("p", "o-meta", "No decks ticked. Choose some on the first screen.")); return; }
+    decks.forEach((d) => {
+      const sec = el("div", "list-deck");
+      sec.append(el("h3", null, d.name));
+      const rows = el("div", "o-stones");
+      d.cards.forEach((c) => {
+        const s = st(c.id);
+        const row = el("div", "list-card");
+        row.append(el("span", "lq", c.q));
+        const meta = el("div", "lrow");
+        let words;
+        if (s && s.retired) words = "Retired";
+        else if (!s || !s.reps) words = "Not yet seen";
+        else words = (s.due <= Date.now() ? "Due now" : "Next " + shortDate(s.due)) + " · every " + plural(s.ivl, "day");
+        meta.append(el("span", "o-meta", words));
+        if (c.status === "contested" || c.status === "myth") meta.append(el("span", "o-chip " + (c.status === "myth" ? "o-chip--fail" : "o-chip--warn"), c.status === "myth" ? "Myth" : "Contested"));
+        if (s && s.retired) {
+          const back = el("button", "o-btn o-btn--quiet", "Bring back");
+          back.type = "button";
+          back.addEventListener("click", () => { delete s.retired; saveSrs(); drawList(); });
+          meta.append(back);
+        }
+        row.append(meta);
+        rows.append(row);
       });
-      row.append(q, a);
-      box.appendChild(row);
+      sec.append(rows);
+      body.append(sec);
     });
   }
+  $("listBtn").addEventListener("click", () => { drawList(); $("listSheet").hidden = false; });
+  $("closeList").addEventListener("click", () => { $("listSheet").hidden = true; if (!$("home").hidden) renderHome(); });
 
-  $("editBtn").addEventListener("click", () => { drawRows(); sheet.hidden = false; });
-  $("closeSheet").addEventListener("click", () => {
-    sheet.hidden = true;
-    deck = deck.filter(c => c.q.trim() || c.a.trim());
-    stash();
-    rebuildStage(); startRound();
+  // ---------- fixing a card: writes the change into the deck's note ----------
+  let fixing = null;
+  $("fixBtn").addEventListener("click", () => {
+    if (!current || current.d.builtin) return;
+    fixing = current;
+    $("fixQ").value = current.c.q;
+    $("fixA").value = current.c.a;
+    $("fixS").value = current.c.status || "";
+    $("fixWhy").value = current.c.why || "";
+    $("fixNote").textContent = accessKey ? "" : "Needs the access key: enter it on the first screen.";
+    $("saveFix").disabled = false;
+    $("fixSheet").hidden = false;
+    $("fixA").focus();
   });
-  $("addBtn").addEventListener("click", () => {
-    deck.push({ id: "c" + Date.now().toString(36), q: "", a: "" });
-    stash(); drawRows();
-    const rows = $("rows").querySelectorAll("textarea");
-    if (rows.length) rows[rows.length - 2].focus();
-  });
+  $("closeFix").addEventListener("click", () => { $("fixSheet").hidden = true; fixing = null; });
 
-  // ---------- saving ----------
-  // Served as a static file from your own domain, so there is nobody to publish
-  // a new version to: the deck lives in this browser. Cards added on the phone
-  // stay on the phone.
-  function save() {
-    deck = deck.filter(c => c.q.trim() || c.a.trim());
-    stash();
-    $("syncNote").textContent = "Saved on this device";
-    sheet.hidden = true;
-    rebuildStage(); startRound();
+  function replaceSection(text, oldQ, block) {
+    const lines = String(text).split(/\r?\n/);
+    const start = lines.findIndex((l) => { const m = /^##\s+(.+?)\s*$/.exec(l); return m && norm(m[1]) === norm(oldQ); });
+    if (start < 0) return null;
+    let end = start + 1;
+    while (end < lines.length && !/^##\s/.test(lines[end])) end++;
+    const tail = end < lines.length ? [""] : [];
+    return lines.slice(0, start).concat(block, tail, lines.slice(end)).join("\n");
   }
 
-  $("saveBtn").addEventListener("click", save);
+  $("saveFix").addEventListener("click", async () => {
+    if (!fixing) return;
+    const q = $("fixQ").value.replace(/\s+/g, " ").trim();
+    const a = $("fixA").value.trim();
+    const status = $("fixS").value;
+    const why = $("fixWhy").value.replace(/\s+/g, " ").trim();
+    if (!q || !a) { $("fixNote").textContent = "A card needs a question and an answer."; return; }
+    if (!accessKey) { $("fixNote").textContent = "Needs the access key: enter it on the first screen."; return; }
+    const block = ["## " + q].concat(a.split(/\r?\n/), status ? ["Status: " + status + (why ? " — " + why : "")] : []);
+    $("saveFix").disabled = true;
+    $("fixNote").textContent = "Saving to Open Brain…";
+    try {
+      const raw = await callTool("fetch", { id: fixing.d.noteId });
+      const note = JSON.parse(raw);
+      const content = replaceSection(note.text || "", fixing.c.q, block);
+      if (content === null) throw new Error("couldn’t find this card in the note any more. It may have been edited elsewhere.");
+      await callTool("update_thought", { id: fixing.d.noteId, content, updated_date: isoDay(new Date()) });
+      // Carry what you'd learned across if the question changed.
+      const oldId = fixing.c.id;
+      const newId = "n" + hash(fixing.d.noteId + "|" + norm(q));
+      if (newId !== oldId && srs[oldId]) { srs[newId] = srs[oldId]; delete srs[oldId]; saveSrs(); }
+      Object.assign(fixing.c, { id: newId, q, a, status, why });
+      cached = { at: Date.now(), decks: bookDecks }; store.set(LS_DECKS, cached);
+      $("fixSheet").hidden = true;
+      fixing = null;
+      toast("Card saved to Open Brain.");
+      if (current) render();
+    } catch (err) {
+      $("saveFix").disabled = false;
+      if (err.auth) { accessKey = ""; store.del(KEY_STORAGE); }
+      $("fixNote").textContent = err.message === "offline" ? "No connection. Try again when you have signal." : "Could not save: " + err.message;
+    }
+  });
 
   // ---------- go ----------
-  wireCard();
-  startRound();
-
-  $("syncNote").textContent = dirty ? "Unsaved changes" : "Kept on this device";
+  renderHome();
+  refresh();
 })();
 </script>
 
 <script>
-// Registers the catalog's worker, which also precaches this page, so the cards
-// open with no connection at all. Same origin, same worker, one shell cache.
+// Registers the worker, so the page opens with no connection at all.
 if ("serviceWorker" in navigator) {
   window.addEventListener("load", () => {
     navigator.serviceWorker.register("./sw.js").catch(() => { /* still works online */ });
@@ -904,6 +1261,7 @@ if ("serviceWorker" in navigator) {
   const exit = document.exitFullscreen || document.webkitExitFullscreen;
   const active = () => document.fullscreenElement || document.webkitFullscreenElement;
   if (!btn || !enter || !(document.fullscreenEnabled || document.webkitFullscreenEnabled)) return;
+  if (matchMedia("(hover: none)").matches) return;
   btn.hidden = false;
   const toggle = () => { Promise.resolve(active() ? exit.call(document) : enter.call(root)).catch(() => {}); };
   const sync = () => {

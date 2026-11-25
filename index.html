@@ -5175,9 +5175,12 @@ function revealListOnPhone() {
   const drawer = listScroll.parentElement;
   const head = document.getElementById('listHead');
   if (!head) return;
-  // Where the head sits in the list, not where it is pinned on screen.
+  // Where the head sits in the list, not where it is pinned on screen. The
+  // list's own top padding counts too: leaving it out stopped the scroll 8px
+  // short, with a sliver of the panel above still showing (25 Nov 2026).
   const top = listScroll.getBoundingClientRect().top - drawer.getBoundingClientRect().top +
-    drawer.scrollTop + (head.previousElementSibling ? head.previousElementSibling.offsetHeight : 0);
+    drawer.scrollTop + (parseFloat(getComputedStyle(listScroll).paddingTop) || 0) +
+    (head.previousElementSibling ? head.previousElementSibling.offsetHeight : 0);
   drawer.scrollTop = Math.max(0, top);
 }
 
