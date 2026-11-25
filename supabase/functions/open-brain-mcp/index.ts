@@ -11,6 +11,7 @@ import { tickStayTask, todayExtras } from "./briefing.ts";
 import { checkPlan, isDay, type PlanBlockIn } from "./plan.ts";
 import { checkItemText, checkList, isId, LIST_KINDS, type ListItemRow, type ListRow, listsAsText } from "./lists.ts";
 import { fallbackSuggestion, FILED_AS, type InboxRow, normaliseSuggestion, SORTER_MODEL, sorterPrompt, type Suggestion } from "./inbox.ts";
+import { checkTelegramText, sendTelegram, TELEGRAM_MAX } from "./telegram.ts";
 import { AUDIO_BUCKET, audioFormat, cleanAudioPaths, cleanPaths, cleanTranscript, decodeAudio, decodeImage, isAudioPath, newAudioPath, newPhotoPath, PHOTO_BUCKET, PHOTO_SIGN_SECONDS, toBase64, TRANSCRIBE_MAX_BYTES, TRANSCRIBE_MODEL } from "./photos.ts";
 
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
@@ -3034,6 +3035,33 @@ function buildServer(): McpServer {
       if (error) return listErr("remove the item", error.message);
       if (data && data[0]) await touchList(data[0].list_id);
       return listOk("Removed.");
+    }
+  );
+
+  server.registerTool(
+    "send_telegram",
+    {
+      title: "Send Stewart a Telegram",
+      description: `Send Stewart a short plain-text Telegram message from his Life Engine bot. It only ever goes to his own chat; you choose the words, not the recipient. For cloud sessions and scheduled tasks that need to reach his phone (a result, a failure, a decision waiting). Up to ${TELEGRAM_MAX} characters. Don't use it to chat; one message per run is usually right.`,
+      annotations: { readOnlyHint: false, openWorldHint: true, destructiveHint: false },
+      inputSchema: {
+        text: z.string().describe("The message, plain text"),
+      },
+    },
+    async ({ text }) => {
+      const checked = checkTelegramText(text);
+      if ("problem" in checked) {
+        return { content: [{ type: "text" as const, text: `Not sent: ${checked.problem}` }], isError: true };
+      }
+      const sent = await sendTelegram(
+        Deno.env.get("TELEGRAM_BOT_TOKEN") ?? "",
+        Deno.env.get("TELEGRAM_CHAT_ID") ?? "7964238886",
+        checked.text,
+      );
+      if ("problem" in sent) {
+        return { content: [{ type: "text" as const, text: `Not sent: ${sent.problem}` }], isError: true };
+      }
+      return { content: [{ type: "text" as const, text: "Sent to Stewart on Telegram." }] };
     }
   );
 
