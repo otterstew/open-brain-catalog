@@ -2570,10 +2570,6 @@ a.o-card:hover{filter:brightness(.98)}
   @media (max-width: 760px) { .index-card-head .compose-clean-btn { min-height: 44px; } }
   html.compose-clean .ob-rail, html.compose-clean .drawer, html.compose-clean #tabbar, html.compose-clean .ref-panel { display: none !important; }
   html.compose-clean .app, html.compose-clean .app.detail-open, html.compose-clean .app.ref-open { grid-template-columns: minmax(0, 1fr) !important; height: 100dvh; }
-  /* Cards view pins the main pane to column 2, row 2; with the rail hidden that
-     put a new note against the right edge (Stewart, 26 Nov 2026, Windows
-     desktop). One cell, whole width, as v190 did for the clean note. */
-  html.compose-clean .app > .main { grid-column: 1 / -1 !important; grid-row: 1 / -1 !important; }
   html.compose-clean .main > .back-btn, html.compose-clean .index-card-type, html.compose-clean .edit-body-label,
   html.compose-clean .index-card-ribbon,
   html.compose-clean .compose-title-row .edit-field-label { display: none !important; }
@@ -3168,8 +3164,14 @@ a.o-card:hover{filter:brightness(.98)}
   @media (max-width: 480px) {
     .wv .o-write__bar { gap: var(--s3); }
     .wv .btn-lbl { display: none; }
-    .wv .mic-add i, .wv .rec-add i { font-size: 20px; }
+    .wv .mic-add i, .wv .rec-add i, .wv .photo-add i { font-size: 20px; }
   }
+  .wv .photo-add { display: inline-flex; align-items: center; gap: 4px; }
+  /* Save must never fall off a phone's edge (26 Nov 2026: on a 375px screen
+     the bar was 387px and Save sat half off it). */
+  .wv .o-write__bar [data-wv="save"] { flex-shrink: 0; }
+  .wv .o-write__bar .wv-status { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (hover: none) { .wv.is-writing .o-write__bar { transform: none; } }
   .mic-add.is-listening { background: var(--accent-mark); color: var(--paper); padding-left: 8px; padding-right: 8px; border-radius: var(--r-sm); }
   .mic-add.is-listening i { animation: mic-pulse 1.2s ease-in-out infinite; }
   @keyframes mic-pulse { 50% { opacity: .4; } }
@@ -6770,7 +6772,7 @@ function openWritingView(t, startWriting) {
       <button type="button" data-wv="close">Close</button>
       <button type="button" data-wv="mode">Write</button>
       <button type="button" data-wv="focus" aria-pressed="false" hidden>Focus</button>
-      <button type="button" class="photo-add" data-wv="photo" hidden>Add photo</button>
+      <button type="button" class="photo-add" data-wv="photo" aria-label="Add photo" hidden><i class="ph-light ph-camera" aria-hidden="true"></i><span class="btn-lbl"> Add photo</span></button>
       ${micButtonHtml() ? '<button type="button" class="mic-add" data-wv="mic" aria-pressed="false" aria-label="Transcribe" hidden><i class="ph-light ph-microphone" aria-hidden="true"></i><span class="btn-lbl"> Transcribe</span></button>' : ''}
       ${CAN_RECORD ? '<button type="button" class="rec-add" data-wv="rec" aria-pressed="false" aria-label="Record a sound" hidden><i class="ph-light ph-waveform" aria-hidden="true"></i><span class="btn-lbl"> Record</span></button>' : ''}
       <span class="o-bar__spacer"></span>
@@ -6836,6 +6838,10 @@ function openWritingView(t, startWriting) {
     if ($('[data-wv="mic"]')) { $('[data-wv="mic"]').hidden = !writing; if (!writing && activeMic) activeMic.rec.stop(); }
     if ($('[data-wv="rec"]')) $('[data-wv="rec"]').hidden = !writing;
     modeBtn.textContent = writing ? 'Read' : 'Write';
+    // On a touch screen the options stay up while writing, so Save is always
+    // in reach (Stewart, 26 Nov 2026: added to a journal entry on the phone
+    // and found no save option; the bar had slid away after 1.8s).
+    view.classList.toggle('is-writing', writing);
     if (writing) { paint(); ta.focus({ preventScroll: true }); }
     else renderRead();
   }
