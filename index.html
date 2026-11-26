@@ -3171,6 +3171,9 @@ a.o-card:hover{filter:brightness(.98)}
     .wv .mic-add i, .wv .rec-add i, .wv .photo-add i { font-size: 20px; }
   }
   .wv .photo-add { display: inline-flex; align-items: center; gap: 4px; }
+  /* The inline-flex rules above beat the hidden attribute, so Add photo,
+     Transcribe and Record showed while reading (Stewart's 22 Nov screenshot). */
+  .wv .o-write__bar [hidden] { display: none; }
   /* Save must never fall off a phone's edge (26 Nov 2026: on a 375px screen
      the bar was 387px and Save sat half off it). */
   .wv .o-write__bar [data-wv="save"] { flex-shrink: 0; }
