@@ -870,8 +870,10 @@ const SECTIONS = [
   // <owner>
   { tag: 'AI Forum',                  name: 'AI Forum',              colour: 'var(--accent)',  blurb: 'Round-table agenda and notes. Use the chips to jump between items.', private: true },
   { tag: 'Project status',            name: 'Projects – work',       colour: 'var(--accent)', blurb: 'Where each work project is up to, and the next step.', private: true },
+  { tag: 'Personal project status',   name: 'Projects – personal',   colour: 'var(--accent)',  blurb: 'Where each personal project is up to, and the next step.', private: true },
   { tag: 'Project register',          name: 'Project register',      colour: 'var(--accent)',  blurb: 'Every project in one table, and what rebuilding it in Microsoft would take. Tap a row to edit it.', private: true },
   { tag: 'Skills',                    name: 'Skills',                colour: 'var(--accent)',  blurb: 'Every skill I have: what it does, when to use it, what it can reach.', private: true },
+  { tag: 'Security review',           name: 'Security',              colour: 'var(--accent)',  blurb: 'Keys, access, hooks and risks. The latest results refresh daily with the health check.', private: true },
   // </owner>
 ];
 
@@ -981,9 +983,6 @@ async function loadHealth(runFirst) {
     const res = await fetch(HEALTH_URL, { headers: { 'x-brain-key': accessKey } });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     health = await res.json(); healthErr = '';
-    // Security checks are not shown on AI Desk (Stewart, 26 Nov 2026). They still run,
-    // alert on Telegram and fill the Open Brain note "Security check — latest results".
-    if (health && Array.isArray(health.checks)) health.checks = health.checks.filter(c => c.app !== 'Security' && !String(c.check_id || '').startsWith('security:'));
   } catch (e) { healthErr = 'Could not load the health check (' + e.message + ').'; }
 }
 

@@ -2570,6 +2570,10 @@ a.o-card:hover{filter:brightness(.98)}
   @media (max-width: 760px) { .index-card-head .compose-clean-btn { min-height: 44px; } }
   html.compose-clean .ob-rail, html.compose-clean .drawer, html.compose-clean #tabbar, html.compose-clean .ref-panel { display: none !important; }
   html.compose-clean .app, html.compose-clean .app.detail-open, html.compose-clean .app.ref-open { grid-template-columns: minmax(0, 1fr) !important; height: 100dvh; }
+  /* Cards view pins the main pane to column 2, row 2; with the rail hidden that
+     put a new note against the right edge (Stewart, 26 Nov 2026, Windows
+     desktop). One cell, whole width, as v190 did for the clean note. */
+  html.compose-clean .app > .main { grid-column: 1 / -1 !important; grid-row: 1 / -1 !important; }
   html.compose-clean .main > .back-btn, html.compose-clean .index-card-type, html.compose-clean .edit-body-label,
   html.compose-clean .index-card-ribbon,
   html.compose-clean .compose-title-row .edit-field-label { display: none !important; }
